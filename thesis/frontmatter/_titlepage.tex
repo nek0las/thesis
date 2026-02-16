@@ -1,0 +1,94 @@
+\begin{titlepage}
+
+  \setcounter{page}{-1}
+
+\setlength{\headheight}{14pt}
+
+\begin{center}
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.6\textwidth}
+    \includegraphics[width=\textwidth]{figures/Titlepage/UVA LOGO.jpg}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.3\textwidth}
+    \includegraphics[width=\textwidth]{figures/Titlepage/VU LOGO.jpg}
+  \end{minipage}
+\end{figure}
+
+\bigskip
+\bigskip
+\bigskip
+
+%% Title
+{\makeatletter
+\largetitlestyle\fontsize{25}{25}\selectfont{MSc Computer Science}
+\makeatother}
+
+%% Print the subtitle
+{\makeatletter
+{\medskip\fontsize{17}{17}\selectfont{\@mastertrack}}
+\makeatother}
+
+\vspace{0.8cm}
+
+{\makeatletter
+\largetitlestyle\fontsize{24}{24}\selectfont{Master Thesis}
+\makeatother}
+
+\vspace{0.7cm}
+
+\rule{\linewidth}{0.5pt}
+
+\vspace{0.3cm}
+
+%% Print the title
+{\makeatletter
+\largetitlestyle\fontsize{33}{33}\selectfont\textbf{\@title}
+\makeatother}
+
+%% Print the subtitle
+{\makeatletter
+\ifdefvoid{\@subtitle}{}{\bigskip\fontsize{20}{20}\selectfont\@subtitle}
+\makeatother}
+\vspace{0.15cm}
+\rule{\linewidth}{0.5pt}
+
+\begin{Large}
+by
+\end{Large}
+
+\medskip
+
+%% Print the name of the author
+{\makeatletter
+\largetitlestyle\fontsize{25}{25}\selectfont\@author
+\makeatother}
+
+\medskip
+
+{\makeatletter
+\largetitlestyle\fontsize{20}{20}\selectfont\@studentnumber
+\makeatother}
+
+\vspace{1cm}
+
+%% Print some more information at the bottom
+\begin{tabular}{ll}
+    Supervisors: & \makeatletter\@firstsupervisor \\
+                 & \makeatletter\@secondsupervisor \\
+    Date:       & \makeatletter\@handindate \\
+    Credits \& Period: & \makeatletter\@studypoints, \makeatletter\@startenddate
+\end{tabular}
+
+\bigskip
+
+\begin{figure}[H]
+  \centering
+    \includegraphics[width=0.6\textwidth]{figures/Titlepage/Company_logo.png}
+\end{figure}
+
+
+\end{center}	
+\end{titlepage}

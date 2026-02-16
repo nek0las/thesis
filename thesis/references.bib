@@ -1,0 +1,197 @@
+%% some example references
+@inproceedings{alglave2018frightening,
+  author    = {Jade Alglave and Luc Maranget and Paul E. McKenney and Andrea Parri and Alan Stern},
+  title     = {Frightening Small Children and Disconcerting Grown-ups: Concurrency in the Linux Kernel},
+  booktitle = {Proceedings of the 23rd International Conference on Architectural Support for Programming Languages and Operating Systems (ASPLOS '18)},
+  year      = {2018},
+  pages     = {405--418},
+  publisher = {ACM},
+  address   = {New York, NY, USA},
+  doi       = {10.1145/3173162.3177156}
+}
+
+    @article{10.1145/2627752,
+    author = {Alglave, Jade and Maranget, Luc and Tautschnig, Michael},
+    title = {Herding Cats: Modelling, Simulation, Testing, and Data Mining for Weak Memory},
+    year = {2014},
+    issue_date = {July 2014},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    volume = {36},
+    number = {2},
+    issn = {0164-0925},
+    url = {https://doi.org/10.1145/2627752},
+    doi = {10.1145/2627752},
+    abstract = {We propose an axiomatic generic framework for modelling weak memory. We show how to instantiate this framework for Sequential Consistency (SC), Total Store Order (TSO), C++ restricted to release-acquire atomics, and Power. For Power, we compare our model to a preceding operational model in which we found a flaw. To do so, we define an operational model that we show equivalent to our axiomatic model.We also propose a model for ARM. Our testing on this architecture revealed a behaviour later acknowledged as a bug by ARM, and more recently, 31 additional anomalies.We offer a new simulation tool, called herd, which allows the user to specify the model of his choice in a concise way. Given a specification of a model, the tool becomes a simulator for that model. The tool relies on an axiomatic description; this choice allows us to outperform all previous simulation tools. Additionally, we confirm that verification time is vastly improved, in the case of bounded model checking.Finally, we put our models in perspective, in the light of empirical data obtained by analysing the C and C++ code of a Debian Linux distribution. We present our new analysis tool, called mole, which explores a piece of code to find the weak memory idioms that it uses.},
+    journal = {ACM Trans. Program. Lang. Syst.},
+    month = jul,
+    articleno = {7},
+    numpages = {74},
+    keywords = {Concurrency, software verification, weak memory models}
+    }
+
+      
+
+@inproceedings{10.1145/2676726.2676995,
+author = {Vafeiadis, Viktor and Balabonski, Thibaut and Chakraborty, Soham and Morisset, Robin and Zappa Nardelli, Francesco},
+title = {Common Compiler Optimisations are Invalid in the C11 Memory Model and what we can do about it},
+year = {2015},
+isbn = {9781450333009},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2676726.2676995},
+doi = {10.1145/2676726.2676995},
+abstract = {We show that the weak memory model introduced by the 2011 C and C++ standards does not permit many common source-to-source program transformations (such as expression linearisation and "roach motel" reorderings) that modern compilers perform and that are deemed to be correct. As such it cannot be used to define the semantics of intermediate languages of compilers, as, for instance, LLVM aimed to. We consider a number of possible local fixes, some strengthening and some weakening the model. We evaluate the proposed fixes by determining which program transformations are valid with respect to each of the patched models. We provide formal Coq proofs of their correctness or counterexamples as appropriate.},
+booktitle = {Proceedings of the 42nd Annual ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages},
+pages = {209–220},
+numpages = {12},
+keywords = {weak memory models, program transformations, concurrency, compilers, c/c++},
+location = {Mumbai, India},
+series = {POPL '15}
+}
+
+
+@article{10.1145/3458926ArmedCat,
+author = {Alglave, Jade and Deacon, Will and Grisenthwaite, Richard and Hacquard, Antoine and Maranget, Luc},
+title = {Armed Cats: Formal Concurrency Modelling at Arm},
+year = {2021},
+issue_date = {June 2021},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {43},
+number = {2},
+issn = {0164-0925},
+url = {https://doi.org/10.1145/3458926},
+doi = {10.1145/3458926},
+abstract = {We report on the process for formal concurrency modelling at Arm. An initial formal consistency model of the Arm achitecture, written in the cat language, was published and upstreamed to the herd+diy tool suite in 2017. Since then, we have extended the original model with extra features, for example, mixed-size accesses, and produced two provably equivalent alternative formulations.In this article, we present a comprehensive review of work done at Arm on the consistency model. Along the way, we also show that our principle for handling mixed-size accesses applies to x86: We confirm this via vast experimental campaigns. We also show that our alternative formulations are applicable to any model phrased in a style similar to the one chosen by Arm.},
+journal = {ACM Trans. Program. Lang. Syst.},
+month = jul,
+articleno = {8},
+numpages = {54},
+keywords = {Concurrency Weak memory models, arm architecture, linux, mixed-size accesses}
+}
+
+
+@phdthesis{DennisPhdThesis,
+title = "Correct Translation between Weak Memory Model Architectures",
+abstract = "This dissertation is about translating concurrent programs between computer architectures. Legacy programs—built-for and tested-on x86—behave differently on newer architectures, such as Arm and RISC-V. Particularly, weak memory behaviors emerge when two micro-architectural features interact: (i) concurrency, where multiple CPU cores simultaneously execute parts of a program, and (ii) out-of-order execution, where a CPU core reorders instructions to increase throughput. Programs can non-deterministically show one of various weak memory behaviors, meaning it could behave differently when executing again. Those behaviors differ between architectures. When migrating programs from x86 to Arm or RISC-V, the same program could non-deterministically show behaviors never observed on x86.In part I, we look at binary translators, which are software systems that translate compiled binary programs between architectures. We study the translation process of three such real-world systems, identify errors in their translation of concurrency primitives, and fix them. We propose mathematically-rigorous weak memory models for these translators. We then define mapping schemes to translate concurrency primitives one-by-one from x86 to Arm and RISC-V. With the formal semantics, we prove those mapping schemes correct in the Agda proof assistant.In part II, we study the common structure of our weak memory proofs written in Agda. As those proofs are often large, complex, and rigid, we identify their common structures for which we identify domain-specific abstractions. We implement those abstractions in our novel Agda proof framework Burrow to greatly simplify writing future weak memory proofs.In part III, we use dynamic analysis to identify weak behaviors that were never seen on x86 but could appear on Arm. Our analysis simulates the program{\textquoteright}s execution with the formal weak memory semantics of x86 and Arm. This analysis identifies only the new behaviors the program shows in practice. After finding any new behavior on Arm, we judiciously modify the program to eliminate only that behavior.",
+keywords = "weak memory, formal verification",
+author = "D.G. Sprokholt",
+year = "2025",
+doi = "10.4233/uuid:8dc4a658-85bf-4243-993c-2bb511abe5f1",
+language = "English",
+type = "Dissertation (TU Delft)",
+school = "Delft University of Technology",
+
+}
+
+
+@article{10.1145/3140587.3062352Reparing,
+author = {Lahav, Ori and Vafeiadis, Viktor and Kang, Jeehoon and Hur, Chung-Kil and Dreyer, Derek},
+title = {Repairing sequential consistency in C/C++11},
+year = {2017},
+issue_date = {June 2017},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {52},
+number = {6},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/3140587.3062352},
+doi = {10.1145/3140587.3062352},
+abstract = {The C/C++11 memory model defines the semantics of concurrent memory accesses in C/C++, and in particular supports racy "atomic" accesses at a range of different consistency levels, from very weak consistency ("relaxed") to strong, sequential consistency ("SC"). Unfortunately, as we observe in this paper, the semantics of SC atomic accesses in C/C++11, as well as in all proposed strengthenings of the semantics, is flawed, in that (contrary to previously published results) both suggested compilation schemes to the Power architecture are unsound. We propose a model, called RC11 (for Repaired C11), with a better semantics for SC accesses that restores the soundness of the compilation schemes to Power, maintains the DRF-SC guarantee, and provides stronger, more useful, guarantees to SC fences. In addition, we formally prove, for the first time, the correctness of the proposed stronger compilation schemes to Power that preserve load-to-store ordering and avoid "out-of-thin-air" reads.},
+journal = {SIGPLAN Not.},
+month = jun,
+pages = {618–632},
+numpages = {15},
+keywords = {sequential consistency, declarative semantics, Weak memory models, C++11}
+}
+
+
+@misc{catOnlineDocHerd,
+  title        = {herdtools7 documentation (Cat language reference)},
+  howpublished = {Online documentation},
+  note         = {\url{https://diy.inria.fr/doc/herd.html}}
+}
+
+@misc{catManualSyntax11,
+  title        = {Cat Syntax (version 1.1)},
+  howpublished = {HSA Foundation technical document},
+  year         = {2021},
+  note         = {\url{https://hsafoundation.com/wp-content/uploads/2021/02/cat_Syntax-1.1.pdf}}
+}
+
+@inproceedings{deMoura2021lean4,
+  author    = {de Moura, Leonardo and Ullrich, Sebastian},
+  title     = {The Lean 4 Theorem Prover and Programming Language},
+  booktitle = {CADE 28},
+  year      = {2021}
+}
+
+@inproceedings{mathlib2020,
+  author    = {Avigad, Jeremy and Carneiro, Mario},
+  title     = {The {Lean} Mathematical Library},
+  booktitle = {CPP 2020},
+  year      = {2020}
+}
+
+@article{10.1145/3110278Lean4Meta,
+author = {Ebner, Gabriel and Ullrich, Sebastian and Roesch, Jared and Avigad, Jeremy and de Moura, Leonardo},
+title = {A metaprogramming framework for formal verification},
+year = {2017},
+issue_date = {September 2017},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {1},
+number = {ICFP},
+url = {https://doi.org/10.1145/3110278},
+doi = {10.1145/3110278},
+abstract = {We describe the metaprogramming framework currently used in Lean, an interactive theorem prover based on dependent type theory. This framework extends Lean's object language with an API to some of Lean's internal structures and procedures, and provides ways of reflecting object-level expressions into the metalanguage. We provide evidence to show that our implementation is performant, and that it provides a convenient and flexible way of writing not only small-scale interactive tactics, but also more substantial kinds of automation.},
+journal = {Proc. ACM Program. Lang.},
+month = aug,
+articleno = {34},
+numpages = {29},
+keywords = {dependent type theory, metaprogramming, tactic language, theorem proving}
+}
+
+
+@article{10.1145/1993316.1993520,
+author = {Sarkar, Susmit and Sewell, Peter and Alglave, Jade and Maranget, Luc and Williams, Derek},
+title = {Understanding POWER multiprocessors},
+year = {2011},
+issue_date = {June 2011},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {46},
+number = {6},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/1993316.1993520},
+doi = {10.1145/1993316.1993520},
+abstract = {Exploiting today's multiprocessors requires high-performance and correct concurrent systems code (optimising compilers, language runtimes, OS kernels, etc.), which in turn requires a good understanding of the observable processor behaviour that can be relied on. Unfortunately this critical hardware/software interface is not at all clear for several current multiprocessors.In this paper we characterise the behaviour of IBM POWER multiprocessors, which have a subtle and highly relaxed memory model (ARM multiprocessors have a very similar architecture in this respect). We have conducted extensive experiments on several generations of processors: POWER G5, 5, 6, and 7. Based on these, on published details of the microarchitectures, and on discussions with IBM staff, we give an abstract-machine semantics that abstracts from most of the implementation detail but explains the behaviour of a range of subtle examples. Our semantics is explained in prose but defined in rigorous machine-processed mathematics; we also confirm that it captures the observable processor behaviour, or the architectural intent, for our examples with an executable checker. While not officially sanctioned by the vendor, we believe that this model gives a reasonable basis for reasoning about current POWER multiprocessors.Our work should bring new clarity to concurrent systems programming for these architectures, and is a necessary precondition for any analysis or verification. It should also inform the design of languages such as C and C++, where the language memory model is constrained by what can be efficiently compiled to such multiprocessors.},
+journal = {SIGPLAN Not.},
+month = jun,
+pages = {175–186},
+numpages = {12},
+keywords = {relaxed memory models, semantics}
+}
+
+@inproceedings{10.1145/1993498.1993520OperationalModel,
+author = {Sarkar, Susmit and Sewell, Peter and Alglave, Jade and Maranget, Luc and Williams, Derek},
+title = {Understanding POWER multiprocessors},
+year = {2011},
+isbn = {9781450306638},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/1993498.1993520},
+doi = {10.1145/1993498.1993520},
+abstract = {Exploiting today's multiprocessors requires high-performance and correct concurrent systems code (optimising compilers, language runtimes, OS kernels, etc.), which in turn requires a good understanding of the observable processor behaviour that can be relied on. Unfortunately this critical hardware/software interface is not at all clear for several current multiprocessors.In this paper we characterise the behaviour of IBM POWER multiprocessors, which have a subtle and highly relaxed memory model (ARM multiprocessors have a very similar architecture in this respect). We have conducted extensive experiments on several generations of processors: POWER G5, 5, 6, and 7. Based on these, on published details of the microarchitectures, and on discussions with IBM staff, we give an abstract-machine semantics that abstracts from most of the implementation detail but explains the behaviour of a range of subtle examples. Our semantics is explained in prose but defined in rigorous machine-processed mathematics; we also confirm that it captures the observable processor behaviour, or the architectural intent, for our examples with an executable checker. While not officially sanctioned by the vendor, we believe that this model gives a reasonable basis for reasoning about current POWER multiprocessors.Our work should bring new clarity to concurrent systems programming for these architectures, and is a necessary precondition for any analysis or verification. It should also inform the design of languages such as C and C++, where the language memory model is constrained by what can be efficiently compiled to such multiprocessors.},
+booktitle = {Proceedings of the 32nd ACM SIGPLAN Conference on Programming Language Design and Implementation},
+pages = {175–186},
+numpages = {12},
+keywords = {relaxed memory models, semantics},
+location = {San Jose, California, USA},
+series = {PLDI '11}
+}
+
+
+
+

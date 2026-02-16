@@ -1,0 +1,243 @@
+\chapter{Implementations in Lean 4}
+\label{chapter:design}
+
+\section{Weak Memory Mechanization}
+When we work with pen and paper, we usually do not focus on the subtle parts of a proof; instead, we prioritize the interesting aspects. In contrast, mechanization requires us to define every detail of the specification. These challenges are independent of the particular proof assistant we choose, so we propose a general design whose ideas can be easily implemented in other languages. In this section, we identify and clarify the issues involved in mechanizing weak memory models and show how we address them using Lean 4’s existing MathLib and Meta-Programming framework [\citet{deMoura2021lean4,10.1145/3110278Lean4Meta,mathlib2020}].
+
+\paragraph{Running example (Cat definitions).}
+We use the Cat definitions of sequential consistency (\textsc{sc}) and total store order (\textsc{tso}) as our running example throughout this chapter (Figures~\ref{fig:cat-sc} and~\ref{fig:cat-tso}). Our goal is to formalize these definitions in Lean and prove that every \textsc{sc}-consistent execution is also \textsc{tso}-consistent.
+\begin{figure}[t]
+  \centering
+  \begin{minipage}{0.95\linewidth}
+\begin{verbatim}
+include "cos.cat"
+let com = rf | fr | co
+acyclic po | com as sc
+\end{verbatim}
+  \end{minipage}
+  \caption{Cat definition of sequential consistency (\textsc{sc}).}
+  \label{fig:cat-sc}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \begin{minipage}{0.95\linewidth}
+\begin{verbatim}
+include "cos.cat"
+let com-tso = rf | co | fr
+let po1-tso = po & (W*W | R*M)
+let ghb = po1-tso | com-tso
+acyclic ghb as tso
+\end{verbatim}
+  \end{minipage}
+  \caption{Cat definition of total store order (\textsc{tso}).}
+  \label{fig:cat-tso}
+\end{figure}
+
+\subsection{Core Types for Memory Models in Lean 4}
+\label{sec:design:core-types}
+To compare two different memory models, we need to define the data types we operate on firstly. We use \citet{catOnlineDocHerd,catManualSyntax11} as our reference. The \citet{catManualSyntax11} defines the syntax and semantics of the Cat language in a formal way, but it is not always up to date. For example, it does not define the \texttt{[]} unary operator, while the \citet{catOnlineDocHerd} defines it and is continuously updated. Therefore, most of the time we use the online documentation as our primary reference.
+
+Besides the documentation, some aspects of the Cat language are implicit. For example, the manual presents the ``semantics of instructions'' as follows \citet{catManualSyntax11}:
+\begin{quote}\small
+\begin{verbatim}
+instructions aevt [annotation 1, ..., annotation n]K X <j, f, rho, omega>,
+  let typei : Ti = Jannotation iK X <j, f, rho, omega>, i in [1, n] in
+  if forall i in [1, n]. typei = set /\
+     forall type' : t in Ti. type' = tag /\
+     forall e in evts-of(X). (kind-of(e) = aevt) ->
+       (forall i in [1, n]. annot-of(e)i in Ti)
+  then <j, f, rho, omega>
+  else error.
+\end{verbatim}
+\end{quote}
+This mainly specifies when a Cat program should return an error state, rather than giving a complete, executable meaning. As a result, we must make additional design choices to turn such fragments into a usable semantics. Besides this, there are other implicit definitions, which we discuss in the definitions section.
+
+\textbf{Event and Set}
+Events and sets of events are the most fundamental data types in the Cat language: Cat defines predicates and binary relations over them in \citet{catOnlineDocHerd}. One event represents an instruction, so it has an ID, a thread ID, an address, a value, etc. We can represent the thread ID and the ID using \texttt{Nat}, but the address and value are not fixed by Cat. Different architectures may have different address spaces; for example, some machines use 32-bit addresses, while others use 64-bit addresses or even wider representations. Similarly, values may range over signed integers or floating-point numbers. These details are intentionally left unspecified by Cat \citet{catOnlineDocHerd,catManualSyntax11}.
+
+However, addresses and values are irrelevant to the problem we want to solve. LeanCat works at a high level of abstraction: we do not need to generate a DSL or assembly code to simulate litmus tests; instead, we only care about the execution graph and the relations between instructions in the program. Therefore, in our design we use \texttt{Nat} to represent both addresses and values.
+
+In cat, we use Set in Lean 4 to organize the events, and there are some primitive set of events like W (All the write events), R (All the read events), F (All the fence events), etc. These events are gathered from the herd7 tools for each litmus tests, and they call them anarchical semantics, we can simply treat them as the input of the model. Besides the primitive events, there are some sets are composed by these primitive sets, for example, the M (Set of modification events) is the union of the W and R. Besides that, there are some user defined sets, these sets are an important part of the LKMM model, the users defined these sets by the tag in the event.
+
+We don't use the tags in comparing the tso and sc, but it's worth to talk about them because of the importance. The user can use the `enum` to define the tags, for example: enum Barriers = 'wmb || 'rmb || 'MB. And the user can also specify which primitive set can bear the tags by using `instructions', like: instructions F[Barriers], and the design of the tag is used in the litmus test by specifying the where the users want to collect these events, like F['wmb], then the the herd7 will feed all the Events in that specific location in F, this can also give us a assumption that 'wmb is subset of F.
+
+There are some design choices we need to clarify, that is if one event can have multiple tags? There is no explaination in cat langauge, we need to find a way to confirm it. The place where the cat model gets the tags are from the litmus tests where the user specify which place they want to have a tag, and in that case only one tag is possible to attach, and also the instructions set on the specific location doesn't intersect with the instructions set on the other location, so in this case, we assume that event has only one tag in most cases.
+
+\textbf{Candidate Execution}
+Candidate executions play a crucial role in the Cat language: they represent a specific possible execution and may comprise an execution graph. \citet{catManualSyntax11} abstracted each execution as a candidate execution, providing sets of events, each of which satisfies a specific property, such as read-from, initial writes, and so on. We represent these sets in a separate way: a candidate execution contains a set of events as a parameter, and it also includes primitive relations that can be used to filter these events.
+
+In addition to these definitions, we treat the coherence order and from-read relations as primitive relations, following their definitions in the Cat standard library. The standard library defines the coherence order as a series of computations, but this computation is difficult to represent in Lean~4. For example, defining the coherence order requires the use of an operation called \texttt{cross}:
+\[
+  \mathit{cross}(S_1 \mathbin{+\!\!+} S)
+  \;=\;
+  \bigcup_{\substack{e_1 \in S_1 \\ t \in \mathit{cross}(S)}}
+  \left\{
+    e_1 \cup t
+  \right\}.
+\]
+
+In the definition above, $\mathit{cross}(S_1 \mathbin{+\!\!+} S)$ is constructed by taking the set of all unions of one relation $e_1$ chosen from $S_1$ and one relation $t$ chosen from $\mathit{cross}(S)$. This computation is difficult to represent and reason about effectively. First, it is unclear how to express it using the current definitions of sets in Lean. Second, all of its associated properties would need to be proved explicitly, while providing limited practical benefit. Therefore, for most relations of this kind in the standard library, we define them directly as primitive relations.
+
+We define the candidate execution as follows:
+\begin{verbatim}
+structure CandidateExecution
+  (evts : Events)
+  [IsStrictTotalOrder Event (preCo evts)]
+  where
+  (evts : Events)
+  (_po : Rel Event Event)
+  (_rf : Rel Event Event)
+  (_fr : Rel Event Event)
+  (_IW : Set Event)
+\end{verbatim}
+
+The underscores in the front of the relations are used to avoid the conflicts with Macros (We will explain this later). The relation \texttt{preCo} is defined as:
+\begin{verbatim}
+structure preCo (evts : Events) (e₁ e₂ : Event) : Prop where
+  lIn : e₁ \in evts
+  rIn : e₂ \in evts
+  lWrite : isWrite e₁
+  rWrite : isWrite e₂
+\end{verbatim}
+
+We require the \texttt{preCo} constraint in order to introduce the coherence order relation, since it naturally satisfies the properties of a strict total order. Intuitively, the coherence order represents a sequence of write events to the same memory location. As such, it is transitive: if one write overwrites another, and that write in turn overwrites a third, then the first write necessarily overwrites the third. It is also irreflexive: since the coherence order relates two distinct instructions, it is impossible for an instruction to overwrite itself, or for two instructions to overwrite each other in both directions.
+
+\textbf{Model the models}
+Now that we have the primitive types, we need a way to connect them. We can reuse existing definitions from Mathlib for working with \texttt{Set} and \texttt{Rel}, and then describe \textsc{tso} and \textsc{sc} using these functions.
+
+The following is the standard Cat definition of sequential consistency (\textsc{sc}; see Figure~\ref{fig:cat-sc}). We ignore the \texttt{include} directive here, since we model the relations imported from \texttt{cos.cat} as primitives. The first statement, \texttt{let com = rf | fr | co}, introduces a name for the expression on the right-hand side; in Lean, this can be represented with a \texttt{def}. The operator \texttt{|} is relational union. Since Mathlib does not provide union and intersection for relations out of the box, we define them as follows:
+\begin{verbatim}
+def union (r1 r2 : Rel Event Event) : Rel Event Event :=
+  fun x y => r1 x y \/ r2 x y
+
+def inter (r1 r2 : Rel Event Event) : Rel Event Event :=
+  fun x y => r1 x y /\ r2 x y
+
+instance : Union (Rel Event Event) := ⟨union⟩
+instance : Inter (Rel Event Event) := ⟨inter⟩
+\end{verbatim}
+With these instances, Lean can use the usual notation (e.g., $r_1 \cup r_2$ and $r_1 \cap r_2$) to combine relations.
+
+The most important proposition is \emph{acyclicity}, and there are other propositions that are also useful in proofs, such as \emph{irreflexivity}. For a relation $r : \mathrm{Event} \to \mathrm{Event} \to \mathrm{Prop}$, we define acyclicity as
+\[
+  \mathit{Acyclic}(r)
+  \;:\!\!\iff\;\;
+  \forall a : \mathrm{Event},\; \neg\,\mathrm{Relation.TransGen}\; r\; a\; a.
+\]
+Intuitively, this means that if we follow edges of $r$, we can never return to the starting event (i.e., there is no directed cycle). This is the Cat-style formulation of acyclicity \citep{catManualSyntax11,catOnlineDocHerd}. Another useful proposition is irreflexivity,
+\[
+  \mathit{Irreflexive}(r) \;:\!\!\iff\; \forall a : \mathrm{Event},\; \neg\, r\; a\; a,
+\]
+which is already provided by Mathlib \citep{mathlib2020}.
+
+Next, consider total store order (\textsc{tso}; see Figure~\ref{fig:cat-tso}). Compared to sequential consistency, its Cat definition uses additional operators, most notably relational intersection (written \texttt{\&} in Cat, corresponding to $\cap$) and Cartesian products of event sets (written \texttt{*} in Cat). If $S_1,S_2 \subseteq \mathrm{Event}$ are sets of events, then their product induces a relation
+\[
+  S_1 \times S_2
+  \;:=\;
+  \{\,(e_1,e_2) \mid e_1 \in S_1 \wedge e_2 \in S_2\,\}.
+\]
+In Lean, we implement this idea either via a definition
+\begin{verbatim}
+def prod (s1 s2 : Set Event) : Rel Event Event :=
+  fun e1 e2 => e1 \in s1 /\ e2 \in s2
+\end{verbatim}
+or directly via \texttt{Set.prod}; LeanCat uses \texttt{Set.prod} to reuse existing Mathlib lemmas \citep{mathlib2020}.
+
+\textbf{Well-formedness} Besides these basic definitions, we need to add more properties to make sense for an execution.
+
+\subsection{Connect Lean and Cat}
+Now that we know how to represent the types and operators of the Cat language in Lean~4, we need a way to turn this representation into a convenient DSL inside Lean. In principle, we could use the data structures defined above to encode each memory model manually and then prove properties about it. However, our goal is to reuse existing Cat specifications (e.g., Figures~\ref{fig:cat-sc} and~\ref{fig:cat-tso}), rather than rewriting them by hand \citep{catOnlineDocHerd,catManualSyntax11}.
+
+To parse Cat files, there are several possible implementation strategies. For example, we could use an external parser (in OCaml, Rust, or C/C++) to translate Cat into an intermediate representation (such as an AST) and then generate Lean code. Instead, we rely on Lean~4's metaprogramming framework and implement the parsing pipeline inside Lean itself, which removes one translation layer and lets the kernel type-check the elaborated result \citep{10.1145/3110278Lean4Meta,deMoura2021lean4}.
+
+More concretely, after parsing, our macros and elaborator code produce ordinary Lean definitions (e.g., \texttt{def}s of relations and consistency predicates). These generated definitions are then checked by the Lean~4 kernel just like handwritten code: if a macro expands into an ill-typed term (for example, a relation with the wrong domain/codomain, or a definition that uses an operator at an incompatible type), the kernel rejects it and the model fails to elaborate. In this sense, the kernel provides a sound defense: the trusted computing base is the small kernel, not the parsing/translation code that merely constructs candidate terms \citep{10.1145/3110278Lean4Meta,deMoura2021lean4}.
+
+This is important for our running example (Figures~\ref{fig:cat-sc} and~\ref{fig:cat-tso}): once \textsc{sc} and \textsc{tso} are elaborated into Lean definitions, any theorem we prove about them is a proof term checked by the kernel. In particular, a statement such as \textsc{sc} $\Rightarrow$ \textsc{tso} is accepted only if the kernel verifies that the proof term has exactly the required type.
+
+Therefore, even if our macros are imperfect, they cannot silently ``prove'' false statements: at worst they generate ill-typed terms (which are rejected), or they generate a well-typed but unintended definition (which becomes a semantic bug that must be caught by testing and review, not by trusting the kernel).
+
+Lean can define grammars using \texttt{syntax} declarations and syntax categories. We implement a large subset of the Cat grammar; the supported subset is summarized in Section~\ref{sec:design:cat-subset}. This grammar layer allows Lean to recognize Cat tokens and build a \emph{concrete syntax tree} (CST), but it does not assign any semantics. To turn a CST into meaningful Lean definitions, we can use either macros or elaborator extensions.
+
+In this project, we primarily use macros, because they provide a direct mapping from Cat surface syntax to Lean definitions. For example, Cat \texttt{let} bindings can be translated into Lean \texttt{def} declarations in a syntax-directed way. While an AST-based approach could offer more control, it would require more global bookkeeping (e.g., managing the environment and name resolution) and would significantly increase complexity.
+
+We use \texttt{namespace}s to separate different memory models: each Cat model is elaborated into a corresponding Lean namespace. For example, the Cat \textsc{tso} fragment in Figure~\ref{fig:cat-tso} becomes a Lean namespace of the following form:
+\begin{verbatim}
+namespace TSO
+
+def com_tso := rf ∪ co ∪ fr
+
+def po1_tso := po ∩ (W * W ∪ R * M)
+
+def ghb := po1_tso ∪ com_tso
+
+def tso := Acyclic ghb
+
+end TSO
+\end{verbatim}
+We can then refer to the resulting definition as \texttt{TSO.tso}.
+
+\begin{itemize}
+  \item \textbf{What we model:}
+  \item \textbf{Why this representation:} explain the design goals (compositionality, reuse of Mathlib, proof automation).
+  \item \textbf{Comparison to alternatives:} e.g., deep embedding vs shallow embedding; inductive syntax trees vs typed structures.
+  \item \textbf{Limitations:} what becomes harder/verbose, and what is intentionally out of scope.
+\end{itemize}
+
+\subsection{Supported \texttt{cat} Subset (Targeting LKMM)}
+\label{sec:design:cat-subset}
+\begin{itemize}
+  \item \textbf{Goal:} a pragmatic subset sufficient for Linux Kernel Memory Model (LKMM) style specifications.
+  \item \textbf{Supported constructs:}
+    \begin{itemize}
+      \item relation definitions and basic combinators (union, intersection, difference, composition)
+      \item closures (reflexive/transitive as applicable)
+      \item checks/constraints expressed as acyclicity/irreflexivity/emptiness of derived relations
+      \item named sets/filters for events (as supported by our embedding)
+    \end{itemize}
+  \item \textbf{Unsupported or deferred:} list the remaining \texttt{cat} features we do not parse/elaborate.
+\end{itemize}
+
+\subsection{Embedding and Syntax Support in Lean 4}
+\label{sec:design:syntax}
+\begin{itemize}
+  \item \textbf{Approach:} a macro-based front-end that elaborates into typed Lean definitions.
+  \item \textbf{Design choices:}
+    \begin{itemize}
+      \item why macros (vs external parser, vs elaborator extensions only)
+      \item tags/labels: representation and ergonomics
+      \item namespace vs \texttt{section}: scoping, reuse, and hygiene
+    \end{itemize}
+  \item \textbf{Soundness story:} the Lean kernel checks the elaborated terms and rejects ill-typed specifications.
+\end{itemize}
+
+\subsection{Library Theorems and Proof Support}
+\label{sec:design:theorems}
+\begin{itemize}
+  \item \textbf{What we provide:} core lemmas about relations and closures used repeatedly in weak-memory proofs.
+  \item \textbf{Why these theorems:} they match recurring proof patterns in LKMM-style reasoning and reduce boilerplate.
+  \item \textbf{How they are used:} short examples of turning \texttt{cat}-style constraints into Lean proof obligations.
+\end{itemize}
+
+\subsection{Parsing/Elaboration Limitations and Intended Goals}
+\label{sec:design:limitations}
+\begin{itemize}
+  \item \textbf{Parsing limitations:} document Lean 4 macro/parser constraints (e.g., identifier syntax restrictions).
+  \item \textbf{Elaboration limitations:} what cannot be expressed/checked in our current embedding.
+  \item \textbf{Intended end goal:} enable proofs by comparing two architectures/models (refinement, implication of constraints).
+\end{itemize}
+
+\subsection{Case Study Plan}
+\label{sec:design:case-study}
+\begin{itemize}
+  \item Evaluate whether \textsc{sc} vs \textsc{tso} is a meaningful demonstration; otherwise compare a small x86-TSO fragment against a weaker model.
+  \item Include a small set of LKMM litmus tests encoded in Lean, and demonstrate checking a concrete execution graph.
+\end{itemize}
+
+\subsection{Tooling and Presentation (Future Work)}
+\label{sec:design:tooling}
+\begin{itemize}
+  \item Integrate an Infoview widget to render execution graphs during development.
+  \item Add end-to-end Lean examples for LKMM specifications and concrete executions.
+  \item Ensure citations use \texttt{\textbackslash citet} and verify naming consistency.
+\end{itemize}

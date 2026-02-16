@@ -1,0 +1,43 @@
+\chapter{Introduction}
+\label{chapter:introduction}
+\section{Motivation}
+Modern computer architectures run programs concurrently in shared memory. Under this model, subtle behaviors can lead to bugs and security issues; for instance, \citet{10.1145/2676726.2676995} show that many common compiler optimisations are invalid under the C11 memory model. To study such behaviours systematically, \citet{10.1145/2627752} introduced the diy7 toolchain and the Cat specification language for describing weak memory models. Cat represents an execution as a graph built from binary relations, which enables concise axiomatic specifications and supports formal reasoning. Using Cat-style relations, \citet{10.1145/3458926ArmedCat} developed and maintained an axiomatic formal model for Arm, and \citet{10.1145/3140587.3062352Reparing} proposed a repaired account of sequential consistency for C/C++11. However, mechanization and proof construction are orthogonal problems, and only a limited number of solutions address both simultaneously.
+
+Writing a proof for each architecture and each memory model on paper is time-consuming. Proof assistants can reduce boilerplate work by reusing existing proofs, and they also provide tactics to automate certain proof steps. In particular, \citet{10.1145/3110278Lean4Meta} present a metaprogramming framework for Lean, and Lean 4's expressive type system is well-suited to encoding the types and semantics of the Cat language. Many existing mechanizations focus only on the essential ideas and do not directly reuse Cat specifications. However, this approach introduces additional work because many memory models are already defined in Cat.
+
+The Arm team mechanized the ARMv8 memory model in RCoq \citet{10.1145/3458926ArmedCat}, but this work targets only Arm and does not provide a general framework. Similarly, in his PhD thesis, Dennis develops an Agda framework for verifying the correctness of transformations between architectures without relying on Cat files \citet{DennisPhdThesis}.
+
+In this project, we propose a domain-specific proof framework, LeanCat, to mechanize weak memory models in Lean 4. LeanCat relies on existing Cat files: it parses Cat specifications and introduces their semantics into Lean. It also provides necessary primitives and abstractions to help users prove interesting properties, such as whether one memory model is weaker than another. LeanCat greatly reduces the mechanization effort and the amount of boilerplate code required for weak memory transformation proofs.
+
+\section{Contributions}
+
+\section{Structrure of this thesis}
+
+%% Normal figure
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/Insert_image_here.png}
+  \caption{A single figure}
+  \label{fig:A single figure}
+\end{figure}
+
+%% Double figure
+\begin{figure}[H]
+  \begin{subfigure}{.5\textwidth}
+    \centering
+    \includegraphics[width=1\linewidth]{figures/Insert_image_here.png}
+    \caption{Left figure}
+    \label{fig:Left figure}
+  \end{subfigure}%
+  \begin{subfigure}{.5\textwidth}
+    \centering
+    \includegraphics[width=1\linewidth]{figures/Insert_image_here.png}
+    \caption{Right figure}
+    \label{fig:Right figure}
+  \end{subfigure}
+  \caption{Two figures side to side}
+  \label{fig:Two figures side to side}
+\end{figure}
+
+%% text generator
+\lipsum[1-3]

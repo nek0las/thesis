@@ -1,0 +1,168 @@
+\documentclass{layout/siccs-thesis}
+\usepackage{parskip} %Automatic blank lines if there is an enter
+%% for equations a  nice parameter description
+\newenvironment{conditions}
+{\par\vspace{\abovedisplayskip}\noindent
+\begin{tabular}{>{$}l<{$} @{${}={}$} l}}
+  {
+\end{tabular}\par\vspace{\belowdisplayskip}}
+
+%%  spacing before and after equations to the text
+\setlength{\abovedisplayskip}{8pt}
+\setlength{\belowdisplayskip}{8pt}
+
+%% top margin headheght
+\setlength{\headheight}{13.59999pt}
+
+%% Set up the bibliography
+% styles   https://de.overleaf.com/learn/latex/Biblatex_citation_styles
+% here is the used bibliography package
+%Originally \usepackage[style=authoryear,sorting=nyt,maxcitenames=3]{biblatex}
+\usepackage[style=ieee,maxcitenames=3]{biblatex}
+\addbibresource{references.bib}
+%% If you want to manually add you library from mendeley or other source
+% \addbibresource{mendeley.bib}
+
+% for spacing between references in the bibliography
+\setlength\bibitemsep{1.5\itemsep}
+
+% for the commas between author and year
+\DeclareDelimFormat{nameyeardelim}{\addcomma\space}
+
+% natbib-like aliases for biblatex
+\let\citet\textcite
+\let\citep\parencite
+
+% biblatex already formats names appropriately for \textcite/\parencite; keep defaults
+% (custom name-alias settings here can lead to malformed author output)
+
+%% Additional packages and commands
+
+%settings for the SI units
+\sisetup{locale = DE,
+  output-decimal-marker={.}, % because  in german is switched to {,}
+  separate-uncertainty=true,
+  multi-part-units=single,
+  range-units = single ,
+  list-units = single,
+  per-mode=reciprocal,
+  group-minimum-digits = 4,
+number-unit-product = \hspace{0.16667em plus 0.08334em}}
+
+%% here individual units are defined
+\DeclareSIUnit\equivalents{eq}
+\DeclareSIUnit\water{kgw}
+\DeclareSIUnit\year{yr}
+\DeclareSIUnit\dollar{\$}
+
+\setlist{itemsep=-2pt} % Reducing white space in lists slightly
+\renewcommand{\deg}{\si{\degree}\xspace} % Use \deg easily, everywhere
+
+%\usepackage{graphicx}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% Begin of document %%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+%% Roman page numbering
+\frontmatter
+
+%% Defining the main parameters
+\title{Mechanizing Weak Memory Models in Lean 4}
+\subtitle{Explanatory subtitle}
+\author{Zhiyang Wang}
+\studentnumber{student number}
+%\subject{A nice subject}
+\mastertrack{Computer System and Infrastructure}
+\affiliation{University of Amsterdam
+Vrije Universiteit Amsterdam}
+\companysupervisor{Andrés Goens}
+\firstsupervisor{Andrés Goens}
+\secondsupervisor{Andy D. Pimentel}
+\handindate{February 24, 2026}
+\studypoints{30 ECTS}
+\startenddate{September 2025 - February 2026}
+
+\definecolor{title}{HTML}{4884d6} % Color for title
+
+% title page
+\input{frontmatter/_titlepage}
+
+% abstract
+\input{frontmatter/abstract}
+
+\tableofcontents
+%\listoffigures
+%\listoftables
+
+\input{frontmatter/nomenclature}
+
+%% Arabic page numbering
+\mainmatter
+
+\input{content/introduction}
+
+The Cat file also has the standard library, we decided to model the std in the lean 4 instead of using the combinition of primitives.
+
+Note: Grammar fixed by Claude, the original was written by me.
+
+\textbf{Lemma 1 (Monotonicity of Acyclicity):}
+If $\text{Acyclic}(r_2)$ and $r_1 \subseteq r_2$, then $\text{Acyclic}(r_1)$.
+
+\textbf{Proof sketch:}
+Since transitive closure is monotone, $r_1 \subseteq r_2$ implies $r_1^+ \subseteq r_2^+$.
+If $r_2^+$ is irreflexive (i.e., $\text{Acyclic}(r_2)$), then any subset $r_1^+$
+must also be irreflexive, hence $\text{Acyclic}(r_1)$.
+\textit{(Formally verified in Lean 4; see [reference to your code]).}
+\qed
+
+\textbf{Theorem:} If SC is acyclic, then TSO is acyclic.
+
+\textbf{Proof:}
+We have $\text{TSO} \subseteq \text{SC}$ because:
+\begin{itemize}
+  \item $\text{po} \cap ((R \times W) \cup (W \times W)) \subseteq \text{po} \subseteq \text{SC}$
+  \item $\text{co} \subseteq \text{SC}$, $\text{fr} \subseteq \text{SC}$
+  \item $\text{rf} \cap \text{external} \subseteq \text{rf} \subseteq \text{SC}$
+\end{itemize}
+By Lemma 1, $\text{Acyclic}(\text{SC})$ implies $\text{Acyclic}(\text{TSO})$.
+\textit{(Formally verified in Lean 4; see [reference]).}
+\qed
+
+\input{content/lean}
+
+%\input{content/chapter-2}
+%\input{content/chapter-3}
+%\input{mainmatter/chapter-4} % Create file to add
+
+\input{content/design}
+
+\input{content/results}
+
+\input{content/discussion}
+
+\input{content/conclusion}
+
+\newpage
+\setcounter{secnumdepth}{-1}
+\input{content/acknowledgement}
+
+%% Prevent urls running into margins in bibliography
+\setcounter{biburlnumpenalty}{7000}
+\setcounter{biburllcpenalty}{7000}
+\setcounter{biburlucpenalty}{7000}
+
+%%  Add the bibliography
+\printbibliography[heading=bibintoc,title=References]
+
+% Letters for chapters
+\appendix
+
+\setcounter{secnumdepth}{2}
+
+%\input{appendix/versicherung.tex}
+\input{appendix/appendix-a}
+
+\end{document}
