@@ -6,14 +6,16 @@ In this chapter we will introduce the weak memory, the Lean 4 programming langau
 \section{Weak Memory Model}
 There was a widely held belief in the software community that we did not need to optimize software; we could focus on abstraction, and hardware improvements would deliver performance gains for us. This belief largely held during the single-threaded era, when increasing clock speeds and improved microarchitectures steadily accelerated programs. However, when single-core processors hit power and energy-efficiency limits, hardware designers shifted toward adding more cores to improve performance. At that point, synchronization and memory-consistency abstractions were not yet well defined for compiler and system engineers. Vendors relied heavily on experience and natural-language descriptions to explain hardware behavior. Because natural language is inherently ambiguous, it became difficult to reason precisely about many concurrent program behaviors.
 
+
 The compiler will normally optimize the code aggressively for performance as long as the programmer can’t observe the difference between the unoptimized and optimized code, but in fact, the code is not equivalent. In a uniprocessor system it works fine, but when it comes to a multithreaded program the code can cause bugs. Also, the hardware itself will run the program out of order to optimize execution, or just speculatively execute. Optimizing compilers have great freedom in the way they translate source code to object code. They are allowed to apply transformations that add memory accesses, eliminate accesses, combine them, split them into pieces, or move them around.
 
-Let’s consider the following example:
+\begin{figure}[h]
+\centering
 \[
+\begin{array}{c}
 \text{Initially: } X = 0,\; Y = 0
-\]
-
-\[
+\end{array}
+\qquad
 \begin{array}{c|c}
 \text{Thread 0} & \text{Thread 1} \\
 \hline
@@ -21,58 +23,534 @@ X := 1          & Y := 1 \\
 a := Y          & b := X
 \end{array}
 \]
-This is a Store-Buffering program in which the variables X and Y are initialized to 0. Each thread first assigns the value 1 to one variable and then reads the other variable. From the programmer’s perspective, one might expect both a and b to be 1, assuming the program executes in the order in which the operations are written. However, due to underlying hardware architectures and compiler optimizations, this assumption does not necessarily hold. It is possible for both a and b to be 0, and it is also possible for a and b to observe different values.
+\caption{Store-Buffering litmus test}
+\label{fig:litmus-test}
+\end{figure}
 
-To help describe these weak memory behaviors, Jade proposed an axiomatic semantics called Cat, which uses binary relations. In the next section, we introduce this axiomatic semantics and its specification language (Cat) in section \ref{Background:AWMM}.
+Let’s consider the following example in Figure \ref{fig:litmus-test}. It is a Store-Buffering program in which the variables X and Y are initialized to 0. Each thread first assigns the value 1 to one variable and then reads the other variable. From the programmer’s perspective, one might expect both a and b to be 1 if the program executes in the order in which the operations are written. However, due to underlying hardware memory models and possible instruction reordering, this assumption does not necessarily hold. It is possible for both a and b to be 0, and it is also possible for a and b to observe different values. For instance, we may non-deterministically observe one of the following interleaving orders, marked with solid arrows: 
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    node distance=1cm,
+    event/.style={draw, rectangle, minimum width=0.5cm, minimum height=0.5cm},
+    po/.style={->, thick},
+    rf/.style={->, dashed, thick}
+]
+
+% Initial writes (merged)
+\node[event] (init) {Init: $X=0, Y=0$};
+
+% Thread 0
+\node[event, below left=1cm and 0.5cm of init] (wx1) {$W(X)=1$};
+\node[event, below=of wx1] (ry1) {$R(Y)=1$};
+
+% Thread 1
+\node[event, below right=1cm and 0.5cm of init] (wy1) {$W(Y)=1$};
+\node[event, below=of wy1] (rx1) {$R(X)=1$};
+
+% Program order
+\draw[po] (wx1) -- (wy1);
+\draw[po] (wy1) -- (rx1);
+\draw[po] (init) -- (wx1);
+\draw[po] (rx1) -- (ry1);
+
+% Read-from relations
+\draw[rf] (wy1) -- (ry1);
+\draw[rf] (wx1) -- (rx1);
+
+\end{tikzpicture}
+\caption{Execution Order with X = 1 and Y = 1}
+\label{fig:litmus-execution-1-1}
+\end{figure}
+
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    node distance=1cm,
+    event/.style={draw, rectangle, minimum width=0.5cm, minimum height=0.5cm},
+    po/.style={->, thick},
+    rf/.style={->, dashed, thick}
+]
+
+% Initial writes (merged)
+\node[event] (init) {Init: $X=0, Y=0$};
+
+% Thread 0
+\node[event, below left=1cm and 0.5cm of init] (wx1) {$W(X)=1$};
+\node[event, below=of wx1] (ry1) {$R(Y)=1$};
+
+% Thread 1
+\node[event, below right=1cm and 0.5cm of init] (wy1) {$W(Y)=1$};
+\node[event, below=of wy1] (rx1) {$R(X)=1$};
+
+% Program order
+\draw[po] (wx1) -- (ry1);
+\draw[po] (ry1) -- (wy1);
+\draw[po] (init) -- (wx1);
+
+% Read-from relations
+\draw[po] (wy1) -- (rx1);
+
+\draw[rf] (init) -- (ry1);
+\draw[rf] (wx1) -- (rx1);
+
+\end{tikzpicture}
+\caption{Execution Order with X = 0 and Y = 1}
+\label{fig:litmus-execution-0-1}
+\end{figure}
+
+Even though the order of instructions within each thread is preserved according to the program order, threads can interleave arbitrarily. The dashed read-from (rf) arrows indicate the relationship between write operations and subsequent reads of the same memory location in the interleaving. Depending on the specific interleaving, these read operations may observe values written by different write operations, resulting in distinct assignments to a and b upon termination. The formal study of the exact behaviours concurrent programs can exhibit is a field known as weak memory models.
+
+Memory models are generally categorized into two classes: operational and axiomatic. Operational models are described using buffers and queues and are abstractions derived from hardware behavior [\citet{10.1145/1993498.1993520OperationalModel}]. In contrast, axiomatic memory models specify disallowed program behaviors, usually by constraining relations on memory accesses [\citet{10.1145/2627752}]. In this thesis, we use an axiomatic memory model.
 
 \subsection{Axiomatic Weak Memory Model}
 \label{Background:AWMM}
-Memory models are generally categorized into two classes: operational and axiomatic. Operational models are described using buffers and queues; they are abstractions derived from hardware behavior \citet{10.1145/1993498.1993520OperationalModel}. Axiomatic memory models, in contrast, describe the disallowed behaviors of program executions, usually by constraining various relations on memory accesses \citet{10.1145/2627752}.
 
-The axiomatic model uses the Event as the primitive type, they use event to give sementics to each single instruction, the event contains the thread id, the address, the operation (Fence, read or write) and instruction value, etc. 
+In Figure \ref{fig:litmus-execution-1-1} and Figure \ref{fig:litmus-execution-0-1}, we use lines to show the execution order and write-read pairs. In axiomatic models, binary relations represent these lines, and Events represent nodes or instructions; together, these binary relations compose an execution graph. 
+
+Each event is used to represent the behavior of an instruction. For example, Event R is used to define a read instruction that reads a value from a location, and Event W is used to define a write instruction that writes a value to that location. These addresses are concrete values (e.g., 0x00000000), but for clarity of presentation we denote them using symbols (e.g., x, y) in the examples. These symbolic locations strictly represent distinct locations in memory (i.e., X and Y are strictly different). Each event also has an identifier that is unique within the execution.
+
+\subsubsection{Primitive Relations}
+
+The relations between events are distinguished as primitive relations and derived relations. The latter are entirely defined from the former and are composed of primitive relations. We also define some typical primitive relations\cite{10.1145/2627752}:
+
+\textbf{Program Order (po)}, relating events by their syntactic order: the order among instructions in the program text carries over to execution graphs with po edges. It is a total order per thread. In Figure \ref{fig:litmus-execution-0-1} and Figure \ref{fig:litmus-execution-1-1}, we have 4 events, the program order in thread 0 is e1 : W(x) = 1 then e2 : R(Y) = 1, and in thread 1 is e3 : W(Y) = 1 then e4 : R(X) = 1, we denote them as po(e1, e2) and po(e3, e4).
+
+\textbf{Read From (rf)}, which relates a W event to the R event reading from it. Every R event reads-from exactly one W event. For instance, when event e2 : R(X) = 1 reads 1 from location X, where that value was earlier written by e1 : W(X) = 1, then we have an rf edge from e1 to e2, alternatively denoted as rf(e1, e2).
+
+\textbf{Coherence Order (co)}, which relates a W event with a W event overwriting it. For instance, when event e3 : W(X, 1) first writes 1 to location X, which event e4 : W(X, 2) then overwrites with 2, then we have an edge co(e3, e4). Both co-related write events access the same location. Additionally, co is a total strict order per location.
+
+\textbf{Read Modify Write (rmw)}, relating the R and W of a successful atomic read-modify-write instruction (RMW). The RMW instructions are special instructions within architectures, where architectures can detect whether another thread modifies the written value in-between the atomic operation. The generated R and W events access the same location and are po-adjacent (i.e., there are no po-intermediate events).
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    node distance=1cm,
+    event/.style={draw, rectangle, minimum width=0.5cm, minimum height=0.5cm},
+    po/.style={->, thick},
+    rf/.style={->, dashed, thick},
+    co/.style={->, dotted, thick}
+]
+
+% Initial writes (merged)
+\node[event] (init) {Init: $X=0, Y=0$};
+
+% Thread 0
+\node[event, below left=1cm and 0.5cm of init] (wx1) {$W(X)=1$};
+\node[event, below=of wx1] (ry1) {$R(Y)=1$};
+
+% Thread 1
+\node[event, below right=1cm and 0.5cm of init] (wy1) {$W(Y)=1$};
+\node[event, below=of wy1] (rx1) {$R(X)=1$};
+
+% Program order
+\draw[co] (init) -- (wx1);
+\draw[co] (init) -- (wy1);
+\draw[po] (wx1) -- (ry1);
+\draw[po] (wy1) -- (rx1);
+
+% Read-from relations
+\draw[rf] (wy1) -- (ry1);
+\draw[rf] (init) -- (rx1);
+
+\end{tikzpicture}
+\caption{Execution Order with X = 0 and Y = 1}
+\label{fig:litmus-execution-primitive-relation}
+\end{figure}
+
+Using these primitive relations, we can represent executions of the Store Buffering litmus test. The execution orders are implicitly determined by these primitive relations. Figure~\ref{fig:litmus-execution-primitive-relation} shows one such execution, where the dotted lines represent the coherence order, the dashed lines represent the read-from relation, and the thick lines represent the program order. And one such an execution graph is called a \texttt{Candidate Execution}.
+
+A candidate execution consists of a set of events together with a collection of
+relations over these events. For example, it may be represented as
+\[
+X = \langle E, po, rf, co, rmw \rangle,
+\]
+where $E$ is a set of events and $po, rf, co, rmw \subseteq E \times E$ are
+relations over $E$. We do not fix the exact set of relations included in a candidate execution.
+Additional primitive relations may be introduced later, or some derived
+relations may be treated as primitive ones to simplify proofs.
+
+
+\subsubsection{Derived Relations}
+
+Some relations are composed based on the primitive relations. The following are commonly used derived relations:
+
+\textbf{From-read (fr)}: if a read instruction reads from a location that is later overwritten by another write, we relate these two events. For instance, consider $e_1 : r(x) = 1$, $e_2 : w(x) = 1$, and $e_3 : w(x) = 2$. Event $e_1$ first reads the value written by $e_2$, giving $rf(e_2, e_1)$. Later, this value is overwritten by $e_3$, giving $co(e_2, e_3)$. The \texttt{fr} relation is therefore derived as $rf^{-1};co$. The $^{-1}$ is the inverse of a relation.
+
+\textbf{External relations} are relations between events from different threads. For instance, \texttt{rfe} consists of all \texttt{rf} edges between threads; \texttt{coe} denotes external \texttt{co}, and \texttt{fre} denotes external \texttt{fr}. Conversely, \texttt{internal relations} are relations between events within the same thread, such as \texttt{rfi}, \texttt{coi}, and \texttt{fri}. We consider initialization \texttt{W} events to be internal with events on any thread.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    node distance=1cm,
+    event/.style={draw, rectangle, minimum width=0.8cm, minimum height=0.6cm, align=center},
+    po/.style={->, thick},
+    rf-int/.style={->, dashed, thick, blue},
+    rf-ext/.style={->, dashed, thick, red},
+    fr/.style={->, densely dotted, thick, gray!70!black},
+    co/.style={->, dotted, thick}
+]
+
+% Initial state
+\node[event] (init) {Init\\$X=0, Y=0$};
+
+% Thread 0
+\node[event, below left=1.4cm and 1cm of init] (wx1) {$W(X)=1$};
+\node[event, below=1.2cm of wx1] (ry1) {$R(Y)=1$};
+
+% Thread 1
+\node[event, below right=1.4cm and 1cm of init] (wy1) {$W(Y)=1$};
+\node[event, below=1.2cm of wy1] (rx1) {$R(X)=1$};
+
+% Coherence order
+\draw[co] (init) -- (wx1) node[midway, above, sloped, font=\scriptsize] {co};
+\draw[co] (init) -- (wy1) node[midway, above, sloped, font=\scriptsize] {co};
+
+% Program order
+\draw[po] (wx1) -- (ry1) node[midway, left, font=\scriptsize] {po};
+\draw[po] (wy1) -- (rx1) node[midway, right, font=\scriptsize] {po};
+
+% Read-from relations
+\draw[rf-int] (wy1) -- (ry1)
+    node[midway, right, font=\scriptsize] {$rfe$};
+
+\draw[rf-ext] (init) -- (rx1)
+    node[midway, above, font=\scriptsize] {$rfi$};
+
+% From-read relations
+\draw[fr] (rx1) to[out=270, in=180] (wx1)
+    node[midway, below, font=\scriptsize] {fr};
+
+\end{tikzpicture}
+\caption{Execution with internal/external read-from ($rf$), from-read ($fr$), program order ($po$), and coherence order ($co$).}
+\label{fig:litmus-execution-with-derived-relation}
+\end{figure}
+
+We can redraw Figure~\ref{fig:litmus-execution-primitive-relation} with derived relations, as shown in Figure~\ref{fig:litmus-execution-with-derived-relation}. Observe that the \textit{fr} edges always follow backwards along an \textit{rf} edge and then forwards along a \textit{co} edge (i.e., $fr = rf^{-1};co$), thus relating a read to the write that overwrites it. For instance, in the left execution we can only read $0$ from $Y$ before overwriting $Y$ with $1$. All \textit{fr} relations in both executions are external, producing \textit{fre} arrows, while the \textit{co} relations are internal, producing \textit{coi} arrows.
+
+\subsubsection{Litmus Tests} 
+
+The Store Buffering example in Figure~\ref{fig:litmus-test} is often used together with a small concurrent program to demonstrate the possible behaviors of a memory model. And in these concurrent programs, the results are always non-deterministic. Such small programs are called litmus tests. We can observe these unexpected behaviors by running a litmus test on real hardware (e.g., RISC-V, Arm, x86, etc.).
+
+The Inria team~\citep{10.1145/2627752} developed a tool called \href{https://diy.inria.fr/}{DIY7} that automatically generates litmus tests for different architectures using their litmus program specifications. For example, the Store Buffering example in Figure~\ref{fig:litmus-test} on x86 can be represented as the following litmus test.
+
+Consider the following classical store-buffering litmus test, \texttt{SB.litmus}, for x86:
+
+\begin{verbatim}
+X86 SB
+"Fre PodWR Fre PodWR"
+{ x=0; y=0; }
+
+P0          | P1
+MOV [x],$1  | MOV [y],$1
+MOV EAX,[y] | MOV EAX,[x]
+
+exists (0:EAX=0 /\ 1:EAX=0)
+\end{verbatim}
+
+A litmus test specification typically consists of three main sections:
+
+\textbf{Initial state.} This section defines the initial values of registers and memory locations. Initialization to zero may be omitted.
+
+\textbf{Code section.} This section defines the code that is executed concurrently. In the example above, there are two threads.
+
+\textbf{Final condition.} This section specifies constraints on the final values of registers and memory locations.
+
+The DIY7 toolchains compile such litmus tests into real machine code and collect the results after running them a specific number of times. The semantics of a program is the set of all executions the program can exhibit when running on an architecture \cite{DennisPhdThesis}. 
+
+In the x86 SB example, the \texttt{MOV} instruction can be translated into read or write events. Based on this translation, events and relations between them are generated, while the computations in the program are ignored. The semantics then proposes the possible execution graphs, called candidate executions. We can subsequently use the memory model to determine whether any of the candidate executions are disallowed.
+
+The syntax and usage of litmus tests are not the main focus of this thesis. In \textsc{LeanCat}, we abstract litmus tests as a set of possible \texttt{candidate execution}s directly. Supporting the translation from architecture-specific instructions to candidate executions is time-consuming, and our main task is to compare different memory models. Therefore, we currently provide a set of initial \texttt{Candidate Execution} patterns and use vibe coding to generate litmus tests based on the patterns in Lean 4.
+
+\subsubsection{Memory Model Semantics}
+
+As we showed how to use the binary relations to draw a litmus test, we didn't demonstrate how to define a memory model. Inria team \cite{10.1145/2627752} developed a specification langauge called Cat, which uses the binary relations we said before to define the memory models, and there already existing lots memory models like RISC-V, Arm, X86-TSO [\ref{}] defined in Cat, in this section we introduce sequential consistency and total storing order memory models as they're simple.
+
+\citet{lam1675439} introduced what is called Sequential consistency: \textit{the result of any execution is the same as if the operations of all the processors were executed in some sequential order, and the operations of each individual processor appear in this sequence in the order specified by its program. A multiprocessor satisfying this condition will be called sequentially consistent.}
+
+The Sequential Consistency (SC) model is the most intuitive memory model for
+programmers. It states that the execution of a program must follow the order of
+instructions as specified in the program text, while the instructions from
+different threads may be interleaved with one another. In other words, all
+operations appear to execute in a single global sequence that preserves the
+program order of each individual thread.
+
+Let us return to the \textit{Store Buffering} example. Under Sequential
+Consistency, the only possible behaviors are those obtained by interleaving the
+instructions of the two threads while preserving the program order of each
+thread. In this case, there are six possible interleavings:
+
+\begin{enumerate}
+\item $W(x)=1 \;\rightarrow\; R(y) \;\rightarrow\; W(y)=1 \;\rightarrow\; R(x)$
+\item $W(x)=1 \;\rightarrow\; W(y)=1 \;\rightarrow\; R(y) \;\rightarrow\; R(x)$
+\item $W(x)=1 \;\rightarrow\; W(y)=1 \;\rightarrow\; R(x) \;\rightarrow\; R(y)$
+\item $W(y)=1 \;\rightarrow\; R(x) \;\rightarrow\; W(x)=1 \;\rightarrow\; R(y)$
+\item $W(y)=1 \;\rightarrow\; W(x)=1 \;\rightarrow\; R(y) \;\rightarrow\; R(x)$
+\item $W(y)=1 \;\rightarrow\; W(x)=1 \;\rightarrow\; R(x) \;\rightarrow\; R(y)$
+\end{enumerate}
+
+These interleavings preserve the program order within each thread while allowing
+instructions from different threads to be arbitrarily interleaved. As a result,
+every read observes the value written by the most recent write to the same
+location in the global execution order.
+
+To formalize Sequential Consistency, memory-model frameworks describe executions
+using relations between events. In particular, we define the \textit{communication}
+relation, denoted as \texttt{com}. This relation captures how memory operations
+interact across threads. It is defined as the union of three relations:
+
+\[
+\texttt{let com = rf \;|\; co \;|\; fr}
+\]
+
+These relations capture the ways in which operations in different threads
+communicate through shared memory. In addition to communication, we consider the \textit{program order} relation, denoted as \texttt{po}. This relation represents the order in which instructions
+appear in the program within a single thread and must always be preserved. Sequential Consistency can then be characterized by requiring that the union of
+these relations does not contain any cycles:
+
+\[
+\texttt{acyclic (po | com)}
+\]
+
+The acyclicity condition is important because these binary relations describe
+the data-flow between memory events. In particular, read events act as witnesses
+for the program behaviour, since each read obtains its value from a write event
+through the \texttt{rf} relation. This creates a flow of data between events,
+and these data-flow relations together constrain the possible ordering of
+events, from which a total order can be derived.
+
+However, if a cycle appears in these relations, the ordering constraints become
+inconsistent. For example, the \texttt{fr} relation represents that the value
+observed by a read is later overwritten by a newer write. If such an \texttt{fr}
+edge flows back to a previous event and forms a cycle with program order, it
+would imply that a later read in program order observes an older value, which
+violates Sequential Consistency. The complete SC model is defined as: 
+
+\begin{figure}[htbp]
+\centering
+\begin{verbatim}
+let com = rf | fr | co
+acyclic po | com as sc
+\end{verbatim}
+\caption{Definition of Sequential Consistency}
+\label{fig:sequential-consistency}
+\end{figure}
+
+Based on Sequential Consistency, we can build the Total Store Order (TSO)
+memory model. The TSO model can be described by a hardware model where each
+thread has a write buffer. A write instruction first stores its value into the
+buffer instead of writing directly to memory. Because write instructions are
+more expensive than reads, the processor can postpone the write and execute
+later read instructions first to improve performance. Figure~\ref{} shows this
+architecture diagram.
+
+From the programmer's perspective, the program allows the reordering of
+write--read pairs within a local thread. That is, a read instruction may happen
+before a write event that is \texttt{po}-before the read. Under Sequential
+Consistency this behavior is disallowed, so we need to relax the SC model. SC
+constrains the program order using the acyclicity condition. To allow this
+reordering, we remove write--read pairs from the program order constraint.
+Formally, we express this as \texttt{po \textbackslash (W;R)}, where \texttt{;}
+denotes relation composition and \texttt{\textbackslash} denotes relation
+difference. This removes write--read pairs from the acyclicity constraint,
+meaning that read instructions may be reordered before preceding writes in
+program order. The TSO model is used mostly in X86.
+
+In x86, there are additional atomic instructions that are used to avoid the
+reordering of write--read pairs, such as \texttt{CMPXCHG}. These instructions
+enforce ordering between all preceding and succeeding events, behaving
+similarly to a memory fence. Such instructions are represented in the
+\texttt{rmw} (read--modify--write) relation. In our previous definitions of
+TSO, we did not include these atomic operations, so we need to extend the model
+to make TSO-x86 more accurately reflect the behavior of real hardware.
+
+We define \textit{At} (atomic operations) as
+\[
+At = dom(rmw) \cup codom(rmw),
+\]
+where \texttt{dom} denotes the domain of a relation and \texttt{codom} denotes
+the codomain (range) of a relation.
+
+Using this set, we define the relation
+\[
+implied = po;[At \cup F] \;\cup\; [At \cup F];po,
+\]
+
+And we add this implied to our tso model acyclic constraint, which enforces ordering in the local thread whenever an atomic operation or fence is involved. As a result, the model disallows write--read reordering when an \texttt{rmw} operation occurs between them. This behavior can be observed in
+Figure~\ref{}. The complete TSO model can be defined as:
+
+\begin{figure}[htbp]
+\centering
+\begin{verbatim}
+let xppo = ((W*W) | (R*W) | (R*R)) & po
+let At = domain(rmw) | range(rmw)
+let implied = po;[At | F] | [At | F];po
+acyclic (implied | xppo | rfe | fr | co) as tso
+\end{verbatim}
+\caption{Definition of Total Store Order}
+\label{fig:tso}
+\end{figure}
 
 \subsection{Linux Kernel Memory Model}
 \label{Background:LKMM}
-The Linux system supports a large range of architectures, such as ARM, RISC-V, IBM Power, AMD/Intel, and each architecture has their own memory models and thus disagree on the values that a read can return in a multiprocessor system, it's very important to support all of them in an efficient and secure way, a bad memory model can lead to ineffiencian problem like [], and secure problems like []. The LKMM has to be fairly permissive, in the sense that any behavior allowed by one of these architectures also has to be allowed by the LKMM.
 
-The Linux Kernel memory model (LKMM) is formalized using a Domain Specific Language (DSL) called Cat \citet{alglave2018frightening}, before that the Linux kernel developers use the experiences from maintainers mostly, and they found out they need to find a way that can guide their develpoment. 
-And they define the Linux kernel memory models are defined in .cat and .bell files in this link.
+\begin{figure}[h]
+\centering
+\begin{align*}
+dep &:= addr \cup data \\
+rwdep &:= (dep \cup ctrl) \cap (R \times W) \\
+overwrite &:= co \cup fr \\
+to\text{-}w &:= rwdep \cup (overwrite \cap int) \\
+rrdep &:= addr \cup (dep ; rfi) \\
+strong\text{-}rrdep &:= rrdep^{+} \cap rb\text{-}dep \\
+to\text{-}r &:= strong\text{-}rrdep \cup rfi\text{-}rel\text{-}acq \\
+strong\text{-}fence &:= mb \\
+fence &:= strong\text{-}fence \cup po\text{-}rel \cup wmb \cup rmb \cup acq\text{-}po \\
+ppo &:= rrdep^{*} ; (to\text{-}r \cup to\text{-}w \cup fence) \\
+cumul\text{-}fence &:= A\text{-}cumul(strong\text{-}fence \cup po\text{-}rel) \cup wmb \\
+prop &:= (overwrite \cap ext)^{?} ; cumul\text{-}fence^{*} ; rfe^{?} \\
+hb &:= ((prop \setminus id) \cap int) \cup ppo \cup rfe \\
+pb &:= prop ; strong\text{-}fence ; hb^{*}
+\end{align*}
+\caption{LKMM Definitions}
+\label{fig:lkmm-definitions}
+\end{figure}
 
-\subsubsection{Observation, code equivalance, and bugs}
 
+Let's focus on a more complex memory model, namely the Linux Kernel Memory
+Model (LKMM). The Linux system supports a wide range of architectures, such as
+ARM, RISC-V, IBM Power, and AMD/Intel. Each architecture has its own memory
+model, and therefore they may disagree on the values that a read can return in
+a multiprocessor system. Supporting all of them in an efficient and secure way
+is challenging. A poorly designed memory model can lead to efficiency problems,
+such as [], and security problems, such as []. The LKMM must therefore be
+fairly permissive, in the sense that any behavior allowed by one of these
+architectures must also be allowed by the LKMM. The LKMM is defined in Figure~\ref{fig:lkmm-definitions}. 
 
+The most fundamental way to access memory in the Linux kernel is through
+\texttt{READ\_ONCE} and \texttt{WRITE\_ONCE}. These primitives prevent the
+compiler from optimizing memory accesses by splitting or combining them. For
+example, a compiler may combine multiple read operations into a single access
+to improve the use of memory bandwidth. The \texttt{ONCE} primitives are used
+to prevent such optimizations. In the LKMM, we model the \texttt{READ\_ONCE} instructions as the set
+$R[\text{once}]$, and \texttt{WRITE\_ONCE} as the set $W[\text{once}]$.
+The brackets denote tags. The notation
+$\langle annotatable\text{-}events \rangle[\text{tag}]$
+indicates the set of annotatable events that carry the given tag
+\cite{10.1145/2627752}.
 
-Let's see this example in Pseudo Code (Message Passing):
+Besides the READ\_ONCE and WRITE\_ONCE instructions, there are also synchronization primitives in the LKMM. 
 
-buf = 0, flag = 0;
+\textbf{Acquire and Release}: Full memory barriers disallow any instruction
+reordering across the barrier (e.g., mfence in X86), both before and after it. In contrast, an
+Acquire operation only prevents later instructions from being reordered before
+it, ensuring that all subsequent instructions execute after the Acquire. A
+Release operation only prevents earlier instructions from being reordered
+after it, ensuring that all prior instructions complete before the Release.
+Thus, no instruction before a Release can happen after it, and no instruction
+after an Acquire can happen before it. Acquire is associated with a read
+instruction, while Release is associated with a write instruction.
 
-	P0()
-	{
-		write(buf, 1);
-		write(flag, 1);
-	}
+\textbf{Fences}: There are four types of fences used in the LKMM. For a read
+memory barrier, we have \texttt{smp\_rmb}. For a write memory barrier, we have
+\texttt{smp\_wmb}. There is also a full memory barrier, \texttt{smp\_mb}. In
+addition, \texttt{smp\_read\_barrier\_depends} is used for architectures that do
+not respect dependency ordering.
 
-	P1()
-	{
-		int r1;
-		int r2 = 0;
+\textbf{Read-modify-writes}: A read-modify-write (RMW) operation consists of a
+read paired with a write. Depending on the primitive, these reads and writes
+may be \texttt{ONCE} (for example, \texttt{xchg\_relaxed}), acquire, release, or
+surrounded by full fences (for example, \texttt{xchg}).
 
-		r1 = load(flag);
-		if (r1)
-			r2 = load(buf);
-	}
+What makes the LKMM different from the previous models is that it makes
+extensive use of tags. These tags are important because they help distinguish
+which instruction generated a given event. For example, read events can be
+generated by both \texttt{READ\_ONCE} and \texttt{rmw} operations, so we need
+tags to differentiate between them. \citet{alglave2018frightening} defines the
+following mappings between synchronization primitives and tags:
 
-Normally, we expect that in P1 the values of r1 and r2 are always consistent; if they are different, we find a bug. But this assumption can be broken easily by compiler and hardware optimizations.
+\begin{figure}[h]
+\centering
+\begin{center}
+\begin{tabular}{ll}
+\texttt{READ\_ONCE()} & $R[\text{once}]$ \\
+\texttt{WRITE\_ONCE()} & $W[\text{once}]$ \\
+\texttt{smp\_load\_acquire()} & $R[\text{acquire}]$ \\
+\texttt{smp\_store\_release()} & $W[\text{release}]$ \\
+\texttt{smp\_rmb()} & $F[\text{rmb}]$ \\
+\texttt{smp\_wmb()} & $F[\text{wmb}]$ \\
+\texttt{smp\_mb()} & $F[\text{mb}]$ \\
+\texttt{smp\_read\_barrier\_depends()} & $F[\text{rb-dep}]$ \\
+\texttt{xchg\_relaxed()} & $R[\text{once}],\; W[\text{once}]$ \\
+\texttt{xchg\_acquire()} & $R[\text{acquire}],\; W[\text{once}]$ \\
+\texttt{xchg\_release()} & $R[\text{once}],\; W[\text{release}]$ \\
+\texttt{xchg()} & $F[\text{mb}],\; R[\text{once}],\; W[\text{once}],\; F[\text{mb}]$
+\end{tabular}
+\end{center}
+\caption{LKMM primitives mapping}
+\label{fig:LKMM-events}
+\end{figure}
 
-First, the compiler may optimize this because these two write operations are independent, so the generated assembly code may write the flag first and then write the buf, because from the compiler’s perspective, swapping them has no observable effects. But if we just let the compiler optimize it, in P1 we may read buf as 0 after reading flag as 1.
+Like we did in TSO and SC, we first need to maintain an order in the local thread. The local orders will be modeled by \textit{ppo} and \textit{SCpv}. The \textit{SCpv} is the sequential consistency per variable, and it states that for each variable the values must follow SC. And \textit{ppo} is preserved program order; this is used to constrain the ordering in the local thread by dependencies and fences. 
 
-Second, even if we don’t let the compiler do any optimizations, the hardware will still break the code. In some weak memory model architectures like ARM and RISC-V, they may reorder the writes, which will cause the same problem as the compiler optimization. But the TSO model will prevent this, because the TSO model let other threads observe the writes in program order (The abstract model is that they put all the writes in the queue, so there is no reordering of write-write (WW) operations). So, the outcome highly depends on the hardware the code executes on.
+The dependencies are composed of address dependencies and data dependencies. These dependencies always start with a read event. The data dependencies mean that the following instruction will use the result, and the address dependencies mean that the following instruction will use the value of the result as the address. Therefore these dependencies cannot be reordered.
 
-The most foundamental way to access the memory in Linux kernel is READ\_ONCE and WRITE\_ONCE, as they prevent the optimization of compiler to split or combine the memory access operation, for example, the compiler may combine many read opreations at once to make the use of the memory bandwidth, the ONCE is used to prevent such optimizations.
+And these dependencies can be categorized into read--write dependencies and read--read dependencies. The read--write dependencies include the \textit{ctrl} dependencies, but the relation has to be the read--write pair as:
+\[
+rwdep := (dep \cup ctrl) \cap (R \times W)
+\]
+
+The read--read dependencies are the address dependencies or the \textit{dep} followed by an \textit{rfi} (starts with a read and ends with a read). The architecture Alpha does not preserve the read--read address dependencies, so LKKM adds the \textit{rd-dep} as the \textit{strong-rrdep} to model Alpha explicitly.
+
+\textit{ppo} then uses the dependencies as the \textit{to-r} and \textit{to-w} relations. The \textit{to-w} is modeled as the internal overwrites, and overwrite is from-read (a write overwrites a read) and a coherence order (a write overwrites a write), and together with the \textit{rw-dep} to compose an order of \textit{to-w}. The \textit{to-r} is modeled as \textit{strong-rrdep} or the \textit{rfi-rel-acq}. The \textit{strong-rrdep} is explained above, and the \textit{rfi-rel-acq} is the typical release-write, acquire-read order, and we cannot reorder these release-acquire instructions.
+
+The fence also contributes to the \textit{ppo}. The \textit{strong-fence} is the \textit{mb} (memory barrier); it orders the events separated by \texttt{smp\_mb}. It also orders the events separated by \texttt{rmb} and \texttt{wmb}, or when the first event is the acquire (\textit{po-acquire}) or the second event is the release (\textit{po-rel}). The ppo is defined as: 
+
+\[
+ppo := rrdep^{*} ; (to\text{-}r \cup to\text{-}w \cup fence)
+\]
+
+Besides this local thread ordering (\textit{ppo}), we also need to constrain the order involving other threads. The \textit{prop} (propagation) is used to make sure the ordering of propagation writes. The propagation is used to describe the write instructions interacting with other threads (we ignore the hardware abstraction, e.g., caches and memory systems, because it is complex). That is, when we use a fence related to writes that come from another thread, we need to make sure that all the stores \textit{po}-later than this fence must be executed later than the store (from another thread) to this thread.
+
+They use a value called \textit{A-cumul} to describe this behavior:
+\[
+A\text{-}cumul(r) := rfe? ; r
+\]
+
+because the \textit{rfe} is the interaction with the store from another thread. We want to make sure the read instruction reads the store propagated from another thread before the fence. Then the \textit{cumul-fence} becomes
+\[
+cumul\text{-}fence := A\text{-}cumul(strong\text{-}fence \cup po\text{-}rel) \cup wmb
+\]
+
+The \textit{strong-fence} and \textit{po-rel} need to be \textit{A-cumul} because they cannot find the correct write from another thread if we do not put the \textit{rfe} on them. Then the \textit{prop} can be defined as
+\[
+prop := (overwrite \cap ext)? ; cumul\text{-}fence^{*} ; rfe?
+\]
+
+The final definition generalizes the cumulative behaviors of propagation by adding the \textit{overwrites} and \textit{rfe}.
+
+The \textit{ppo} and \textit{prop} compose the \textit{hb} (happens-before) relation. The \textit{ppo} is for the ordering within the same thread, and the \textit{prop} is for the ordering involving other threads. The \textit{hb} is the union of \textit{ppo} and \textit{rfe} relations, together with the \textit{prop} that relates distinct events. Then we can use \textit{acyclic} to constrain the \textit{hb}, to make sure there is no ordering problem. 
+
+Besides the \textit{hb} (happens-before) relation, they also defined the \textit{pb} (propagates-before) relation. The \textit{pb} relation consists of events that begin with a write originating from another thread (i.e., propagations), followed by a strong fence and then an arbitrary number of \textit{hb} links.
+They enforce the acyclicity of \textit{pb} to guarantee that events are overwritten in a manner consistent with the orderings imposed by strong fences.
+
+In summary, the Linux Kernel Memory Model (LKMM) is defined by the following constraints:
+
+\[
+    acyclic(po\text{-}loc cup com)
+    empty(rmw \cap (fre ; coe))
+    acyclic(hb)
+    acyclic(pb)
+\]
+
+The LKMM also formalizes RCU operations, but these involve very complex and computationally expensive constraints. For this reason, we decided to exclude the RCU-related part from our analysis.
+We will explain this decision in more detail later.
 
 \section{Mathematical Backgrounds}
 
-The formalization used in this thesis is based on \emph{binary relations}. Relationships between elements of two sets are represented using a structure called a binary relation. There are two common methods for representing relations: using square matrices and using directed graphs. In this thesis, we mainly use the second method, i.e., directed graphs, to represent binary relations.
+The understand the axiomatic memory models we need to use \emph{binary relations}. Relationships between elements of two sets are represented using a structure called a binary relation. There are two common methods for representing relations: using square matrices and using directed graphs. In this thesis, we mainly use the second method, i.e., directed graphs, to represent binary relations.
 
 We use the notation \(a \, R \, b\) to denote that \((a,b) \in R\), and \(a \not R b\) to denote that \((a,b) \notin R\).
 
@@ -129,32 +607,73 @@ From a high-level perspective, when comparing different models, we check whether
 This captures the idea that every execution permitted by the stricter model must also be permitted by the weaker one.
 
 \section{Lean 4 and its Meta-Programming Framework}
-This subsection introduces the nessary knowleages for those who never used the Lean 4 bofore, we only introduce the most important parts used in this project, we don't introduce complex concepts like monads.
-Before we introduce the concepts about the Lean 4, we need to talk about why we choose Lean 4 as our tool in this project.
+This subsection introduces the necessary background for readers who have never used Lean 4 before. We cover only the most important concepts used in this project and do not introduce complex topics such as monads. Before presenting the key features of Lean 4, we first explain why we chose it as our tool for this project.
 
-1. It is an interactive proof assistant (ITP). Most of the proofs for the memory models use pen-and-paper, such as (Podkopaev et al., 2019; Alglave et al., 2014; Batty et al., 2011; Doko and Vafeiadis, 2016). They give theoretical contributions but may have problems, such as they finding errors in existing models (Chakraborty and Vafeiadis, 2016, 2017) and repairing those models (Lahav et al., 2017; Chapter 3). By using the ITP, we could increase the reliability of the proof by avoiding missing edge cases, because the proofs can be checked in a mechanized way by a computer.
+\subsection{Lean 4}
 
-2.  Lean 4 is fully extensible: users can modify and extend the parser, elaborator, tactics, decision
-procedures, pretty printer, and code generator. (cite: https://lean-lang.org/papers/lean4.pdf), for this project, we separate the paper-and-pen (Linux kernel model).
+Lean 4 is an interactive theorem prover (ITP). Traditionally, most proofs for memory models have been carried out on paper, for example in (Podkopaev et al., 2019; Alglave et al., 2014; Batty et al., 2011; Doko and Vafeiadis, 2016). Although these works make important theoretical contributions, they are prone to subtle issues, such as undetected errors in existing models (Chakraborty and Vafeiadis, 2016, 2017) or the need for later repairs (Lahav et al., 2017; Chapter 3). By using an ITP, we can dramatically increase the reliability of our proofs: they are mechanically checked by a computer, greatly reducing the chance of missed edge cases.
 
-3. Another option is we use the SMT solver.
+Lean 4 is not only just an ITP, it is also a functional programming language like Haskell and OCaml, which means it is a general-purpose programming language that supports computation and IO. This gives us the ability to read and parse the CAT files directly from storage, instead of manually migrating the CAT files into Lean 4.
 
-The Lean 4 is a relatively new proof assistant currently under the active developement, it's featured by the dependent type. The most powerful part of the lean 4 is its general purpose programming and the metaprogramming framework, that's also why we choose Lean 4 as our mechnizazing tool. (Why it's metaprogramming framework is powerful, compared to what)
+For readers unfamiliar with interactive theorem provers, the following simple example illustrates how they work. You can experiment with more examples yourself in the \href{https://adam.math.hhu.de/#/g/leanprover-community/nng4/}{Lean 4 Natural Number Game}. Suppose we want to prove that for all natural numbers \(n\), \(n + 0 = n\). While this equality is obvious at a glance, in a formal system we must justify it using previously proven theorems. In Lean 4, this is achieved using commands called \emph{tactics}. One particularly useful tactic is \texttt{rw} (rewrite). There exists a theorem \texttt{add\_zero} stating that \(\forall a, a + 0 = a\). If our goal is to prove \(n + 0 = n\), we can apply the tactic \texttt{rw [add\_zero]}. This replaces \(n + 0\) with \(n\), immediately closing the goal.
 
 
+More generally, the \texttt{rw} tactic allows us to replace any subexpression that matches the left-hand side of a known equality with the corresponding right-hand side. For example, to prove \((n + 0) + 0 = n\), we can apply \texttt{rw [add\_zero]} twice. Each application eliminates one occurrence of \(+ 0\), eventually reducing the goal to the trivial equality \(n = n\). This example reflects a fundamental principle in Lean 4: even the simplest intuitive facts must be formally justified by applying previously established theorems. Tactics provide a systematic and interactive way to do so. While this particular example may appear trivial, we will explore more powerful tactics and theorems later.
 
-\subsubsection{Defintations in Lean 4}
-We need to constraint our design, because the Cat langauge itself is a big project and implemented by several years, we can't implement all the parts within a master thesis work, so the target for this project is to try to support the proof of the LKMM model.
+\subsection{Meta-Programming in Lean 4}
 
-The Cat language model is formalled
-\label{subsubsection:Subsubsection of section 1}
-\lipsum[1-2]
+Another important reason for choosing Lean 4 is its extensibility. Lean 4 provides a metaprogramming framework that allows users to define domain-specific languages (DSLs) directly within the system. Informally, metaprogramming refers to writing programs that manipulate or generate other programs. In conventional programmithereby enabling automatic determination of programs must follow a predefined syntax understood by the compiler or interpreter. The process of parsing this syntax and translating it into intermediate representations, such as abstract syntax trees (ASTs) or control-flow graphs (CFGs), belongs to the meta-level, whereas writing ordinary programs belongs to the object-level.
 
-The most foundamental type in Cat langauge is the Event, so to define it correctly is quite important as the starting point. The event is an instruction that reads or writes a value on an address
+In most systems, meta-level functionality is implemented in a different language from the object-level language. However, Lean 4 integrates both levels within a single framework: most meta-level code is written in Lean itself. This design enables users to extend the language by defining new syntax constructs and providing corresponding elaboration procedures that translate them into core Lean expressions.
+
+This capability is often described as reflection, where meta-level functionality is made directly accessible at the object-level. As a result, users can introduce custom notation or commands and use them immediately within the same development environment. For example, new commands can be defined concisely using elab declarations.
+
+In practice, Lean 4 metaprogramming frequently involves working directly with its internal representations of programs. In particular, the concrete syntax tree (CST), represented by the Syntax type, captures the parsed structure of code, while the abstract syntax tree (AST), represented by the Expr type, corresponds to its elaborated form. These representations are especially important when implementing tactics and other advanced features. Consequently, although Lean 4 provides powerful metaprogramming capabilities, mastering them requires a solid understanding of these underlying structures.
+
+There is a very simple case on how the Lean 4 metaprogramming works, essetnailly, we have two ways to operate the grammar in Lean 4, one is via the Macro and another is the elaborator, the Macro is simpler, it's a function (with side effects) converts one syntax to another syntax, it's silimar in Rust. And another one is called Elaborator, it's more powerful because it operates on the CST level, and convert them into AST, and it can also operate the environment (the namespace, scopes, etc), in this project we use Macro mainly because it's more direct and easy, we also use elaborator for some complex things that involves with the environment. 
+
+Let's say we want to translate the notation let r = co | po into the Lean 4 definition def r := co.union po, where co and po are binary relations. We can start by defining a syntax rule for the Lean 4 parser like this: 
+
+syntax "let" cat\_ident "=" expr : inst
 
 
-The cat language is implementated in OCaml, and some of the operations are implemented by the computation, for example, the OCaml implementation of co is use a function called cross, and it's used to get pick up the set from a set of set in order, and we can express it in Lean 4 because Lean 4 is also a general purpose programming languge, but we need to prove lots of proofs for the computation and it's not the main idea of our project. So there is a design choice, we will add the std.cat and cross.cat these basic cat as part of the assumptions in our model instead of parsing all the individual cat files.
-For example, the [introduce the computation of co]. In our model, we just assume the computation is finished, and they gave us the results of the computation: co is linearization order.
+This looks similar to a regular expression pattern. The \verb|syntax| keyword declares a new piece of concrete syntax, and \verb|: inst| specifies that this syntax belongs to the syntax category \verb|inst| (a node kind in the concrete syntax tree used to organize and group related syntax constructs), we can use \texttt{syntax\_cat} to define a syntax catogry in Lean 4. Here, \verb|cat_ident| stands for the identifier (e.g., \verb|r|), and \verb|expr| represents the right-hand side. In our case, the binary operation co | po. Next, we need to define the \verb||| operator itself for expressions with the following rule: 
+
+syntax:51 expr:51 "|" expr:50 : expr
+
+The natural number after \verb|syntax| and after each \verb|expr| specifies precedence levels. This declaration means: The entire production (the binary | operator) has precedence 51.
+The left operand is parsed with precedence 51 (same as the operator).
+The right operand is parsed with precedence 50 (strictly lower).
+
+In Lean 4, a higher number indicates higher (stronger/tighter) precedence. Therefore, for an expression such as r1 | r2 | r3, the parser groups it as ((r1 | r2) | r3), that is left-associative. This happens because the right operand is restricted to precedence $> 50$. If we tried to group it the other way, as (r1 | (r2 | r3)) without parentheses, and the subexpression (r2 | r3) would need to be parsed in a context expecting precedence $> 50$, but the inner | operator has precedence 51, which conflicts with the allowed range. Hence, such a grouping is naturally rejected by the parser, enforcing left associativity.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{thesis/figures/metaproramming-cheatsheet.png}
+    \caption{Meta-programming APIs in Lean 4.}
+    \label{fig:meta-api}
+\end{figure}
+
+After we have defined how to parse the \texttt{inst} category (and the associated syntax), the next step is to assign semantics to it. Lean~4 provides multiple ways to handle syntax transformations and elaboration; a comprehensive list can be found in Figure~\ref{fig:meta-api}. In this project, we make use of all these mechanisms, but we will not introduce them all in this section. Instead, we focus on illustrating how \texttt{macro\_rules} works through the following example.
+
+As mentioned earlier, a macro is essentially a conversion from one piece of syntax to another. In Lean~4, \texttt{antiquotations} (brackets prefixed with `) are used to capture and splice parts of the input syntax into the output syntax. These act like placeholders in a pattern-matching regular expression style template for syntax trees. Here is how we can implement the desired translation using \texttt{macro\_rules}:
+
+\begin{verbatim}
+macro_rules
+  | `(let $nm:cat_ident = $e) => `(abbrev $nm := $e)
+\end{verbatim}
+
+This rule matches the pattern \texttt{let <identifier> = <expression>} (where \$nm captures the identifier from the \texttt{cat\_ident} category, and \$e captures the right-hand side expression) and rewrites it to an \texttt{abbrev} declaration (a lightweight definition in Lean).
+
+For the binary | operator (which we want to map to set union), we add another rule:
+
+\begin{verbatim}
+macro_rules
+  | `($e₁:expr "|" $e₂:expr) => `(Set.union $e₁ $e₂)
+\end{verbatim}
+
+This is a simple illustration of how the meta-programming framework works. In our project, the implementation is more complex and it is not necessary to introduce all of them. After we defining the Macro rules, Lean 4 checks that the final elaborated terms are type-safe using its small trusted kernel. Macros and elaborators operate outside the kernel and can define arbitrary syntax or transformations, but their output must ultimately be accepted by the kernel. This means even if we define unsafe or incorrect syntax transformations, they cannot break soundness because the kernel will reject any ill-typed terms.
+
 
 
 

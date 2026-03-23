@@ -1,4 +1,4 @@
-\documentclass{layout/siccs-thesis}
+!\documentclass{layout/siccs-thesis}
 \usepackage{parskip} %Automatic blank lines if there is an enter
 %% for equations a  nice parameter description
 \newenvironment{conditions}
@@ -19,9 +19,16 @@
 % here is the used bibliography package
 %Originally \usepackage[style=authoryear,sorting=nyt,maxcitenames=3]{biblatex}
 \usepackage[style=ieee,maxcitenames=3]{biblatex}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
 \addbibresource{references.bib}
 %% If you want to manually add you library from mendeley or other source
 % \addbibresource{mendeley.bib}
+
+\usepackage{xcolor}
+\usepackage{soul}
+\usepackage{listings}
+\usepackage{tcolorbox}
 
 % for spacing between references in the bibliography
 \setlength\bibitemsep{1.5\itemsep}
@@ -103,33 +110,6 @@ Vrije Universiteit Amsterdam}
 \mainmatter
 
 \input{content/introduction}
-
-The Cat file also has the standard library, we decided to model the std in the lean 4 instead of using the combinition of primitives.
-
-Note: Grammar fixed by Claude, the original was written by me.
-
-\textbf{Lemma 1 (Monotonicity of Acyclicity):}
-If $\text{Acyclic}(r_2)$ and $r_1 \subseteq r_2$, then $\text{Acyclic}(r_1)$.
-
-\textbf{Proof sketch:}
-Since transitive closure is monotone, $r_1 \subseteq r_2$ implies $r_1^+ \subseteq r_2^+$.
-If $r_2^+$ is irreflexive (i.e., $\text{Acyclic}(r_2)$), then any subset $r_1^+$
-must also be irreflexive, hence $\text{Acyclic}(r_1)$.
-\textit{(Formally verified in Lean 4; see [reference to your code]).}
-\qed
-
-\textbf{Theorem:} If SC is acyclic, then TSO is acyclic.
-
-\textbf{Proof:}
-We have $\text{TSO} \subseteq \text{SC}$ because:
-\begin{itemize}
-  \item $\text{po} \cap ((R \times W) \cup (W \times W)) \subseteq \text{po} \subseteq \text{SC}$
-  \item $\text{co} \subseteq \text{SC}$, $\text{fr} \subseteq \text{SC}$
-  \item $\text{rf} \cap \text{external} \subseteq \text{rf} \subseteq \text{SC}$
-\end{itemize}
-By Lemma 1, $\text{Acyclic}(\text{SC})$ implies $\text{Acyclic}(\text{TSO})$.
-\textit{(Formally verified in Lean 4; see [reference]).}
-\qed
 
 \input{content/lean}
 

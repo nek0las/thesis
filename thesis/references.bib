@@ -192,6 +192,60 @@ location = {San Jose, California, USA},
 series = {PLDI '11}
 }
 
+@article{10.1145/3776687,
+author = {Haas, Thomas and Meyer, Roland and Ponce de Le\'{o}n, Hern\'{a}n and Lomel\'{\i} Gardu\~{n}o, Andr\'{e}s},
+title = {Recurrence Sets for Proving Fair Non-termination under Axiomatic Memory Consistency Models},
+year = {2026},
+issue_date = {January 2026},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {10},
+number = {POPL},
+url = {https://doi.org/10.1145/3776687},
+doi = {10.1145/3776687},
+abstract = {Recurrence sets characterize non-termination in sequential programs.   We present a generalization of recurrence sets to concurrent programs that run on weak memory models. Sequential programs have operational semantics in terms of states and transitions, and classical recurrence sets are defined as sets of states that are existentially closed under transitions. Concurrent programs have axiomatic semantics in terms of executions, and our new recurrence sets are defined as sets of executions that are existentially closed under extensions.    The semantics of concurrent programs is not only affected by the memory model, but also by fairness assumptions about its environment, be it the scheduler or the memory subsystems.   Our new recurrence sets are formulated relative to such fairness assumptions.   We show that our recurrence sets are sound for proving fair non-termination on all practical memory models, and even complete on many.    To turn our theory into practice, we develop a new automated technique for proving fair non-termination in concurrent programs on weak memory models.   At the heart of this technique is a finite representation of recurrence sets in terms of execution-based lassos.   We implemented a lasso-finding algorithm in Dartagnan, and evaluated it on a number of programs running under CPU and GPU memory models.},
+journal = {Proc. ACM Program. Lang.},
+month = jan,
+articleno = {45},
+numpages = {30},
+keywords = {Non-termination, automatic verification, axiomatic memory models, forward progress}
+}
+
+@book{rosen2012discrete,
+  author    = {Rosen, Kenneth H.},
+  title     = {Discrete Mathematics and Its Applications},
+  edition   = {7th},
+  publisher = {McGraw-Hill},
+  year      = {2012},
+  isbn      = {978-0-07-338309-5}
+}
+
+@ARTICLE{lam1675439,
+  author={Lamport},
+  journal={IEEE Transactions on Computers}, 
+  title={How to Make a Multiprocessor Computer That Correctly Executes Multiprocess Programs}, 
+  year={1979},
+  volume={C-28},
+  number={9},
+  pages={690-691},
+  keywords={Memory modules;Computers;Protocols;Memory management;Freeports;Logic;Array signal processing;Welding;Semiconductor memory;Programmable logic arrays;Computer design;concurrent computing;hardware correctness;multiprocessing;parallel processing},
+  doi={10.1109/TC.1979.1675439}}
 
 
+@manual{riscv-spec,
+  title        = {The RISC-V Instruction Set Manual},
+  author       = {{RISC-V International}},
+  organization = {RISC-V International},
+  year         = {2026},
+  edition      = {Ratified Specification},
+  url          = {https://riscv.org/technical/specifications/}
+}
 
+@manual{arm-arm,
+  title        = {ARM Architecture Reference Manual},
+  author       = {{Arm Limited}},
+  organization = {Arm Limited},
+  year         = {2021},
+  edition      = {Armv8-A, Issue E.a},
+  url          = {https://developer.arm.com/documentation/ddi0487/latest/}
+}
