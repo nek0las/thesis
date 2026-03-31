@@ -128,10 +128,14 @@ keywords = {sequential consistency, declarative semantics, Weak memory models, C
 }
 
 @inproceedings{mathlib2020,
-  author    = {Avigad, Jeremy and Carneiro, Mario},
+  author    = {{The mathlib Community}},
   title     = {The {Lean} Mathematical Library},
-  booktitle = {CPP 2020},
-  year      = {2020}
+  booktitle = {Proceedings of the 9th ACM SIGPLAN International Conference on Certified Programs and Proofs (CPP '20)},
+  year      = {2020},
+  pages     = {367--381},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  doi       = {10.1145/3372885.3373824}
 }
 
 @article{10.1145/3110278Lean4Meta,
@@ -248,4 +252,123 @@ keywords = {Non-termination, automatic verification, axiomatic memory models, fo
   year         = {2021},
   edition      = {Armv8-A, Issue E.a},
   url          = {https://developer.arm.com/documentation/ddi0487/latest/}
+}
+
+@inproceedings{podkopaev2019bridging,
+  author    = {Podkopaev, Anton and Lahav, Ori and Vafeiadis, Viktor},
+  title     = {Bridging the Gap Between Programming Languages and Hardware Weak Memory Models},
+  booktitle = {Proceedings of the ACM on Programming Languages},
+  series    = {POPL '19},
+  volume    = {3},
+  number    = {POPL},
+  articleno = {69},
+  year      = {2019},
+  publisher = {Association for Computing Machinery},
+  doi       = {10.1145/3290382}
+}
+
+@inproceedings{batty2011mathematizing,
+  author    = {Batty, Mark and Owens, Scott and Sarkar, Susmit and Sewell, Peter and Weber, Tjark},
+  title     = {Mathematizing {C++} Concurrency},
+  booktitle = {Proceedings of the 38th Annual ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages},
+  series    = {POPL '11},
+  year      = {2011},
+  pages     = {55--66},
+  publisher = {Association for Computing Machinery},
+  doi       = {10.1145/1926385.1926394}
+}
+
+@inproceedings{doko2016program,
+  author    = {Doko, Marko and Vafeiadis, Viktor},
+  title     = {A Program Logic for {C11} Memory Fences},
+  booktitle = {Programming Languages and Systems (ESOP 2016)},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {9632},
+  pages     = {413--438},
+  year      = {2016},
+  publisher = {Springer},
+  doi       = {10.1007/978-3-662-49498-1_17}
+}
+
+@inproceedings{chakraborty2016fixing,
+  author    = {Chakraborty, Soham and Vafeiadis, Viktor},
+  title     = {Formalizing the Concurrency Semantics of an {LLVM} Fragment},
+  booktitle = {Proceedings of the 2016 International Symposium on Code Generation and Optimization},
+  series    = {CGO '16},
+  year      = {2016},
+  pages     = {100--110},
+  publisher = {Association for Computing Machinery},
+  doi       = {10.1145/2854038.2854066}
+}
+
+@inproceedings{chakraborty2017grounding,
+  author    = {Chakraborty, Soham and Vafeiadis, Viktor},
+  title     = {Grounding Thin-Air Reads with Event Structures},
+  booktitle = {Proceedings of the ACM on Programming Languages},
+  series    = {POPL '17},
+  volume    = {3},
+  number    = {POPL},
+  year      = {2019},
+  publisher = {Association for Computing Machinery},
+  doi       = {10.1145/3290383}
+}
+
+@article{sewell2010x86tso,
+  author    = {Sewell, Peter and Sarkar, Susmit and Owens, Scott and Nardelli, Francesco Zappa and Myreen, Magnus O.},
+  title     = {x86-{TSO}: A Rigorous and Usable Programmer's Model for x86 Multiprocessors},
+  journal   = {Communications of the ACM},
+  volume    = {53},
+  number    = {7},
+  pages     = {89--97},
+  year      = {2010},
+  publisher = {Association for Computing Machinery},
+  doi       = {10.1145/1785414.1785443}
+}
+
+@inproceedings{nawrocki2023proofwidgets,
+  author    = {Nawrocki, Wojciech and Ayers, Edward W. and Ebner, Gabriel},
+  title     = {An Extensible User Interface for {Lean}~4},
+  booktitle = {14th International Conference on Interactive Theorem Proving (ITP 2023)},
+  series    = {Leibniz International Proceedings in Informatics (LIPIcs)},
+  volume    = {268},
+  pages     = {24:1--24:20},
+  year      = {2023},
+  publisher = {Schloss Dagstuhl -- Leibniz-Zentrum f{\"u}r Informatik},
+  doi       = {10.4230/LIPIcs.ITP.2023.24}
+}
+
+@inproceedings{wickerson2017automatically,
+  author    = {Wickerson, John and Batty, Mark and Sorensen, Tyler and Constantinides, George A.},
+  title     = {Automatically Comparing Memory Consistency Models},
+  booktitle = {Proceedings of the 44th ACM SIGPLAN Symposium on Principles of Programming Languages},
+  series    = {POPL '17},
+  year      = {2017},
+  pages     = {190--204},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  doi       = {10.1145/3009837.3009838}
+}
+
+@inproceedings{kang2017promising,
+  author    = {Kang, Jeehoon and Hur, Chung-Kil and Lahav, Ori and Vafeiadis, Viktor and Dreyer, Derek},
+  title     = {A Promising Semantics for Relaxed-Memory Concurrency},
+  booktitle = {Proceedings of the 44th ACM SIGPLAN Symposium on Principles of Programming Languages},
+  series    = {POPL '17},
+  year      = {2017},
+  pages     = {175--189},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  doi       = {10.1145/3009837.3009850}
+}
+
+@inproceedings{barbosa2022cvc5,
+  author    = {Barbosa, Haniel and Barrett, Clark W. and Brain, Martin and Kremer, Gereon and Lachnitt, Hanna and Mann, Makai and Mohamed, Abdalrhman and Mohamed, Mudathir and Niemetz, Aina and N{\"o}tzli, Andres and Ozdemir, Alex and Preiner, Mathias and Reynolds, Andrew and Sheng, Ying and Tinelli, Cesare and Zohar, Yoni},
+  title     = {{cvc5}: A Versatile and Industrial-Strength {SMT} Solver},
+  booktitle = {Tools and Algorithms for the Construction and Analysis of Systems (TACAS 2022)},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {13243},
+  pages     = {415--442},
+  year      = {2022},
+  publisher = {Springer},
+  doi       = {10.1007/978-3-030-99524-9_24}
 }

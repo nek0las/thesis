@@ -136,7 +136,7 @@ The \textit{Candidate Execution} is designed as a universal superset containing 
 We establish a formal abstraction at this boundary: while a candidate execution is typically generated from a litmus test via a parser or compiler, the correctness of that translation is not what we focus on at the memory level. In this project, we leave the correctness of the generation process to us and treat the candidate execution itself as the input. It is important to note that this is a significant assumption in practice; instructions with similar behaviors may not produce identical events and relations. For example, a Read instruction might be represented as a simple $R$ in a standard \texttt{.cat} file, whereas in LKMM it is treated as \texttt{READ\_ONCE}. These differing semantics generate different candidate executions; however, by abstracting these details and focusing solely on the candidate execution as the input, we significantly reduce the overall verification effort.
 
 \subsection{Wellformness}
-The wellformess is the important perperties that give each set and relation a semantic, only when the relations follow these semantics, we say they're wellformenss, otherwise they're meaningless. Most of the formeness are adapted from the https://github.com/herd/herdtools7/blob/c78279fa32f0c0d37e90d083d966b726f781014e/herd/libdir/arm-models/proofs/mixed_v8_equivalences.v#L4
+The wellformess is the important perperties that give each set and relation a semantic, only when the relations follow these semantics, we say they're wellformenss, otherwise they're meaningless. Most of the wellformedness conditions are adapted from the herdtools7 Coq development \cite{10.1145/2627752, 10.1145/3458926ArmedCat}
 
 
 
@@ -252,7 +252,7 @@ Another approach is to encode the recursion using a least fixed-point formulatio
 
 \subsubsection{locks}, the LKMM depends on the library called lock.cat, and these libraries all depend on cos.cat and std.lib, as we stated earlier, for the convenience of modeling, we defined these libraries into the LeanCats directly instead of parsing them using macros. The lock.cat is used to express the spin\_lock related relations, like lock/unlock, etc. 
 
-We summarized all the supported syntax in \ref{} using LKMM as the example. The yellow part is what can be supported now; the other parts are what we can't support.
+We summarized all the supported syntax in Appendix~\ref{app:cat-bell} and~\ref{app:lkmm-cat} using LKMM as the example. The yellow part is what can be supported now; the other parts are what we can't support.
 
 \subsection{Design Choices}
 The design has some tradeoffs because of the limitation and complexity of Lean 4, and some definitions in Cat is not defined, so we need to choose the design when we implemented the system especially for the time-constraint.

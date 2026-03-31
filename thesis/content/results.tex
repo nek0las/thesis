@@ -7,7 +7,7 @@ In Lean 4, we use the \emph{InfoView} panel on the right-hand side of Visual Stu
 
 In our development, we use type classes together with \texttt{Set} and \texttt{RelSet} to define candidate executions. However, this representation can be difficult to reason about from a human perspective. Essentially, graphs in Lean 4 are encoded in a way that is convenient for machine processing, but not for human intuition. It would be much easier to understand the structure—especially to identify cycles—if we could directly visualize the graph.
 
-To achieve this visualization, we use the tool \href{https://github.com/leanprover-community/ProofWidgets4}{ProofWidgets}. Broadly speaking, it provides APIs that allow us to visualize data and proofs interactively. Let us look at an example of how it works in LeanCat.
+To achieve this visualization, we use the tool ProofWidgets~\cite{nawrocki2023proofwidgets}\footnote{\url{https://github.com/leanprover-community/ProofWidgets4}}. Broadly speaking, it provides APIs that allow us to visualize data and proofs interactively. Let us look at an example of how it works in LeanCat.
 
 The following program represents the X86 \emph{Store Buffering (SB)} litmus test (from Figure~\ref{fig:litmus-test}):
 
