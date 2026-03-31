@@ -2,6 +2,7 @@
 \label{chapter:results}
 
 \section{Visualization}
+\label{sec:visualization}
 
 In Lean 4, we use the \emph{InfoView} panel on the right-hand side of Visual Studio Code. We typically rely on this panel (via the Lean VSCode extension) to inspect the current goals and track the progress of a proof.
 
@@ -103,8 +104,7 @@ lemma acyclic_of_rank
 The proof proceeds by induction on the transitive closure: any path in~$r^+$ strictly
 increases~$f$ at each step, so a cycle would require $f(a) < f(a)$, contradicting
 \texttt{Nat.lt\_irrefl}. This lemma is particularly useful for the litmus test case studies
-in Section~\ref{sec:snippets}, where the ranking function can often be defined directly from
-the event identifiers.
+in Section~\ref{sec:snippets}, where the ranking function can often be defined directly from the event identifiers.
 
 \paragraph{Other supporting lemmas.}
 We proved several additional theorems that are used
@@ -126,6 +126,7 @@ we demonstrate how they are applied in practice.
 \section{Case Studies}
 \label{subsection: Subsection of Results}
 \subsection{Program Snippets Check}
+\label{sec:snippets}
 
 We proved that SC is stronger than TSO and TSO is stronger than MIPS. We can use litmus tests to demonstrate this. Litmus tests are small concurrent programs with specific initial conditions and a query about whether a particular outcome is observable. They serve as a convenient way to distinguish memory models: if one model allows an outcome that another forbids, the models are provably different in strength.
 
@@ -332,6 +333,7 @@ This cycle violates the LKMM's coherence condition, which requires $\mathit{po\_
 TODO: (CoRR_poonceonce_Once.lean and 4 other litmus tests in lkmm)
 
 \subsection{Comparison between different models for the same architecture}
+\label{sec:comparison}
 
 To check whether a memory model is weaker or stronger than another, we can use LeanCat 
 to verify it mechanically. As we discussed in Section~\ref{sec:math-background}, a model 
@@ -392,6 +394,7 @@ in the TSO acyclicity constraint is already present --- possibly in a weaker or 
 --- in the SC constraint. The proof therefore proceeds by \emph{monotonicity}: if 
 $po \cup com$ is acyclic, then any sub-relation of it is also acyclic.
 
+\label{sec:sc-tso}
 The proof unfolds in two stages. First, we unfold both model predicates and reduce the 
 goal to showing that every edge in the TSO relation is already an edge in the SC relation:
 
@@ -439,7 +442,7 @@ $po \cup com$. The case split follows the structure of the TSO constraint:
 Every branch closes successfully, and Lean's kernel accepts the proof term. This gives us 
 a machine-checked certificate that SC is strictly stronger than TSO: any execution the SC 
 model permits, TSO must also permit, but not vice versa. The store-buffering execution 
-from Figure~\ref{fig:sb}, where both reads observe $0$, is forbidden under SC yet allowed 
+from Figure~\ref{fig:sb-fre-cycle}, where both reads observe $0$, is forbidden under SC yet allowed 
 under TSO, which confirms that the inclusion is strict.
 
 This workflow --- \texttt{defcat}, state the inclusion theorem, apply \texttt{acyclicMono}, 
@@ -455,9 +458,9 @@ complexity of either model individually.
 To make the comparison complete, we also need to show the other direction: that TSO is 
 \emph{strictly} weaker than SC, not merely weaker. That is, there exists a candidate 
 execution that TSO permits but SC forbids. We already introduced this execution in 
-Figure~\ref{fig:sb} --- it is the Store-Buffering execution where both reads observe $0$.
+Figure~\ref{fig:sb-fre-cycle} --- it is the Store-Buffering execution where both reads observe $0$.
 
-Let us return to the Store-Buffering litmus test from Figure~\ref{fig:sb}. Recall that 
+Let us return to the Store-Buffering litmus test from Figure~\ref{fig:litmus-test}. Recall that 
 both $X$ and $Y$ are initialized to $0$. Thread 0 writes $1$ to $X$ and then reads $Y$, 
 while Thread 1 writes $1$ to $Y$ and then reads $X$. The specific outcome we are 
 interested in is where both reads observe $0$, that is, $a = 0$ and $b = 0$.
