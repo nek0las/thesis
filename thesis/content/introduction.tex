@@ -11,6 +11,14 @@ In this project, we propose a domain-specific proof framework, LeanCat, to mecha
 
 \section{Contributions}
 
+We design and implement LeanCat, a domain-specific proof framework that mechanizes weak memory models in Lean 4. LeanCat parses existing Cat specifications directly and introduces their semantics into Lean 4 using its metaprogramming framework, so that users do not need to translate or rewrite memory model definitions manually. We implement a core subset of the Cat language targeting LKMM, including support for tagged events, relation operators, and the acyclicity, irreflexivity, and emptiness judgments.
+
+We define the core types and well-formedness conditions needed to represent candidate executions in Lean 4, and we develop a library of theorems about binary relations and acyclicity that bridge the gap between Lean 4's existing Mathlib library and the specific needs of weak memory model reasoning. In particular, we prove an acyclicity monotonicity lemma that serves as the central proof technique for comparing memory models.
+
+We demonstrate LeanCat through two case studies. First, we check concrete litmus test executions against memory models, including SC, TSO, MIPS, and LKMM. Second, we formally compare memory models with each other. In particular, we present a machine-checked proof that Sequential Consistency is strictly stronger than Total Store Order, and Total Store Order is strictly stronger than MIPS, reducing the comparison to a monotonicity argument over acyclicity constraints. We also provide a counterexample execution that TSO permits but SC forbids, completing the strict separation.
+
+We integrate execution graph visualization into the Lean 4 development environment using ProofWidgets, allowing users to inspect candidate executions graphically during proof development.
+
 \section{Structrure of this thesis}
 
 The remainder of this thesis is structured as follows.

@@ -1,7 +1,6 @@
 \chapter{Results}
 \label{chapter:results}
 
-
 \section{Visualization}
 
 In Lean 4, we use the \emph{InfoView} panel on the right-hand side of Visual Studio Code. We typically rely on this panel (via the Lean VSCode extension) to inspect the current goals and track the progress of a proof.
@@ -55,150 +54,282 @@ This produces a clear graphical representation of the execution. From this graph
   \label{fig:infoview}
 \end{figure}
 
-\section{Case Studys}
-\label{section:Section of Results}
+\section{Theorems}
+\subsection{Theorems}
 
+To support the case studies, we proved a collection of library theorems about binary relations,
+acyclicity, and the primitive relations of candidate executions. These theorems bridge the gap
+between Lean~4's existing \texttt{Mathlib} library and the specific needs of weak memory
+model reasoning. We highlight the two most important results in detail and briefly summarise
+the remaining supporting lemmas.
+
+\paragraph{Acyclicity monotonicity.}
+The central proof technique for comparing memory models is \emph{monotonicity}: if a
+relation~$r$ is acyclic and~$s \subseteq r$, then~$s$ is also acyclic. We formalise this as
+\texttt{acyclicMono}:
+
+\begin{lstlisting}
+lemma acyclicMono
+  {r₁ r₂ : SetRel Event Event}
+  (hacyc : SetRel.Acyclic r₂)
+  (hsub : ∀ a b, (a, b) ∈ r₁ → (a, b) ∈ r₂)
+  : SetRel.Acyclic r₁
+\end{lstlisting}
+
+The proof proceeds by lifting the edge-wise inclusion to a transitive-closure inclusion using
+\texttt{TransGen.mono}, and then applying the acyclicity hypothesis. This lemma is the
+workhorse of the SC~$\Rightarrow$~TSO comparison in Section~\ref{sec:comparison}: once we
+show that every edge in the TSO acyclicity constraint is also an edge in the SC constraint,
+the result follows immediately.
+
+We also prove a generalised variant, \texttt{acyclicMono\_trans}, which allows each edge
+of~$r_1$ to correspond to a \emph{path} (rather than a single edge) in~$r_2$. This stronger
+form is useful when the relations in the two models are not in direct subset relation but one
+model's edges can be decomposed into multi-step paths in the other.
+
+\paragraph{Acyclicity via ranking functions.}
+For concrete litmus test executions, we sometimes need to show acyclicity of a specific
+finite relation. A convenient technique is to exhibit a \emph{ranking function}
+$f : \text{Event} \to \mathbb{N}$ that strictly increases along every edge:
+
+\begin{lstlisting}
+lemma acyclic_of_rank
+  {r : SetRel Event Event}
+  (f : Event → ℕ)
+  (hf : ∀ a b, (a, b) ∈ r → f a < f b)
+  : SetRel.Acyclic r
+\end{lstlisting}
+
+The proof proceeds by induction on the transitive closure: any path in~$r^+$ strictly
+increases~$f$ at each step, so a cycle would require $f(a) < f(a)$, contradicting
+\texttt{Nat.lt\_irrefl}. This lemma is particularly useful for the litmus test case studies
+in Section~\ref{sec:snippets}, where the ranking function can often be defined directly from
+the event identifiers.
+
+\paragraph{Other supporting lemmas.}
+We proved several additional theorems that are used
+throughout the case studies. The lemmas \texttt{strictPartialOrderImpliesAcyclic} and
+{\texttt{AcyclicImpliesIrreflexive} establish the equivalence between the Cat-style
+acyclicity judgment and the standard strict-order properties available in \texttt{Mathlib}.
+The composition theorems \texttt{rf\_fr\_subset\_co} and \texttt{fr\_co\_subset\_fr} capture
+the algebraic identities of the primitive relations: composing $\mathit{rf}$ then $\mathit{fr}$
+yields $\mathit{co}$, and composing $\mathit{fr}$ then $\mathit{co}$ yields $\mathit{fr}$.
+As a direct corollary, \texttt{co\_acyclic} follows from the wellformedness condition on
+$\mathit{co}$ and \texttt{strictPartialOrderImpliesAcyclic}. Finally,
+\texttt{internalImpliesPoOrPoMinusOne} states that two distinct same-thread events must be
+related by program order in one direction, since $\mathit{po}$ is a total order per thread.
+ 
+Together, these theorems form the proof infrastructure of LeanCat. In the following sections,
+we demonstrate how they are applied in practice.
+ 
+
+\section{Case Studies}
 \label{subsection: Subsection of Results}
 \subsection{Program Snippets Check}
 
-We used two sets of litmus tests to show our work: one is the X86 litmus tests, and 
-another is the LKMM litmus test examples. We have 30 typical X86 litmus test examples 
-and 5 LKMM litmus test examples to show how to prove them in our framework.
+We proved that SC is stronger than TSO and TSO is stronger than MIPS. We can use litmus tests to demonstrate this. Litmus tests are small concurrent programs with specific initial conditions and a query about whether a particular outcome is observable. They serve as a convenient way to distinguish memory models: if one model allows an outcome that another forbids, the models are provably different in strength.
 
-We already introduced SB (Store Buffering) in Figure~\ref{fig:sb}, and it can generate 
-six possible candidate executions, as we discussed in Section~\ref{sec:sc-tso}. The 
-complete set of X86 litmus tests we support is summarized in 
-Table~\ref{tab:x86-litmus-tests}.
+First, we use our classical Store Buffering (SB) example. The execution graph for this test is shown in Figure~\ref{fig:sb-fre-cycle}.
 
-\begin{table}[h]
+% Requires: \usepackage{tikz}
+% \usetikzlibrary{arrows.meta, positioning}
+
+\begin{figure}[ht]
 \centering
-\caption{X86 litmus tests supported by LeanCat. Each test is verified against both 
-the SC and TSO models, with results matching the expected outcomes from the herdtools7 
-reference implementation.}
-\label{tab:x86-litmus-tests}
-\begin{tabular}{lll}
-\toprule
-\textbf{Test} & \textbf{Category} & \textbf{Description} \\
-\midrule
-\texttt{SB.litmus}          & Store Buffering   & Classic write--read reordering \\
-\texttt{SB\_MFence.litmus}  & Store Buffering   & SB with full memory fence \\
-\texttt{SB\_opt.litmus}     & Store Buffering   & Optimized SB variant \\
-\texttt{3SB.litmus}         & Store Buffering   & Three-thread store buffering \\
-\texttt{3SB\_MFence.litmus} & Store Buffering   & Three-thread SB with fence \\
-\texttt{4SB.litmus}         & Store Buffering   & Four-thread store buffering \\
-\midrule
-\texttt{LB.litmus}          & Load Buffering    & Classic load buffering \\
-\texttt{LB\_MFence.litmus}  & Load Buffering    & LB with full memory fence \\
-\texttt{3LB.litmus}         & Load Buffering    & Three-thread load buffering \\
-\texttt{4LB.litmus}         & Load Buffering    & Four-thread load buffering \\
-\midrule
-\texttt{MP.litmus}          & Message Passing   & Classic message passing \\
-\texttt{MP\_MFence.litmus}  & Message Passing   & MP with full memory fence \\
-\texttt{MP2.litmus}         & Message Passing   & Message passing variant \\
-\texttt{3MP.litmus}         & Message Passing   & Three-thread message passing \\
-\midrule
-\texttt{IRIW.litmus}        & Independent Reads & Independent reads of 
-                                                  independent writes \\
-\texttt{IRIW\_MFence.litmus}& Independent Reads & IRIW with full memory fence \\
-\midrule
-\texttt{ISA2.litmus}        & ISA2              & Three-thread ordering test \\
-\texttt{ISA2\_MFence.litmus}& ISA2              & ISA2 with full memory fence \\
-\midrule
-\texttt{CoRR.litmus}        & Coherence         & Read--read coherence \\
-\texttt{CoRW.litmus}        & Coherence         & Read--write coherence \\
-\texttt{CoWR.litmus}        & Coherence         & Write--read coherence \\
-\texttt{CoWW.litmus}        & Coherence         & Write--write coherence \\
-\midrule
-\texttt{RWC.litmus}         & Mixed             & Read--write causality \\
-\texttt{RWC\_MFence.litmus} & Mixed             & RWC with full memory fence \\
-\texttt{RRW.litmus}         & Mixed             & Read--read--write \\
-\texttt{RWR.litmus}         & Mixed             & Read--write--read \\
-\texttt{WRR.litmus}         & Mixed             & Write--read--read \\
-\texttt{WRW.litmus}         & Mixed             & Write--read--write \\
-\texttt{WRC.litmus}         & Mixed             & Write--read causality \\
-\texttt{WWC.litmus}         & Mixed             & Write--write causality \\
-\bottomrule
-\end{tabular}
-\end{table}
+\begin{tikzpicture}[
+    node distance=1.8cm and 3.8cm,
+    event/.style={draw, rectangle, minimum width=1.6cm, minimum height=0.7cm, font=\small},
+    init/.style={draw, rectangle, minimum width=2.2cm, minimum height=0.7cm, font=\small},
+    po/.style={-{Stealth[length=2.5mm]}, thick},
+    co/.style={-{Stealth[length=2.5mm]}, dotted},
+    rf/.style={-{Stealth[length=2.5mm]}, dashed},
+    fre/.style={-{Stealth[length=2.5mm]}, dashed, red},
+    every edge quotes/.style={font=\footnotesize, auto},
+  ]
+ 
+  % Init
+  \node[init] (init) {Init: $X = 0, Y = 0$};
+ 
+  % Thread 0
+  \node[event, below left=1.5cm and 2cm of init] (wx) {$W(X) = 1$};
+  \node[event, below=of wx] (ry) {$R(Y) = 0$};
+ 
+  % Thread 1
+  \node[event, below right=1.5cm and 2cm of init] (wy) {$W(Y) = 1$};
+  \node[event, below=of wy] (rx) {$R(X) = 0$};
+ 
+  % co: init -> writes (dotted)
+  \draw[co] (init) -- node[above left, pos=0.4] {$co$} (wx);
+  \draw[co] (init) -- node[above right, pos=0.4] {$co$} (wy);
+ 
+  % rf: init -> reads, routed around the outside
+  % Left rf: init -> R(Y)=0, goes wide left
+  \draw[rf] (init.west) .. controls +(-3.5,-1.5) and +(-2.5,1.5) ..
+    node[left, pos=0.5] {$rf$} (ry.west);
+ 
+  % Right rf: init -> R(X)=0, goes wide right
+  \draw[rf] (init.east) .. controls +(3.5,-1.5) and +(2.5,1.5) ..
+    node[right, pos=0.5] {$rf$} (rx.east);
+ 
+  % po: within threads (solid thick)
+  \draw[po] (wx) -- node[left] {$po$} (ry);
+  \draw[po] (wy) -- node[right] {$po$} (rx);
+ 
+  % fre: from-read external (red dashed, forming the cycle)
+  \draw[fre] (ry) -- node[above, pos=0.5] {$fre$} (wy);
+  \draw[fre] (rx) -- node[below, pos=0.5] {$fre$} (wx);
+ 
+\end{tikzpicture}
+\caption{Store Buffering execution with $a = 0$ and $b = 0$.
+  The cycle $W(X) \xrightarrow{po} R(Y) \xrightarrow{fre} W(Y) \xrightarrow{po} R(X) \xrightarrow{fre} W(X)$
+  violates the acyclicity constraint of SC.}
+\label{fig:sb-fre-cycle}
+\end{figure}
 
-\noindent
-All 30 X86 litmus tests were verified against both the SC and TSO models, with results 
-matching the expected outcomes from the herdtools7 reference implementation~\cite{herdtools}. 
-The tests naturally fall into several categories. The Store Buffering tests (SB and its 
-variants) demonstrate write--read reordering, which is the defining characteristic of TSO. 
-The Load Buffering tests (LB and its variants) demonstrate that TSO also allows certain 
-load reorderings. The Message Passing tests (MP and its variants) show how fences restore 
-ordering guarantees. The Coherence tests (CoRR, CoRW, CoWR, CoWW) verify that both SC 
-and TSO maintain per-location coherence. The remaining tests cover more complex 
-multi-thread orderings.
+As shown in Figure~\ref{fig:sb-fre-cycle}, the execution contains a cycle that passes through two W$\to$R program-order edges. This behaviour of the SB test is disallowed by Sequential Consistency, but allowed by x86-TSO, because the W$\to$R program-order pairs do not participate in the preserved program order under TSO, so the cycle in Figure~\ref{fig:sb-fre-cycle} is broken. MIPS likewise allows this outcome, because MIPS only preserves R$\to$W program-order pairs in the execution graph, so the W$\to$R pairs in the SB test again do not form a cycle. We proved this in \texttt{SB.lean}. In this example, we showed a case where SC forbids the outcome but both TSO and MIPS allow it.
 
-An important pattern emerges across these tests: for every litmus test that involves a 
-write--read pair in program order, TSO allows at least one additional execution that SC 
-forbids. Conversely, for tests that involve only fences (the \texttt{MFence} variants), 
-TSO and SC agree on which executions are allowed, because the \texttt{implied} relation 
-in TSO restores ordering around fences. This pattern is consistent with the formal 
-relationship we proved in Section~\ref{sec:scvtso}: SC is strictly stronger than TSO, 
-and the difference is precisely the write--read reordering.
+Next, we show an example where both SC and TSO forbid the outcome, but MIPS allows it. This is the Load Buffering (LB) test, formalized in \texttt{LB.lean}. The program is shown in Figure~\ref{fig:lb-program}, and the candidate execution graph for the outcome $a = 1$ and $b = 1$ is shown in Figure~\ref{fig:lb-rfe-cycle}.
 
-\paragraph{A second worked example: Message Passing.}
-
-Besides the Store Buffering test, we highlight the Message Passing (MP) litmus test as 
-a second representative example:
-
-\begin{center}
-\begin{tabular}{ll}
-\multicolumn{2}{l}{Initially: $X = 0$, $Y = 0$} \\
-\textbf{Thread 0} & \textbf{Thread 1} \\
-$W(X) = 1$ & $R(Y) = 1$ \\
-$W(Y) = 1$ & $R(X) = ?$ \\
-\end{tabular}
-\end{center}
-
-\noindent
-The question is whether Thread 1 can observe $R(Y) = 1$ but $R(X) = 0$. Under SC this 
-is forbidden: if Thread 1 reads $Y = 1$, it must have observed the write to $Y$, which 
-happened after the write to $X$, so it must also observe $X = 1$. Under TSO this is 
-also forbidden, because both writes in Thread 0 are write--write pairs, which are 
-preserved by $\mathit{xppo}$. This makes MP an interesting contrast to SB: unlike SB, 
-the MP outcome is forbidden under \emph{both} SC and TSO, and adding a fence 
-(\texttt{MP\_MFence.litmus}) does not change this conclusion. This demonstrates that 
-LeanCat can correctly identify cases where the two models agree, not only cases where 
-they disagree.
-
-\paragraph{Summary.}
-
-Table~\ref{tab:x86-results} summarizes the relationship between SC and TSO across 
-our litmus test suite.
-
-\begin{table}[h]
+\begin{figure}[ht]
 \centering
-\caption{Summary of SC vs TSO results across the X86 litmus test suite.}
-\label{tab:x86-results}
-\begin{tabular}{lcc}
-\toprule
-\textbf{Category} & \textbf{SC forbids, TSO allows} & 
-\textbf{Both forbid} \\
-\midrule
-Store Buffering (no fence)  & \checkmark & \\
-Store Buffering (MFence)    &            & \checkmark \\
-Load Buffering (no fence)   & \checkmark & \\
-Load Buffering (MFence)     &            & \checkmark \\
-Message Passing (no fence)  &            & \checkmark \\
-Message Passing (MFence)    &            & \checkmark \\
-Coherence                   &            & \checkmark \\
-IRIW (no fence)             & \checkmark & \\
-IRIW (MFence)               &            & \checkmark \\
-ISA2 (no fence)             & \checkmark & \\
-ISA2 (MFence)               &            & \checkmark \\
-\bottomrule
+\begin{tabular}{c}
+Initially: $X = 0,\; Y = 0$ \\[6pt]
+\begin{tabular}{l|l}
+Thread 0 & Thread 1 \\
+\hline
+$a := X$ & $b := Y$ \\
+$Y := 1$ & $X := 1$ \\
+\end{tabular} \\[6pt]
+Can we get $a = 1$ and $b = 1$?
 \end{tabular}
-\end{table}
+\caption{The Load Buffering (LB) litmus test.}
+\label{fig:lb-program}
+\end{figure}
 
-\noindent
-The pattern is consistent and expected: fences restore the ordering that TSO relaxes, 
-and coherence is maintained by both models regardless of fences. All results were 
-verified mechanically in LeanCat, giving us machine-checked evidence for the 
-relationship between SC and TSO across a representative suite of litmus tests.
+% Requires: \usepackage{tikz}
+% \usetikzlibrary{arrows.meta, positioning}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+    node distance=1.8cm and 4cm,
+    event/.style={draw, rectangle, minimum width=1.6cm, minimum height=0.7cm, font=\small},
+    po/.style={-{Stealth[length=2.5mm]}, thick},
+    rfe/.style={-{Stealth[length=2.5mm]}, dashed, red},
+    every edge quotes/.style={font=\footnotesize, auto},
+  ]
+
+  % Thread 0
+  \node[event] (rx) {$R(X) = 1$};
+  \node[event, below=of rx] (wy) {$W(Y) = 1$};
+
+  % Thread 1
+  \node[event, right=of rx] (ry) {$R(Y) = 1$};
+  \node[event, below=of ry] (wx) {$W(X) = 1$};
+
+  % Thread labels
+  \node[above=0.4cm of rx, font=\small\bfseries] {Thread 0};
+  \node[above=0.4cm of ry, font=\small\bfseries] {Thread 1};
+
+  % po: within threads (solid thick)
+  \draw[po] (rx) -- node[left] {$po$} (wy);
+  \draw[po] (ry) -- node[right] {$po$} (wx);
+
+  % rfe: straight lines crossing diagonally
+  % W(X)=1 in Thread 1 reads-from to R(X)=1 in Thread 0
+  \draw[rfe] (wx) -- node[below, pos=0.5] {$rfe$} (rx);
+
+  % W(Y)=1 in Thread 0 reads-from to R(Y)=1 in Thread 1
+  \draw[rfe] (wy) -- node[above, pos=0.5] {$rfe$} (ry);
+
+\end{tikzpicture}
+\caption{Load Buffering execution with $a = 1$ and $b = 1$.
+  The cycle $R(X) \xrightarrow{po} W(Y) \xrightarrow{rfe} R(Y) \xrightarrow{po} W(X) \xrightarrow{rfe} R(X)$
+  is allowed under MIPS but forbidden under x86-TSO.}
+\label{fig:lb-rfe-cycle}
+\end{figure}
+
+Under SC, this outcome is impossible: every interleaving requires at least one read to occur before the corresponding write, so at least one thread must read the initial value~0. Under TSO, the outcome is also forbidden. As Figure~\ref{fig:lb-rfe-cycle} illustrates, the cycle involves R$\to$W program-order edges, and TSO preserves R$\to$W ordering, so the cycle cannot be eliminated. However, under MIPS, the outcome is allowed. MIPS does not preserve R$\to$W program-order pairs, so neither of the \textit{po} edges in the cycle of Figure~\ref{fig:lb-rfe-cycle} contributes to the preserved program order, and the acyclicity check passes. We proved this in \texttt{LB.lean}.
+
+Together, these two litmus tests confirm the strict hierarchy: SC $\subset$ TSO $\subset$ MIPS. The SB test separates SC from TSO (and MIPS), while the LB test separates TSO from MIPS.
+
+We also formalize litmus tests for the Linux Kernel Memory Model (LKMM). The LKMM is a significantly more complex memory model than the generic axiomatic models discussed above, as it is designed to capture the specific semantics of the Linux kernel's concurrency primitives. It distinguishes between different access types --- such as \texttt{ONCE}, \texttt{RELEASE}, \texttt{ACQUIRE}, and \texttt{MB} --- and includes fence instructions like \texttt{wmb}, \texttt{rmb}, and \texttt{barrier}. The model defines several acyclicity conditions: \emph{coherence}, which requires the union of same-location program order and communication edges to be acyclic; \emph{atomic}, which ensures read-modify-write operations are not interleaved; \emph{happens-before}, built from preserved program order, reads-from-external edges, and internal propagation; and \emph{propagation}, which governs the visibility of writes across threads through cumulative fences.
+
+We present a Coherence of Read-Read (CoRR) litmus test under the LKMM, formalized in \texttt{CoRR.lean}. The program is shown in Figure~\ref{fig:lkmm-corr-program}, and the candidate execution graph is shown in Figure~\ref{fig:lkmm-corr-cycle}.
+
+\begin{figure}[ht]
+\centering
+\begin{tabular}{c}
+Initially: $X = 0$ \\[6pt]
+\begin{tabular}{l|l}
+P0 & P1 \\
+\hline
+\texttt{WRITE\_ONCE(*x, 1)} & \texttt{r0 = READ\_ONCE(*x)} \\
+                             & \texttt{r1 = READ\_ONCE(*x)} \\
+\end{tabular} \\[6pt]
+Outcome: $r_0 = 1 \wedge r_1 = 0$
+\end{tabular}
+\caption{The CoRR litmus test under the LKMM (\texttt{C CoRR+poonceonce+Once}).}
+\label{fig:lkmm-corr-program}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+    node distance=1.8cm and 4cm,
+    event/.style={draw, rectangle, minimum width=1.8cm, minimum height=0.7cm, font=\small},
+    init/.style={draw, rectangle, minimum width=2.2cm, minimum height=0.7cm, font=\small},
+    po/.style={-{Stealth[length=2.5mm]}, thick},
+    rf/.style={-{Stealth[length=2.5mm]}, dashed},
+    fr/.style={-{Stealth[length=2.5mm]}, dashed, red},
+    co/.style={-{Stealth[length=2.5mm]}, dotted},
+    every edge quotes/.style={font=\footnotesize, auto},
+  ]
+
+  % Init
+  \node[init] (init) {Init: $W(X) = 0$};
+
+  % P0
+  \node[event, below left=1.5cm and 2cm of init] (wx) {$W(X) = 1$};
+
+  % P1
+  \node[event, below right=1.5cm and 2cm of init] (r0) {$R(X) = 1$};
+  \node[event, below=of r0] (r1) {$R(X) = 0$};
+
+  % Thread labels
+  \node[above left=0.4cm and 0cm of wx, font=\small\bfseries] {P0};
+  \node[above right=0.4cm and 0cm of r0, font=\small\bfseries] {P1};
+
+  % co: init -> W(X)=1
+  \draw[co] (init) -- node[above left, pos=0.4] {$co$} (wx);
+
+  % rf: W(X)=1 -> R(X)=1
+  \draw[rf] (wx) -- node[above, pos=0.5] {$rf$} (r0);
+
+  % rf: init -> R(X)=0
+  \draw[rf] (init) .. controls +(3.5,-1.5) and +(2.5,1.5) ..
+    node[right, pos=0.5] {$rf$} (r1);
+
+  % po_loc: R(X)=1 -> R(X)=0 (same location, same thread)
+  \draw[po] (r0) -- node[right] {$po\_loc$} (r1);
+
+  % fr: R(X)=0 -> W(X)=1
+  \draw[fr] (r1) -- node[below, pos=0.5] {$fr$} (wx);
+
+\end{tikzpicture}
+\caption{CoRR execution under the LKMM with $r_0 = 1$ and $r_1 = 0$.
+  The cycle $R(X){=}1 \xrightarrow{po\_loc} R(X){=}0 \xrightarrow{fr} W(X){=}1 \xrightarrow{rf} R(X){=}1$
+  violates the LKMM coherence condition.}
+\label{fig:lkmm-corr-cycle}
+\end{figure}
+
+In this test, all accesses are annotated with \texttt{ONCE}, the weakest marked access type in the LKMM. P0 performs a single write \texttt{WRITE\_ONCE(*x, 1)}, while P1 reads $X$ twice using \texttt{READ\_ONCE}. The question is whether P1 can first observe the updated value $r_0 = 1$ and then observe the initial value $r_1 = 0$.
+
+As shown in Figure~\ref{fig:lkmm-corr-cycle}, if this outcome were allowed, the execution would contain a cycle in $po\_loc \cup com$. The two reads on P1 access the same location $X$ and are related by $po\_loc$. The second read $R(X) = 0$ reads from the initial write, which is coherence-before $W(X) = 1$, giving rise to a from-read ($fr$) edge from $R(X) = 0$ to $W(X) = 1$. Finally, $W(X) = 1$ feeds back to the first read $R(X) = 1$ via a reads-from ($rf$) edge.
+
+This cycle violates the LKMM's coherence condition, which requires $\mathit{po\_loc} \cup \mathit{com}$ to be acyclic, where $\mathit{com} = \mathit{rf} \cup \mathit{co} \cup \mathit{fr}$. Since coherence is the most basic consistency requirement in the LKMM and does not depend on the access annotations or fence instructions, this outcome is forbidden regardless of the access types used. We proved this in \texttt{CoRR\_poonceonce\_Once.lean} by explicitly constructing the cycle in the coherence relation and deriving a contradiction.
+
+TODO: (CoRR_poonceonce_Once.lean and 4 other litmus tests in lkmm)
 
 \subsection{Comparison between different models for the same architecture}
 
@@ -435,3 +566,10 @@ Every execution allowed by SC is also allowed by TSO, but not vice versa: the
 store-buffering execution with both reads observing $0$ is permitted by TSO yet 
 forbidden by SC. This confirms that the inclusion is strict, and that TSO is 
 \emph{strictly} weaker than SC.
+
+\section{Proof Engineering in AI}
+As the new programming LLM models, such as Opus and Codex, the AI is capable of solving tedious proofs, but it can also introduce hallucinations. The proof assistant is different because it has strict verification; it can give feedback to the LLM if it finds something wrong, and then the LLM can start iterations. So how to define a correct theorem statement becomes important, and how to separate the boundary between AI-generated code and the correct part is also important.
+
+So in this framework, our contribution is to make a trusted framework that can convert the defined cat language into Lean 4 directly, and it is reusable for many memory models. As before, people usually write the corresponding proofs for each model, and there is a lot of boilerplate that can be reused, like some common theorems. With LLMs, we can also let the LLM prove the Cat file directly instead of using our framework, but we need to recognize that even though the LLM is powerful, it still has hallucinations; it can easily mislead humans by defining incorrect assumptions for the models. That is why we need to separate the trusted part and the LLM-generated code part.
+
+In our project, we leave the tedious proofs to automation. For each litmus test, we can find the cycle easily just by inspection, but it is hard and tricky to write the proof, because we need to create the TransGen chain and then chain them together to show that they form a cycle.

@@ -136,8 +136,15 @@ The \textit{Candidate Execution} is designed as a universal superset containing 
 We establish a formal abstraction at this boundary: while a candidate execution is typically generated from a litmus test via a parser or compiler, the correctness of that translation is not what we focus on at the memory level. In this project, we leave the correctness of the generation process to us and treat the candidate execution itself as the input. It is important to note that this is a significant assumption in practice; instructions with similar behaviors may not produce identical events and relations. For example, a Read instruction might be represented as a simple $R$ in a standard \texttt{.cat} file, whereas in LKMM it is treated as \texttt{READ\_ONCE}. These differing semantics generate different candidate executions; however, by abstracting these details and focusing solely on the candidate execution as the input, we significantly reduce the overall verification effort.
 
 \subsection{Wellformness}
+The wellformess is the important perperties that give each set and relation a semantic, only when the relations follow these semantics, we say they're wellformenss, otherwise they're meaningless. Most of the formeness are adapted from the https://github.com/herd/herdtools7/blob/c78279fa32f0c0d37e90d083d966b726f781014e/herd/libdir/arm-models/proofs/mixed_v8_equivalences.v#L4
+
+
+
 We require the \texttt{preCo} constraint in order to introduce the coherence order relation, since it naturally satisfies the properties of a strict total order. Intuitively, the coherence order represents a sequence of write events to the same memory location. As such, it is transitive: if one write overwrites another, and that write in turn overwrites a third, then the first write necessarily overwrites the third. It is also irreflexive: since the coherence order relates two distinct instructions, it is impossible for an instruction to overwrite itself, or for two instructions to overwrite each other in both directions.
 
+
+
+\subsection{Tactics}
 
 \textbf{Model the models}
 Now that we have the primitive types, we need a way to connect them. We can reuse existing definitions from Mathlib for working with \texttt{Set} and \texttt{Rel}, and then describe \textsc{tso} and \textsc{sc} using these functions.
@@ -182,7 +189,7 @@ or directly via \texttt{Set.prod}; LeanCat uses \texttt{Set.prod} to reuse exist
 
 \textbf{Well-formedness} Besides these basic definitions, we need to add more properties to make sense for an execution.
 
-\subsection{Connect Lean and Cat}
+\section{Connect Lean and Cat}
 Now that we know how to represent the types and operators of the Cat language in Lean~4, we need a way to turn this representation into a convenient DSL inside Lean. In principle, we could use the data structures defined above to encode each memory model manually and then prove properties about it. However, our goal is to reuse existing Cat specifications (e.g., Figures~\ref{fig:cat-sc} and~\ref{fig:cat-tso}), rather than rewriting them by hand \citep{catOnlineDocHerd,catManualSyntax11}.
 
 To parse Cat files, there are several possible implementation strategies. For example, we could use an external parser (in OCaml, Rust, or C/C++) to translate Cat into an intermediate representation (such as an AST) and then generate Lean code. Instead, we rely on Lean~4's metaprogramming framework and implement the parsing pipeline inside Lean itself, which removes one translation layer and lets the kernel type-check the elaborated result \citep{10.1145/3110278Lean4Meta,deMoura2021lean4}.
