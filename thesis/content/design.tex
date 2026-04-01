@@ -92,6 +92,8 @@ fun evts x a =>
   ∧ a ∈ x.evts.RMW
 \end{verbatim}
 
+\subsection{Abstractions}
+
 \subsection{Candidate Execution}
 Candidate executions play a crucial role in the Cat language: they represent a specific possible execution and may comprise an execution graph. \citet{catManualSyntax11} abstracted each execution as a candidate execution, providing sets of events, each of which satisfies a specific property, such as read-from, initial writes, and so on. We separately represent these sets: a candidate execution contains a set of events as a parameter, and it also includes primitive relations that can be used to filter these events.
 
