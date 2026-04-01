@@ -130,6 +130,8 @@ we demonstrate how they are applied in practice.
 
 We proved that SC is stronger than TSO and TSO is stronger than MIPS. We can use litmus tests to demonstrate this. Litmus tests are small concurrent programs with specific initial conditions and a query about whether a particular outcome is observable. They serve as a convenient way to distinguish memory models: if one model allows an outcome that another forbids, the models are provably different in strength.
 
+\subsubsection{Store Buffering}
+
 First, we use our classical Store Buffering (SB) example. The execution graph for this test is shown in Figure~\ref{fig:sb-fre-cycle}.
 
 % Requires: \usepackage{tikz}
@@ -189,7 +191,73 @@ First, we use our classical Store Buffering (SB) example. The execution graph fo
 
 As shown in Figure~\ref{fig:sb-fre-cycle}, the execution contains a cycle that passes through two W$\to$R program-order edges. This behaviour of the SB test is disallowed by Sequential Consistency, but allowed by x86-TSO, because the W$\to$R program-order pairs do not participate in the preserved program order under TSO, so the cycle in Figure~\ref{fig:sb-fre-cycle} is broken. MIPS likewise allows this outcome, because MIPS only preserves R$\to$W program-order pairs in the execution graph, so the W$\to$R pairs in the SB test again do not form a cycle. We proved this in \texttt{SB.lean}. In this example, we showed a case where SC forbids the outcome but both TSO and MIPS allow it.
 
-Next, we show an example where both SC and TSO forbid the outcome, but MIPS allows it. This is the Load Buffering (LB) test, formalized in \texttt{LB.lean}. The program is shown in Figure~\ref{fig:lb-program}, and the candidate execution graph for the outcome $a = 1$ and $b = 1$ is shown in Figure~\ref{fig:lb-rfe-cycle}.
+\subsubsection{Messege Passing}
+
+\label{subsec:message_passing}
+
+To further distinguish the ordering guarantees of x86-TSO and MIPS, we formalize the \textbf{Message Passing (MP)} litmus test in \texttt{MP.lean}. This test serves as a benchmark for the preservation of Store-to-Store ($W \to W$) and Load-to-Load ($R \to R$) ordering. The program structure is defined in Figure~\ref{fig:mp-program}, and the candidate execution graph representing the outcome $a = 1$ and $b = 0$ is depicted in Figure~\ref{fig:mp-rfe-cycle}.
+
+\begin{figure}[ht]
+\centering
+\begin{tabular}{c}
+Initially: $X = 0,\; Y = 0$ \\[6pt]
+\begin{tabular}{l|l}
+\textbf{Thread 0} & \textbf{Thread 1} \\
+\hline
+$X := 1$ & $a := Y$ \\
+$Y := 1$ & $b := X$ \\
+\end{tabular} \\[6pt]
+Outcome: $a = 1$ and $b = 0$
+\end{tabular}
+\caption{The Message Passing (MP) litmus test program.}
+\label{fig:mp-program}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+    node distance=1.8cm and 4cm,
+    event/.style={draw, rectangle, minimum width=1.8cm, minimum height=0.7cm, font=\small},
+    po/.style={-{Stealth[length=2.5mm]}, thick},
+    rfe/.style={-{Stealth[length=2.5mm]}, dashed, red},
+    fre/.style={-{Stealth[length=2.5mm]}, dashed, blue},
+    every edge quotes/.style={font=\footnotesize, auto},
+  ]
+
+  % Thread 0
+  \node[event] (wx) {$W(X) = 1$};
+  \node[event, below=of wx] (wy) {$W(Y) = 1$};
+
+  % Thread 1
+  \node[event, right=of wx] (ry) {$R(Y) = 1$};
+  \node[event, below=of ry] (rx) {$R(X) = 0$};
+
+  % Thread labels
+  \node[above=0.4cm of wx, font=\small\bfseries] {Thread 0};
+  \node[above=0.4cm of ry, font=\small\bfseries] {Thread 1};
+
+  % po edges
+  \draw[po] (wx) -- node[left] {$po$} (wy);
+  \draw[po] (ry) -- node[right] {$po$} (rx);
+
+  % rfe edge
+  \draw[rfe] (wy) -- node[above, pos=0.5] {$rfe$} (ry);
+
+  % fre edge
+  \draw[fre] (rx) -- node[below, pos=0.5] {$fre$} (wx);
+
+\end{tikzpicture}
+\caption{Message Passing execution graph. The cycle $W(X) \xrightarrow{po} W(Y) \xrightarrow{rfe} R(Y) \xrightarrow{po} R(X) \xrightarrow{fre} W(X)$ is permitted under MIPS but forbidden under x86-TSO.}
+\label{fig:mp-rfe-cycle}
+\end{figure}
+
+Under Sequential Consistency (SC), this outcome is disallowed as it violates the foundational requirement of global instruction interleaving. Within the x86-TSO model, the outcome is also forbidden due to the axiomatic invariant that both Store-Store and Load-Load program-order pairs must be preserved. Consequently, as illustrated in Figure~\ref{fig:mp-rfe-cycle}, the $po$ edges in both threads are included in the preserved program order, and the resulting cycle is detected as a violation of the acyclicity condition.
+
+In contrast, the MIPS model permits this behavior. As a relaxed architecture, MIPS does not enforce ordering between independent memory accesses unless an explicit synchronization barrier is present. In our \texttt{LeanCat} formalization, these $po$ edges are excluded from the \textit{ppo} relation for MIPS, effectively breaking the cycle shown in Figure~\ref{fig:mp-rfe-cycle}. The acyclicity check therefore passes, providing a machine-checked proof that MIPS allows weak behaviors that TSO strictly forbids.
+
+\subsubsection{Load Buffering}
+
+Next, we examine a case where SC, TSO, and MIPS all forbid the specific outcome. This is the \textbf{Load Buffering (LB)} test, formalized in \texttt{LB.lean}. The program structure is presented in Figure~\ref{fig:lb-program}, and the corresponding candidate execution graph for the outcome $a = 1$ and $b = 1$ is illustrated in Figure~\ref{fig:lb-rfe-cycle}.
 
 \begin{figure}[ht]
 \centering
@@ -206,9 +274,6 @@ Can we get $a = 1$ and $b = 1$?
 \caption{The Load Buffering (LB) litmus test.}
 \label{fig:lb-program}
 \end{figure}
-
-% Requires: \usepackage{tikz}
-% \usetikzlibrary{arrows.meta, positioning}
 
 \begin{figure}[ht]
 \centering
@@ -237,22 +302,21 @@ Can we get $a = 1$ and $b = 1$?
   \draw[po] (ry) -- node[right] {$po$} (wx);
 
   % rfe: straight lines crossing diagonally
-  % W(X)=1 in Thread 1 reads-from to R(X)=1 in Thread 0
   \draw[rfe] (wx) -- node[below, pos=0.5] {$rfe$} (rx);
-
-  % W(Y)=1 in Thread 0 reads-from to R(Y)=1 in Thread 1
   \draw[rfe] (wy) -- node[above, pos=0.5] {$rfe$} (ry);
 
 \end{tikzpicture}
-\caption{Load Buffering execution with $a = 1$ and $b = 1$.
-  The cycle $R(X) \xrightarrow{po} W(Y) \xrightarrow{rfe} R(Y) \xrightarrow{po} W(X) \xrightarrow{rfe} R(X)$
-  is allowed under MIPS but forbidden under x86-TSO.}
+\caption{Load Buffering execution with $a = 1$ and $b = 1$. 
+  The cycle $R(X) \xrightarrow{po} W(Y) \xrightarrow{rfe} R(Y) \xrightarrow{po} W(X) \xrightarrow{rfe} R(X)$ 
+  is disallowed under MIPS and forbidden under x86-TSO.}
 \label{fig:lb-rfe-cycle}
 \end{figure}
 
-Under SC, this outcome is impossible: every interleaving requires at least one read to occur before the corresponding write, so at least one thread must read the initial value~0. Under TSO, the outcome is also forbidden. As Figure~\ref{fig:lb-rfe-cycle} illustrates, the cycle involves R$\to$W program-order edges, and TSO preserves R$\to$W ordering, so the cycle cannot be eliminated. However, under MIPS, the outcome is allowed. MIPS does not preserve R$\to$W program-order pairs, so neither of the \textit{po} edges in the cycle of Figure~\ref{fig:lb-rfe-cycle} contributes to the preserved program order, and the acyclicity check passes. We proved this in \texttt{LB.lean}.
+Under Sequential Consistency (SC), this outcome is impossible: every valid interleaving requires at least one read to occur before the corresponding write, ensuring that at least one thread observes the initial value 0. Within the x86-TSO model, the outcome is similarly forbidden. As Figure~\ref{fig:lb-rfe-cycle} demonstrates, the cycle relies on $R \to W$ program-order edges; because TSO maintains a foundational verification of $R \to W$ ordering, this cycle cannot be eliminated. Furthermore, under MIPS, the outcome is also disallowed. Although MIPS is a relaxed architecture, it preserves $R \to W$ program-order pairs to prevent "out-of-thin-air" behaviors. Consequently, the \textit{po} edges in the cycle of Figure~\ref{fig:lb-rfe-cycle} contribute to the preserved program order, and the acyclicity check correctly identifies the execution as disallowed. We have verified this property through our formalization in LB.lean.
 
-Together, these two litmus tests confirm the strict hierarchy: SC $\subset$ TSO $\subset$ MIPS. The SB test separates SC from TSO (and MIPS), while the LB test separates TSO from MIPS.
+Together, these two litmus tests confirm the strict hierarchy: SC $\subset$ TSO $\subset$ MIPS. The SB test separates SC from TSO (and MIPS), while the MP test separates TSO from MIPS, and all of them forbid the \href{https://github.com/nek0las/lean-cats/blob/main/LeanCats/Linux/LB.lean}{LB.lean}.
+
+\subsubsection{LKMM Litmus Tests}
 
 We also formalize litmus tests for the Linux Kernel Memory Model (LKMM). The LKMM is a significantly more complex memory model than the generic axiomatic models discussed above, as it is designed to capture the specific semantics of the Linux kernel's concurrency primitives. It distinguishes between different access types --- such as \texttt{ONCE}, \texttt{RELEASE}, \texttt{ACQUIRE}, and \texttt{MB} --- and includes fence instructions like \texttt{wmb}, \texttt{rmb}, and \texttt{barrier}. The model defines several acyclicity conditions: \emph{coherence}, which requires the union of same-location program order and communication edges to be acyclic; \emph{atomic}, which ensures read-modify-write operations are not interleaved; \emph{happens-before}, built from preserved program order, reads-from-external edges, and internal propagation; and \emph{propagation}, which governs the visibility of writes across threads through cumulative fences.
 
@@ -332,7 +396,7 @@ This cycle violates the LKMM's coherence condition, which requires $\mathit{po\_
 
 TODO: (CoRR_poonceonce_Once.lean and 4 other litmus tests in lkmm)
 
-\subsection{Comparison between different models for the same architecture}
+\subsection{Comparison between different models}
 \label{sec:comparison}
 
 To check whether a memory model is weaker or stronger than another, we can use LeanCat 
@@ -346,22 +410,35 @@ that is, $M_2$ permits at least as many behaviors as $M_1$. Formally, we require
   \{X \mid X \in S_c \text{ and } \mathrm{allowed}_{\mathrm{weak}}(X)\}.
 \end{equation}
 
-We already showed in Section~\ref{sec:sc-tso} that TSO is defined by relaxing SC: it removes 
-the write--read constraint from the acyclicity condition, allowing processors to reorder a 
-write followed by a read. Intuitively, this means TSO should allow \emph{strictly more} 
-behaviors than SC --- every execution that SC accepts, TSO must also accept. In LeanCat, 
-we can verify this claim formally.
+We will compare three different memory models, sequential consistency, total store memory model, and mips. 
 
-We first load both models using the \texttt{defcat} command:
+\texttt{X86-TSO semantics}
+We defined tso in the Figure \ref{fig:cat-tso}, but it's not complete, we need to add two properties to it, one is called atomicity, and another is called sequential consistency per location, so the compelte definition of tso-86 will become:
+
+
+let com = rf | fr | co
+acyclic po_loc | com as uniproc
+
+empty rmw & (fre;coe) as atomic
+
+let xppo = ((W*W) | (R*W) | (R*R)) & po
+let At = domain(rmw) | range(rmw)
+let implied = po;[At | F] | [At | F];po
+acyclic (implied | xppo | rfe | fr | co) as tso
+
+The uniproc is the sequential consistency, it's an important property for cocurrent programming, that is, for all the operations that access the same location, they must follow a sequential conssitency order, otherwise they will be some data coccuption for the same varialbe, that will cause any program wrong. Another is the atomicity, that is, the read-modify-writes must be the atomical operations, there is no another writes between the atomic operation, with these, the X86 operations is complete.
+
+The mips memory model is more relaxed than the X86 memory model, that is, the mips memory model only reserved the operations that starts with R in the program order, any other po will be out-of-order executed, in example~\ref{fig:lb-program}, 
 
 \begin{lstlisting}[]
 defcat <"sc.cat">
 defcat <"tso.cat">
+defcat <"mips.cat">
 \end{lstlisting}
 
 \noindent
 This parses the Cat files and elaborates them into the Lean namespaces \texttt{SC} and 
-\texttt{TSO}, giving us the predicates \texttt{sc.sc evts X} and \texttt{tso.tso evts X}, 
+\texttt{TSO} and \texttt{MIPS}, giving us the predicates based on their defnitions.
 each of which holds when the candidate execution \texttt{X} is \emph{allowed} under the 
 respective model.
 
@@ -375,193 +452,6 @@ theorem scvtso
   : sc.sc evts X -> tso.tso evts X
 \end{lstlisting}
 
-Recall from Section~\ref{sec:sc-tso} that SC requires
-%
-\begin{equation}
-  \mathtt{acyclic}\ (po \mid com),
-\end{equation}
-%
-while TSO requires
-%
-\begin{equation}
-  \mathtt{acyclic}\ (\mathit{implied} \mid \mathit{xppo} \mid \mathit{rfe} \mid fr \mid co),
-\end{equation}
-%
-where $\mathit{xppo} = ((W \times W) \cup (R \times W) \cup (R \times R)) \cap po$ strips 
-out write--read pairs from $po$, and $\mathit{implied}$ re-introduces ordering only around 
-atomic operations and fences (see Figure~\ref{fig:tso}). The key insight is that every edge 
-in the TSO acyclicity constraint is already present --- possibly in a weaker or equal form 
---- in the SC constraint. The proof therefore proceeds by \emph{monotonicity}: if 
-$po \cup com$ is acyclic, then any sub-relation of it is also acyclic.
-
-\label{sec:sc-tso}
-The proof unfolds in two stages. First, we unfold both model predicates and reduce the 
-goal to showing that every edge in the TSO relation is already an edge in the SC relation:
-
-\begin{lstlisting}[]
-by
-unfold sc.sc
-simp
-intro sc
-apply acyclicMono sc
-\end{lstlisting}
-
-\noindent
-Here \texttt{acyclicMono} is a library lemma in LeanCat stating that if a relation $r$ is 
-acyclic and $s \subseteq r$, then $s$ is also acyclic. It captures exactly the monotonicity 
-argument above. We discharge each case of the TSO relation by locating the corresponding edge in 
-$po \cup com$. The case split follows the structure of the TSO constraint:
-
-
-\textbf{\texttt{implied} edges} arise from $po$ composed with an atomic or fence 
-  event. These reduce either to a direct $po$ edge or to a $po$-transitivity step, both of 
-  which are contained in SC's $po$ component:
-
-\begin{lstlisting}[]
-· rcases hImplied with ⟨mid, hpo_amid, htail⟩
-  ...
-  exact Or.inl (X.prePo _ _ _ hpo_amid hpo_xb)
-\end{lstlisting}
-
-\textbf{\texttt{xppo} edges} are a subset of $po$ restricted to non-write--read 
-  pairs, so they map directly into SC's $po$ component:
-
-\begin{lstlisting}[]
-· exact Or.inl hxppo.2
-\end{lstlisting}
-
-\textbf{\texttt{rfe}, \texttt{fr}, and \texttt{co} edges} are all part of 
-  $com = rf \cup fr \cup co$ in SC, so they map into SC's $com$ component:
-
-\begin{lstlisting}[]
-· exact Or.inr (Or.inr (Or.inl hrfe.1))
-· exact Or.inr (Or.inr (Or.inl hfr))
-· exact Or.inr (Or.inr (Or.inr hco))
-\end{lstlisting}
-
-Every branch closes successfully, and Lean's kernel accepts the proof term. This gives us 
-a machine-checked certificate that SC is strictly stronger than TSO: any execution the SC 
-model permits, TSO must also permit, but not vice versa. The store-buffering execution 
-from Figure~\ref{fig:sb-fre-cycle}, where both reads observe $0$, is forbidden under SC yet allowed 
-under TSO, which confirms that the inclusion is strict.
-
-This workflow --- \texttt{defcat}, state the inclusion theorem, apply \texttt{acyclicMono}, 
-case-split on the relation structure --- generalises directly to other model comparisons. 
-For example, one could compare LKMM against TSO for the architectures it supports, or 
-verify that adding a fence primitive to a custom model makes it strictly stronger than the 
-baseline. LeanCat reduces each such comparison to the same pattern, so the mechanization 
-effort scales with the structural difference between the two models rather than with the 
-complexity of either model individually.
-
-\subsubsection{Counterexample: TSO allows an execution that SC forbids}
-
-To make the comparison complete, we also need to show the other direction: that TSO is 
-\emph{strictly} weaker than SC, not merely weaker. That is, there exists a candidate 
-execution that TSO permits but SC forbids. We already introduced this execution in 
-Figure~\ref{fig:sb-fre-cycle} --- it is the Store-Buffering execution where both reads observe $0$.
-
-Let us return to the Store-Buffering litmus test from Figure~\ref{fig:litmus-test}. Recall that 
-both $X$ and $Y$ are initialized to $0$. Thread 0 writes $1$ to $X$ and then reads $Y$, 
-while Thread 1 writes $1$ to $Y$ and then reads $X$. The specific outcome we are 
-interested in is where both reads observe $0$, that is, $a = 0$ and $b = 0$.
-
-\paragraph{Why SC forbids this execution.}
-Under Sequential Consistency, we require
-%
-\begin{equation}
-  \mathtt{acyclic}\ (po \cup com).
-\end{equation}
-%
-In this execution, the fr relation arises because $R(Y) = 0$ reads the initial value of 
-$Y$, which is later overwritten by $W(Y) = 1$, and similarly $R(X) = 0$ reads the 
-initial value of $X$, which is later overwritten by $W(X) = 1$. This produces the 
-following cycle:
-%
-\begin{equation}
-  W(X) \xrightarrow{po} R(Y) \xrightarrow{fr} W(Y) \xrightarrow{po} R(X) 
-  \xrightarrow{fr} W(X).
-\end{equation}
-%
-The edges $W(X) \xrightarrow{po} R(Y)$ and $W(Y) \xrightarrow{po} R(X)$ are 
-program-order edges, and the edges $R(Y) \xrightarrow{fr} W(Y)$ and 
-$R(X) \xrightarrow{fr} W(X)$ are from-read edges. Together they form a cycle in 
-$po \cup com$, which violates the acyclicity condition. SC therefore forbids this 
-execution.
-
-\paragraph{Why TSO allows this execution.}
-Recall from Figure~\ref{fig:tso} that TSO requires
-%
-\begin{equation}
-  \mathtt{acyclic}\ (\mathit{implied} \cup \mathit{xppo} \cup \mathit{rfe} 
-  \cup fr \cup co),
-\end{equation}
-%
-where $\mathit{xppo} = ((W \times W) \cup (R \times W) \cup (R \times R)) \cap po$ 
-strips out write--read pairs from $po$. The critical edges $W(X) \xrightarrow{po} R(Y)$ 
-and $W(Y) \xrightarrow{po} R(X)$ are both write--read pairs. They are therefore excluded 
-from $\mathit{xppo}$ and do not appear in the TSO acyclicity constraint. Without these 
-edges, the cycle breaks and the execution is allowed under TSO.
-
-\paragraph{Mechanizing the counterexample in LeanCat.}
-We construct this execution concretely in Lean 4, following the same pattern as the 
-\texttt{sbExecution} definition from Section~\ref{sec:visualization}:
-
-\begin{lstlisting}[]
-private def sbEvents : Array Event :=
-  #[initWx, initWy, inst1writeX, inst2readY, inst3writeY, inst4readX]
-
-private def sbRf : Array (Event × Event) :=
-  #[(initWx, inst2readY), (initWy, inst4readX)]
-
-private def sbCo : Array (Event × Event) :=
-  #[(initWx, inst1writeX), (initWy, inst3writeY)]
-
-def sbExecution : ConcreteExecution := {
-  events    := sbEvents
-  po        := computeDirectPo sbEvents
-  rf        := sbRf
-  co        := sbCo
-  fr        := computeFr sbRf sbCo
-  rmw       := #[]
-}
-\end{lstlisting}
-
-\noindent
-Here the rf relation maps the initial writes \texttt{initWx} and \texttt{initWy} to 
-the corresponding read events, meaning both reads observe the initial value $0$. The 
-co relation records that the initial writes are overwritten by the thread writes, 
-giving rise to the fr edges described above.
-
-Once the candidate execution is defined, we can state and prove the two directions 
-formally. The first theorem states that this execution is allowed under TSO:
-
-\begin{lstlisting}[language=lean]
-theorem sb_allowed_tso
-  (evts : Data.Events)
-  (X : CandidateExecution evts)
-  : tso.tso evts sbExecution := by
-  unfold tso.tso
-  simp [Acyclic]
-  -- No cycle exists in (implied | xppo | rfe | fr | co)
-  -- because the write-read po edges are excluded from xppo
-  decide
-\end{lstlisting}
-
-\noindent
-The second theorem states that the same execution is forbidden under SC:
-
-\begin{lstlisting}[language=lean]
-theorem sb_forbidden_sc
-  (evts : Data.Events)
-  (X : CandidateExecution evts)
-  : ¬ sc.sc evts sbExecution := by
-  unfold sc.sc
-  simp [Acyclic]
-  -- The cycle W(X) -po-> R(Y) -fr-> W(Y) -po-> R(X) -fr-> W(X)
-  -- witnesses the violation of acyclicity
-  decide
-\end{lstlisting}
-
 \noindent
 Together, \texttt{scvtso}, \texttt{sb\_allowed\_tso}, and \texttt{sb\_forbidden\_sc} 
 give us a complete machine-checked account of the relationship between SC and TSO. 
@@ -570,9 +460,10 @@ store-buffering execution with both reads observing $0$ is permitted by TSO yet
 forbidden by SC. This confirms that the inclusion is strict, and that TSO is 
 \emph{strictly} weaker than SC.
 
-\section{Proof Engineering in AI}
-As the new programming LLM models, such as Opus and Codex, the AI is capable of solving tedious proofs, but it can also introduce hallucinations. The proof assistant is different because it has strict verification; it can give feedback to the LLM if it finds something wrong, and then the LLM can start iterations. So how to define a correct theorem statement becomes important, and how to separate the boundary between AI-generated code and the correct part is also important.
+\section{Proof Engineering and Heuristic Automation}
 
-So in this framework, our contribution is to make a trusted framework that can convert the defined cat language into Lean 4 directly, and it is reusable for many memory models. As before, people usually write the corresponding proofs for each model, and there is a lot of boilerplate that can be reused, like some common theorems. With LLMs, we can also let the LLM prove the Cat file directly instead of using our framework, but we need to recognize that even though the LLM is powerful, it still has hallucinations; it can easily mislead humans by defining incorrect assumptions for the models. That is why we need to separate the trusted part and the LLM-generated code part.
+With the emergence of high-capability models such as Opus and Codex, AI is capable of addressing the tedious overhead of formalization, though it can also introduce unvalidated heuristic errors. An interactive proof assistant is fundamentally distinct because it maintains strict foundational verification; it can provide precise feedback to the LLM when it detects errors, enabling an iterative cycle of refinement. Consequently, the precise formulation of theorem statements and the demarcation between AI-generated code and the trusted parts of the development become critical considerations.
 
-In our project, we leave the tedious proofs to automation. For each litmus test, we can find the cycle easily just by inspection, but it is hard and tricky to write the proof, because we need to create the TransGen chain and then chain them together to show that they form a cycle.
+In this framework, our contribution is the provision of a trusted infrastructure that translates the Cat language into Lean 4 directly, ensuring reusability across many memory models. Traditionally, formalizers must write corresponding proofs for each model manually, incurring significant overhead in redundant boilerplate and common theorems. While one could task an LLM with reasoning about a Cat file directly without such a framework, we must recognize that its heuristic nature can mislead humans by introducing incorrect assumptions for the models. This is why it is essential to maintain a sharp separation between the trusted core and the LLM-generated code.
+
+In our project, we relegate these tedious proofs to automation. For any given litmus test, a cycle is often easily identified by inspection, but the formal mechanization is notably labor-intensive. It requires the manual construction of transitive closure (\texttt{TransGen}) chains and the composition of relations to demonstrate that they indeed form a cycle.

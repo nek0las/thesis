@@ -146,7 +146,7 @@ We require the \texttt{preCo} constraint in order to introduce the coherence ord
 
 \subsection{Tactics}
 
-\textbf{Model the models}
+\subsection{Models}
 Now that we have the primitive types, we need a way to connect them. We can reuse existing definitions from Mathlib for working with \texttt{Set} and \texttt{Rel}, and then describe \textsc{tso} and \textsc{sc} using these functions.
 
 The following is the standard Cat definition of sequential consistency (\textsc{sc}; see Figure~\ref{fig:cat-sc}). We ignore the \texttt{include} directive here, since we model the relations imported from \texttt{cos.cat} as primitives. The first statement, \texttt{let com = rf | fr | co}, introduces a name for the expression on the right-hand side; in Lean, this can be represented with a \texttt{def}. The operator \texttt{|} is relational union. Since Mathlib does not provide union and intersection for relations out of the box, we define them as follows:
