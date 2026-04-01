@@ -547,7 +547,7 @@ In summary, the Linux Kernel Memory Model (LKMM) is defined by the following con
 The LKMM also formalizes RCU operations, but these involve very complex and computationally expensive constraints. For this reason, we decided to exclude the RCU-related part from our analysis.
 We will explain this decision in more detail later.
 
-\section{Mathematical Backgrounds}
+\section{Mathematical Background}
 \label{sec:math-background}
 
 To understand the axiomatic memory models, we need to use \emph{binary relations}. Relationships between elements of two sets are represented using a structure called a binary relation. A binary relation from a set $A$ to a set $B$ is formally defined as a subset of the Cartesian product $A \times B$ \cite[p.~599]{rosen2012discrete}. There are two common methods for representing relations: using square matrices and using directed graphs \cite[p.~621]{rosen2012discrete}. In this thesis, we mainly use the second method, i.e., directed graphs, to represent binary relations.
@@ -652,7 +652,7 @@ fr = co \mathbin{;} rf^{-1},
 \]
 where $rf^{-1}$ connects the read to its source write, and $co$ (coherence order) connects that write to a subsequent write that overwrites the value.
 
-\subsubsection{Comparison between models in different architectures}
+\subsection{Comparing Memory Models}
 
 From a high-level perspective, when comparing different models, we check whether one model allows more program behaviors than another. If it does, we say that this model is \emph{weaker} than the other. A program generates a set of candidate executions, denoted by \( S^c \), and the memory model filters these to determine which executions are allowed. A weaker memory model should include all executions allowed by a stricter memory model. Formally, we require:
 
@@ -664,7 +664,7 @@ From a high-level perspective, when comparing different models, we check whether
 
 This captures the idea that every execution permitted by the stricter model must also be permitted by the weaker one.
 
-\section{Lean 4 and its Meta-Programming Framework}
+\section{Lean 4 and Its Metaprogramming Framework}
 This subsection introduces the necessary background for readers who have never used Lean 4 before. We cover only the most important concepts used in this project and do not introduce complex topics such as monads. Before presenting the key features of Lean 4, we first explain why we chose it as our tool for this project.
 
 \subsection{Lean 4}

@@ -1,4 +1,4 @@
-\chapter{Implementations in Lean 4}
+\chapter{Implementation in Lean 4}
 \label{chapter:design}
 
 When we work with pen and paper, we usually do not focus on the subtle parts of a proof; instead, we prioritize the interesting aspects. In contrast, mechanization requires us to define every detail of the specification. These challenges are independent of the particular proof assistant we choose, so we propose a general design whose ideas can be easily implemented in other languages. In this section, we identify and clarify the issues involved in mechanizing weak memory models and show how we address them using Lean 4’s existing MathLib and Meta-Programming framework [\citet{deMoura2021lean4,10.1145/3110278Lean4Meta,mathlib2020}].
@@ -42,7 +42,9 @@ However, addresses and values are irrelevant to the problem we want to solve. Le
 
 In cat, we use Set in Lean 4 to organize the events, and there are some primitive set of events like W (All the write events), R (All the read events), F (All the fence events), etc. These events are gathered from the herd7 tools for each litmus tests, and they call them anarchical semantics, we can simply treat them as the input of the model. Besides the primitive events, there are some sets are composed by these primitive sets, for example, the M (Set of modification events) is the union of the W and R. Besides that, there are some user defined sets, these sets are an important part of the LKMM model, the users defined these sets by the tag in the event.
 
-\subsection{Tagged Events}. There are many sets; they are defined by tags instead of being implicitly defined in the Cat language. For example, in LKMM memory models, there are relations used to express accesses; they are normally defined in this way:
+\subsection{Tagged Events}
+
+There are many sets; they are defined by tags instead of being implicitly defined in the Cat language. For example, in LKMM memory models, there are relations used to express accesses; they are normally defined in this way:
 
 \begin{verbatim}
 enum Accesses = 'ONCE (*READ_ONCE,WRITE_ONCE*) ||
@@ -92,8 +94,6 @@ fun evts x a =>
   ∧ a ∈ x.evts.RMW
 \end{verbatim}
 
-\subsection{Abstractions}
-
 \subsection{Candidate Execution}
 Candidate executions play a crucial role in the Cat language: they represent a specific possible execution and may comprise an execution graph. \citet{catManualSyntax11} abstracted each execution as a candidate execution, providing sets of events, each of which satisfies a specific property, such as read-from, initial writes, and so on. We separately represent these sets: a candidate execution contains a set of events as a parameter, and it also includes primitive relations that can be used to filter these events.
 
@@ -137,7 +137,7 @@ The \textit{Candidate Execution} is designed as a universal superset containing 
 
 We establish a formal abstraction at this boundary: while a candidate execution is typically generated from a litmus test via a parser or compiler, the correctness of that translation is not what we focus on at the memory level. In this project, we leave the correctness of the generation process to us and treat the candidate execution itself as the input. It is important to note that this is a significant assumption in practice; instructions with similar behaviors may not produce identical events and relations. For example, a Read instruction might be represented as a simple $R$ in a standard \texttt{.cat} file, whereas in LKMM it is treated as \texttt{READ\_ONCE}. These differing semantics generate different candidate executions; however, by abstracting these details and focusing solely on the candidate execution as the input, we significantly reduce the overall verification effort.
 
-\subsection{Wellformness}
+\subsection{Well-Formedness Conditions}
 The wellformess is the important perperties that give each set and relation a semantic, only when the relations follow these semantics, we say they're wellformenss, otherwise they're meaningless. Most of the wellformedness conditions are adapted from the herdtools7 Coq development \cite{10.1145/2627752, 10.1145/3458926ArmedCat}
 
 
@@ -216,7 +216,7 @@ or directly via \texttt{Set.prod}; LeanCat uses \texttt{Set.prod} to reuse exist
 
 \textbf{Well-formedness} Besides these basic definitions, we need to add more properties to make sense for an execution.
 
-\section{Connect Lean and Cat}
+\section{Connecting Cat Specifications to Lean 4}
 Now that we know how to represent the types and operators of the Cat language in Lean~4, we need a way to turn this representation into a convenient DSL inside Lean. In principle, we could use the data structures defined above to encode each memory model manually and then prove properties about it. However, our goal is to reuse existing Cat specifications (e.g., Figures~\ref{fig:cat-sc} and~\ref{fig:cat-tso}), rather than rewriting them by hand \citep{catOnlineDocHerd,catManualSyntax11}.
 
 To parse Cat files, there are several possible implementation strategies. For example, we could use an external parser (in OCaml, Rust, or C/C++) to translate Cat into an intermediate representation (such as an AST) and then generate Lean code. Instead, we rely on Lean~4's metaprogramming framework and implement the parsing pipeline inside Lean itself, which removes one translation layer and lets the kernel type-check the elaborated result \citep{10.1145/3110278Lean4Meta,deMoura2021lean4}.
@@ -277,7 +277,9 @@ This recursive function computes the RCU lock pairs. An approach is to encode th
 
 Another approach is to encode the recursion using a least fixed-point formulation. Since the data types in Cat are represented using sets and relations, the semantics can be translated into SMT formulas over relations and sets. In principle, the resulting constraints could be solved by an SMT solver. However, the SMT integrations available in Lean 4 are still relatively immature, making this approach unreliable in practice. Although the problem could also be formalized and proven directly in Lean, doing so would introduce significant additional complexity. Due to time constraints, we leave this aspect for future work.
 
-\subsubsection{locks}, the LKMM depends on the library called lock.cat, and these libraries all depend on cos.cat and std.lib, as we stated earlier, for the convenience of modeling, we defined these libraries into the LeanCats directly instead of parsing them using macros. The lock.cat is used to express the spin\_lock related relations, like lock/unlock, etc. 
+\subsubsection{Lock Libraries}
+
+The LKMM depends on a library called \texttt{lock.cat}, which in turn depends on \texttt{cos.cat} and \texttt{stdlib.cat}. For convenience, we embed these libraries directly into LeanCat rather than parsing them through the macro system. The \texttt{lock.cat} library is used to express spin-lock related relations, such as lock and unlock.
 
 We summarized all the supported syntax in Appendix~\ref{app:cat-bell} and~\ref{app:lkmm-cat} using LKMM as the example. The yellow part is what can be supported now; the other parts are what we can't support.
 
