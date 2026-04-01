@@ -146,6 +146,31 @@ We require the \texttt{preCo} constraint in order to introduce the coherence ord
 
 \subsection{Tactics}
 
+Writing memory model proofs in Lean~4 involves two distinct kinds of tedium. The first is establishing the well-formedness obligations of a concrete candidate execution --- showing that the events, coherence order, reads-from relation, and so on satisfy the conditions listed in Section~\ref{sec:design:core-types}. The second is closing the individual sub-goals that arise during an acyclicity or model-comparison proof, where the goal typically decomposes into a large case split over which relation each edge belongs to. Both kinds of tedium are highly repetitive but follow predictable patterns, so they are good targets for automation.
+
+Lean~4 provides several general-purpose tactics that are useful here. The \texttt{simp} tactic rewrites goals using a user-supplied or default set of \texttt{@[simp]} lemmas; we annotate most of our relation definitions with \texttt{@[simp]} so that \texttt{simp} can unfold them automatically. As introduced in Section~\ref{subsec:aesop}, \texttt{aesop} performs extensible proof search; in LeanCat we register \texttt{ayclicMono} with \texttt{@[aesop safe apply]} so that it is applied automatically whenever the goal is an acyclicity statement. The \texttt{decide} tactic closes goals that reduce to a decidable computation over finite data, which is useful when checking concrete event identifiers or thread identifiers. The \texttt{omega} tactic discharges arithmetic goals over the natural numbers and integers, which arises in program-order arguments because event IDs and thread IDs are encoded as \texttt{Nat}.
+
+However, these general-purpose tactics are not sufficient on their own for the well-formedness obligations of concrete candidate executions. Establishing, for example, that the reads-from relation of the SB litmus test is well-formed requires unfolding the definition of \texttt{wellformed.rf}, inspecting each pair in the finite relation, and checking that each pair satisfies all the structural conditions (same location, write on the left, read on the right, etc.). Doing this manually for every litmus test is both tedious and error-prone, because the unfolding and case analysis follow exactly the same pattern each time.
+
+To address this, we define a custom tactic macro \texttt{candidateExecution\_wf}:
+
+\begin{verbatim}
+macro "candidateExecution_wf" : tactic =>
+  `(tactic|
+    (all_goals repeat first
+       | simp at *
+         aesop
+       | (casesm _ ∈ _
+          aesop)))
+\end{verbatim}
+
+\noindent
+The macro repeatedly applies two strategies. The first simplifies all goals using \texttt{simp} and then attempts to close them with \texttt{aesop}. The second destructs set-membership hypotheses of the form \texttt{e ∈ S} using \texttt{casesm}, which enumerates the finitely many elements of the concrete event set, and then tries \texttt{aesop} on each case. Together these two strategies handle the full range of well-formedness checks that arise in practice: type checks (write on the left of rf, read on the right), location checks (same location in rf), and uniqueness checks (at most one write reads-from a given read). We use \texttt{candidateExecution\_wf} in the instance declarations for \texttt{wellformed.rf}, \texttt{wellformed.co}, and related structures throughout the litmus test files.
+
+For the acyclicity proofs, the pattern is different. When we want to show that a concrete execution is allowed by a model, we apply \texttt{acyclic\_of\_rank} with an explicitly provided ranking function that maps event identifiers to natural numbers. The ranking function must strictly increase along every edge of the relation, which the tactic then verifies by unfolding the relation and checking each case with \texttt{simp}, \texttt{rcases}, and \texttt{decide}. For example, in the SB litmus test proof that TSO allows the outcome, we provide a rank function over six event IDs and the remaining proof obligation reduces to a sequence of concrete case checks that \texttt{simp\_all} and \texttt{decide} can close automatically.
+
+For the model-comparison proofs, we apply \texttt{ayclicMono} to reduce the goal to a subset check, and then use \texttt{simp} together with \texttt{rcases} to decompose the disjunction and route each case to the appropriate branch. Because \texttt{ayclicMono} is marked \texttt{@[aesop safe apply]}, \texttt{aesop} will apply it automatically when the goal matches, which further reduces the amount of manual proof scripting required.
+
 \subsection{Models}
 Now that we have the primitive types, we need a way to connect them. We can reuse existing definitions from Mathlib for working with \texttt{Set} and \texttt{Rel}, and then describe \textsc{tso} and \textsc{sc} using these functions.
 
