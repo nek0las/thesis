@@ -553,98 +553,9 @@ BPF (Berkeley Packet Filter) is a technology that allows programs to run safely 
 
 Despite this close relationship, no formal memory model for BPF existed prior to 2024. The BPF memory model was introduced in 2024 through a proposal discussed on \href{https://lwn.net/Articles/976071/}{LWN.net}~\cite{bpf-memory-model-lwn}. That proposal identifies two principal sources of weak memory behaviors in BPF: atomic instructions (such as \texttt{xchg} and \texttt{cmpxchg}), and jump instructions. Understanding these behaviors is important because they represent the bare minimum of ordering guarantees that most BPF programs currently rely on. In the absence of a formalized model, it is impossible to determine whether a bug caused by reordered memory operations is a fault in the BPF program, the compiler, or the BPF just-in-time (JIT) compiler.
 
-The BPF memory model follows the same design philosophy as the LKMM: it should be as weak as possible, avoiding prohibiting behaviors that the supported architectures permit. However, BPF instructions cannot be directly mapped to the LKMM, because the LKMM is defined at the level of C-language primitives, whereas BPF is closer to assembly. Consequently, some constraints required by BPF semantics fall outside what the LKMM can express. The designers therefore chose to adapt the model from both the LKMM and the AArch64 (ARMv8) memory model, as AArch64 provides a more expressive foundation for instruction-level atomic operations. In particular, the BPF memory model adopts the atomic memory operation (AMO) design from AArch64, together with acquire (\texttt{AQ}) and release (\texttt{RL}) annotations. The BPF memory model is defined as:
+The BPF memory model follows the same design philosophy as the LKMM: it should be as weak as possible, avoiding prohibiting behaviors that the supported architectures permit. However, BPF instructions cannot be directly mapped to the LKMM, because the LKMM is defined at the level of C-language primitives, whereas BPF is closer to assembly. Consequently, some constraints required by BPF semantics fall outside what the LKMM can express. The designers therefore chose to adapt the model from both the LKMM and the AArch64 (ARMv8) memory model, as AArch64 provides a more expressive foundation for instruction-level atomic operations. In particular, the BPF memory model adopts the atomic memory operation (AMO) design from AArch64, together with acquire (\texttt{AQ}) and release (\texttt{RL}) annotations. The BPF memory model is defined in \href{https://github.com/herd/herdtools7/blob/master/herd/libdir/bpf.cat}{herd/libdir/bpf.cat}.
 
-BPF "BPF Memory model based on LKMM"
-
-(*************)
-(* Utilities *)
-(*************)
-
-(* Single event atomic ops are marked with both R and W.
- * These events are marked with SC if the op returns a value.
- *)
-let RMW = [R & W] & [SC]
-
-(* Atomic ops with separate R and W events are related by the amo relation.
- * both of these R and W events are  marked with SC if the op returns a value.
- *)
-let SRMW = (SC * SC) & amo
-
-(* Both single and double event atomics when marked with SC act as full
- * barriers:
- * 1. Single event RMW with SC:
- *    [M] -> RMWsc-> [M]
- *
- * 2. Double event RMW with SC:
- *    [M] -> Rsc -> Wsc -> [M]
- *)
-let po_amo_fetch = ([M];po;RMW) | (RMW;po;[M]) | ([M];po;[domain(SRMW)]) | ([range(SRMW)];po;[M])
-
-show po_amo_fetch as atomicfetch
-
-(* Release Consistency processor consistent (RCpc) *)
-let load_acquire = ([AQ];po;[M])
-let store_release = ([M];po;[RL])
-let rcpc = load_acquire | store_release
-
-(****************)
-(* Dependencies *)
-(****************)
-
-let addr_dep = [R];addr;[M]
-let data_dep = [R];data;[W]
-let ctrl_dep = [R];ctrl;[W]
-
-show addr_dep as addr
-show data_dep as data
-show ctrl_dep as ctrl
-
-(**********************)
-(* ppo and prop rules *)
-(**********************)
-
-(* Compute coherence relation *)
-include "cos-opt.cat"
-let com = co | rf | fr
-
-let ppo =
-(* Explicit synchronization *)
- po_amo_fetch | rcpc
-(* Syntactic Dependencies *)
-| addr_dep
-| data_dep
-| ctrl_dep
-(* Pipeline Dependencies *)
-| [M];(addr|data);[W];rfi;[R]
-| [M];addr;[M];po;[W]
-(* Overlapping-address ordering *)
-| (coi | fri)
-
-(* Propagation ordering from SC and release operations *)
-let A-cumul = rfe? ; (po_amo_fetch | store_release)
-let amo-sequence = (rf ; ([R & W] | amo))*
-let prop = (coe | fre)? ; (A-cumul ; amo-sequence)* ; rfe?
-
-(**********)
-(* Axioms *)
-(**********)
-
-(* Sc per location *)
-acyclic com | po-loc as Coherence
-
-(* No-Thin-Air and Observation *)
-let hb = ppo | rfe | ((prop \ id) & int)
-acyclic hb as Happens-before
-
-(* Propagation *)
-let pb = prop ; po_amo_fetch ; hb*
-acyclic pb as Propagation
-
-(* Atomicity *)
-empty rmw & (fre;coe) as Atomic
-
-The model above exhibits the same high-level structure as the LKMM: it enforces coherence (\textit{Coherence}), happens-before (\textit{Happens-before}), propagation (\textit{Propagation}), and atomicity (\textit{Atomic}) constraints. The key difference lies in how synchronization is expressed. Rather than relying on Linux kernel fence primitives declared in a bell file, the BPF model uses AArch64-style atomic memory operations as its synchronization backbone. The \textit{ppo} relation is built from explicit synchronization via \texttt{po\_amo\_fetch} and release-consistency (\texttt{rcpc}), together with syntactic dependencies (address, data, and control) and pipeline dependencies. The \textit{prop} relation captures cumulative propagation in the same spirit as the LKMM, using \textit{A-cumul} to account for stores arriving from other threads before a synchronizing operation. In this way, the BPF memory model inherits the structural discipline of the LKMM while grounding its synchronization primitives in the AArch64 memory model.
+The BPF model exhibits the same high-level structure as the LKMM: it enforces coherence (\textit{Coherence}), happens-before (\textit{Happens-before}), propagation (\textit{Propagation}), and atomicity (\textit{Atomic}) constraints. The key difference lies in how synchronization is expressed. Rather than relying on Linux kernel fence primitives declared in a bell file, the BPF model uses AArch64-style atomic memory operations as its synchronization backbone. The \textit{ppo} relation is built from explicit synchronization via \texttt{po\_amo\_fetch} and release-consistency (\texttt{rcpc}), together with syntactic dependencies (address, data, and control) and pipeline dependencies. The \textit{prop} relation captures cumulative propagation in the same spirit as the LKMM, using \textit{A-cumul} to account for stores arriving from other threads before a synchronizing operation. In this way, the BPF memory model inherits the structural discipline of the LKMM while grounding its synchronization primitives in the AArch64 memory model.
 
 \section{Mathematical Background}
 \label{sec:math-background}
@@ -772,7 +683,7 @@ Lean 4 is an interactive theorem prover (ITP). Traditionally, most proofs for me
 
 Lean 4~\cite{deMoura2021lean4} is not only just an ITP, it is also a functional programming language like Haskell and OCaml, which means it is a general-purpose programming language that supports computation and IO. This gives us the ability to read and parse the CAT files directly from storage, instead of manually migrating the CAT files into Lean 4.
 
-For readers unfamiliar with interactive theorem provers, the following simple example illustrates how they work. You can experiment with more examples yourself in the \href{https://adam.math.hhu.de/#/g/leanprover-community/nng4/}{Lean 4 Natural Number Game}. Suppose we want to prove that for all natural numbers \(n\), \(n + 0 = n\). While this equality is obvious at a glance, in a formal system we must justify it using previously proven theorems. In Lean 4, this is achieved using commands called \emph{tactics}. One particularly useful tactic is \texttt{rw} (rewrite). There exists a theorem \texttt{add\_zero} stating that \(\forall a, a + 0 = a\). If our goal is to prove \(n + 0 = n\), we can apply the tactic \texttt{rw [add\_zero]}. This replaces \(n + 0\) with \(n\), immediately closing the goal.
+For readers unfamiliar with interactive theorem provers, the following simple example illustrates how they work. We can experiment with more examples in the \href{https://adam.math.hhu.de/#/g/leanprover-community/nng4/}{Lean 4 Natural Number Game}. Suppose we want to prove that for all natural numbers \(n\), \(n + 0 = n\). While this equality is obvious at a glance, in a formal system we must justify it using previously proven theorems. In Lean 4, this is achieved using commands called \emph{tactics}. One particularly useful tactic is \texttt{rw} (rewrite). There exists a theorem \texttt{add\_zero} stating that \(\forall a, a + 0 = a\). If our goal is to prove \(n + 0 = n\), we can apply the tactic \texttt{rw [add\_zero]}. This replaces \(n + 0\) with \(n\), immediately closing the goal.
 
 
 More generally, the \texttt{rw} tactic allows us to replace any subexpression that matches the left-hand side of a known equality with the corresponding right-hand side. For example, to prove \((n + 0) + 0 = n\), we can apply \texttt{rw [add\_zero]} twice. Each application eliminates one occurrence of \(+ 0\), eventually reducing the goal to the trivial equality \(n = n\). This example reflects a fundamental principle in Lean 4: even the simplest intuitive facts must be formally justified by applying previously established theorems. Tactics provide a systematic and interactive way to do so. While this particular example may appear trivial, we will explore more powerful tactics and theorems later.

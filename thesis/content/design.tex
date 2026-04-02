@@ -166,7 +166,6 @@ macro "candidateExecution_wf" : tactic =>
           aesop)))
 \end{verbatim}
 
-\noindent
 The macro repeatedly applies two strategies. The first simplifies all goals using \texttt{simp} and then attempts to close them with \texttt{aesop}. The second destructs set-membership hypotheses of the form \texttt{e ∈ S} using \texttt{casesm}, which enumerates the finitely many elements of the concrete event set, and then tries \texttt{aesop} on each case. We use it to automatically prove the well-formedness of the candidate executions.
 
 \subsection{Models}
@@ -241,14 +240,6 @@ def tso := Acyclic ghb
 
 end TSO
 \end{verbatim}
-We can then refer to the resulting definition as \texttt{TSO.tso}.
-
-\begin{itemize}
-  \item \textbf{What we model:}
-  \item \textbf{Why this representation:} explain the design goals (compositionality, reuse of Mathlib, proof automation).
-  \item \textbf{Comparison to alternatives:} e.g., deep embedding vs shallow embedding; inductive syntax trees vs typed structures.
-  \item \textbf{Limitations:} what becomes harder/verbose, and what is intentionally out of scope.
-\end{itemize}
 
 \subsection{Supported \texttt{cat} Subset (Targeting LKMM)}
 \label{sec:design:cat-subset}
