@@ -205,8 +205,8 @@ Some relations are composed based on the primitive relations. The following are 
 \node[event, below=1.2cm of wy1] (rx1) {$R(X)=1$};
 
 % Coherence order
-\draw[co] (init) -- (wx1) node[midway, above, sloped, font=\scriptsize] {co};
-\draw[co] (init) -- (wy1) node[midway, above, sloped, font=\scriptsize] {co};
+\draw[co] (init) -- (wx1) node[pos=0.65, above, sloped, font=\scriptsize] {co};
+\draw[co] (init) -- (wy1) node[pos=0.65, above, sloped, font=\scriptsize] {co};
 
 % Program order
 \draw[po] (wx1) -- (ry1) node[midway, left, font=\scriptsize] {po};
@@ -217,7 +217,7 @@ Some relations are composed based on the primitive relations. The following are 
     node[midway, right, font=\scriptsize] {$rfe$};
 
 \draw[rf-ext] (init) -- (rx1)
-    node[midway, above, font=\scriptsize] {$rfi$};
+    node[pos=0.65, sloped, above, font=\scriptsize] {$rfi$};
 
 % From-read relations
 \draw[fr] (rx1) to[bend right=45] (wx1)
