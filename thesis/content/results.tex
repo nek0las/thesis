@@ -65,7 +65,7 @@ the remaining supporting lemmas.
 
 \paragraph{Acyclicity Monotonicity.}
 The central proof technique for comparing memory models is \emph{monotonicity}: if a
-relation~$r$ is acyclic and~$s \subseteq r$, then~$s$ is also acyclic. We formalise this as
+relation~$r$ is acyclic and~$s \subseteq r$, then~$s$ is also acyclic. We formalize this as
 \texttt{acyclicMono}:
 
 \begin{lstlisting}
@@ -82,7 +82,7 @@ workhorse of the SC~$\Rightarrow$~TSO comparison in Section~\ref{sec:comparison}
 show that every edge in the TSO acyclicity constraint is also an edge in the SC constraint,
 the result follows immediately.
 
-We also prove a generalised variant, \texttt{acyclicMono\_trans}, which allows each edge
+We also prove a generalized variant, \texttt{acyclicMono\_trans}, which allows each edge
 of~$r_1$ to correspond to a \emph{path} (rather than a single edge) in~$r_2$. This stronger
 form is useful when the relations in the two models are not in direct subset relation but one
 model's edges can be decomposed into multi-step paths in the other.
@@ -188,7 +188,7 @@ First, we use our classical Store Buffering (SB) example. The execution graph fo
 \label{fig:sb-fre-cycle}
 \end{figure}
 
-As shown in Figure~\ref{fig:sb-fre-cycle}, the execution contains a cycle that passes through two W$\to$R program-order edges. This behaviour of the SB test is disallowed by Sequential Consistency, but allowed by x86-TSO, because the W$\to$R program-order pairs do not participate in the preserved program order under TSO, so the cycle in Figure~\ref{fig:sb-fre-cycle} is broken. MIPS likewise allows this outcome, because MIPS only preserves R$\to$W program-order pairs in the execution graph, so the W$\to$R pairs in the SB test again do not form a cycle. We proved this in \texttt{SB.lean}. In this example, we showed a case where SC forbids the outcome but both TSO and MIPS allow it.
+As shown in Figure~\ref{fig:sb-fre-cycle}, the execution contains a cycle that passes through two W$\to$R program-order edges. This behavior of the SB test is disallowed by Sequential Consistency, but allowed by x86-TSO, because the W$\to$R program-order pairs do not participate in the preserved program order under TSO, so the cycle in Figure~\ref{fig:sb-fre-cycle} is broken. MIPS likewise allows this outcome, because MIPS only preserves R$\to$W program-order pairs in the execution graph, so the W$\to$R pairs in the SB test again do not form a cycle. We proved this in \texttt{SB.lean}. In this example, we showed a case where SC forbids the outcome but both TSO and MIPS allow it.
 
 \subsubsection{Message Passing}
 

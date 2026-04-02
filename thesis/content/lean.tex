@@ -1,7 +1,7 @@
 \chapter{Background}
 \label{chapter:Background}
 
-In this chapter we will introduce the weak memory, the Lean 4 programming language and its metaprogramming framework, and the mathematical backgrounds needed in later chapters. First, we introduce weak memory models through some basic examples and weak behaviours (Section \ref{Background:LKMM}).
+In this chapter we will introduce the weak memory, the Lean 4 programming language and its metaprogramming framework, and the mathematical backgrounds needed in later chapters. First, we introduce weak memory models through some basic examples and weak behaviors (Section \ref{Background:LKMM}).
 
 \section{Weak Memory Model}
 There was a widely held belief in the software community that we did not need to optimize software; we could focus on abstraction, and hardware improvements would deliver performance gains for us. This belief largely held during the single-threaded era, when increasing clock speeds and improved microarchitectures steadily accelerated programs. However, when single-core processors hit power and energy-efficiency limits, hardware designers shifted toward adding more cores to improve performance. At that point, synchronization and memory-consistency abstractions were not yet well defined for compiler and system engineers. Vendors relied heavily on experience and natural-language descriptions to explain hardware behavior. Because natural language is inherently ambiguous, it became difficult to reason precisely about many concurrent program behaviors.
@@ -101,7 +101,7 @@ Let’s consider the following example in Figure \ref{fig:litmus-test}. It is a 
 \label{fig:litmus-execution-0-1}
 \end{figure}
 
-Even though the order of instructions within each thread is preserved according to the program order, threads can interleave arbitrarily. The dashed read-from (rf) arrows indicate the relationship between write operations and subsequent reads of the same memory location in the interleaving. Depending on the specific interleaving, these read operations may observe values written by different write operations, resulting in distinct assignments to a and b upon termination. The formal study of the exact behaviours concurrent programs can exhibit is a field known as weak memory models.
+Even though the order of instructions within each thread is preserved according to the program order, threads can interleave arbitrarily. The dashed read-from (rf) arrows indicate the relationship between write operations and subsequent reads of the same memory location in the interleaving. Depending on the specific interleaving, these read operations may observe values written by different write operations, resulting in distinct assignments to a and b upon termination. The formal study of the exact behaviors concurrent programs can exhibit is a field known as weak memory models.
 
 Memory models are generally categorized into two classes: operational and axiomatic. Operational models are described using buffers and queues and are abstractions derived from hardware behavior [\citet{10.1145/1993498.1993520OperationalModel}]. In contrast, axiomatic memory models specify disallowed program behaviors, usually by constraining relations on memory accesses [\citet{10.1145/2627752}]. In this thesis, we use an axiomatic memory model.
 
@@ -114,7 +114,7 @@ Each event is used to represent the behavior of an instruction. For example, Eve
 
 \subsubsection{Primitive Relations}
 
-The relations between events are distinguished as primitive relations and derived relations. The latter are entirely defined from the former and are composed of primitive relations. We also define some typical primitive relations\cite{10.1145/2627752}:
+The relations between events are distinguished as primitive relations and derived relations. The latter are entirely defined from the former and are composed of primitive relations. We also define some typical primitive relations~\cite{10.1145/2627752}:
 
 \textbf{Program Order (po)}, relating events by their syntactic order: the order among instructions in the program text carries over to execution graphs with po edges. It is a total order per thread. In Figure \ref{fig:litmus-execution-0-1} and Figure \ref{fig:litmus-execution-1-1}, we have 4 events, the program order in thread 0 is e1 : W(x) = 1 then e2 : R(Y) = 1, and in thread 1 is e3 : W(Y) = 1 then e4 : R(X) = 1, we denote them as po(e1, e2) and po(e3, e4).
 
@@ -266,7 +266,7 @@ The syntax and usage of litmus tests are not the main focus of this thesis. In \
 
 \subsubsection{Memory Model Semantics}
 
-As we showed how to use the binary relations to draw a litmus test, we didn't demonstrate how to define a memory model. Inria team \cite{10.1145/2627752} developed a specification langauge called Cat, which uses the binary relations we said before to define the memory models, and there already existing lots memory models like RISC-V, Arm, X86-TSO \cite{sewell2010x86tso} defined in Cat, in this section we introduce sequential consistency and total storing order memory models as they're simple.
+Having shown how to use binary relations to draw a litmus test, we have not yet demonstrated how to define a memory model. The Inria team~\cite{10.1145/2627752} developed a specification language called Cat, which uses binary relations to define memory models. Many memory models, such as RISC-V, Arm, and X86-TSO~\cite{sewell2010x86tso}, are already defined in Cat; in this section we introduce sequential consistency and total store order as representative examples.
 
 \citet{lam1675439} introduced what is called Sequential consistency: \textit{the result of any execution is the same as if the operations of all the processors were executed in some sequential order, and the operations of each individual processor appear in this sequence in the order specified by its program. A multiprocessor satisfying this condition will be called sequentially consistent.}
 
@@ -316,7 +316,7 @@ these relations does not contain any cycles:
 
 The acyclicity condition is important because these binary relations describe
 the data-flow between memory events. In particular, read events act as witnesses
-for the program behaviour, since each read obtains its value from a write event
+for the program behavior, since each read obtains its value from a write event
 through the \texttt{rf} relation. This creates a flow of data between events,
 and these data-flow relations together constrain the possible ordering of
 events, from which a total order can be derived.
@@ -418,7 +418,7 @@ pb &:= prop ; strong\text{-}fence ; hb^{*}
 \end{figure}
 
 
-Let's focus on a more complex memory model, namely the Linux Kernel Memory
+We now turn to a more complex memory model, namely the Linux Kernel Memory
 Model (LKMM). The Linux system supports a wide range of architectures, such as
 ARM, RISC-V, IBM Power, and AMD/Intel. Each architecture has its own memory
 model, and therefore they may disagree on the values that a read can return in
@@ -698,9 +698,9 @@ This capability is often described as reflection, where meta-level functionality
 
 In practice, Lean 4 metaprogramming frequently involves working directly with its internal representations of programs. In particular, the concrete syntax tree (CST), represented by the Syntax type, captures the parsed structure of code, while the abstract syntax tree (AST), represented by the Expr type, corresponds to its elaborated form. These representations are especially important when implementing tactics and other advanced features. Consequently, although Lean 4 provides powerful metaprogramming capabilities, mastering them requires a solid understanding of these underlying structures.
 
-There is a very simple case on how the Lean 4 metaprogramming works, essetnailly, we have two ways to operate the grammar in Lean 4, one is via the Macro and another is the elaborator, the Macro is simpler, it's a function (with side effects) converts one syntax to another syntax, it's silimar in Rust. And another one is called Elaborator, it's more powerful because it operates on the CST level, and convert them into AST, and it can also operate the environment (the namespace, scopes, etc), in this project we use Macro mainly because it's more direct and easy, we also use elaborator for some complex things that involves with the environment. 
+Lean~4 metaprogramming provides two ways to operate on the grammar: macros and elaborators. A macro is the simpler option — it is a function (with side effects) that converts one syntax term into another, similar to macros in Rust. An elaborator is more powerful: it operates at the CST level, converts terms into AST form, and can also manipulate the environment (namespaces, scopes, etc.). In this project we use macros as the primary mechanism because they offer a direct and straightforward mapping; elaborators are used for the more complex cases that involve environment manipulation.
 
-Let's say we want to translate the notation let r = co | po into the Lean 4 definition def r := co.union po, where co and po are binary relations. We can start by defining a syntax rule for the Lean 4 parser like this: 
+To illustrate, suppose we want to translate the notation let r = co | po into the Lean 4 definition def r := co.union po, where co and po are binary relations. We can start by defining a syntax rule for the Lean 4 parser like this: 
 
 syntax "let" cat\_ident "=" expr : inst
 
