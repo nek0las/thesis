@@ -1,7 +1,7 @@
 \chapter{Background}
 \label{chapter:Background}
 
-In this chapter we will introduce the weak memory, the Lean 4 programming language and its metaprogramming framework, and the mathematical backgrounds needed in later chapters. First, we introduce weak memory models through some basic examples and weak behaviors (Section \ref{Background:LKMM}).
+In this chapter, we introduce weak memory, the Lean 4 programming language and its metaprogramming framework, and the mathematical background needed in later chapters. First, we introduce weak memory models through some basic examples and weak behaviors (Section \ref{Background:LKMM}).
 
 \section{Weak Memory Model}
 There was a widely held belief in the software community that we did not need to optimize software; we could focus on abstraction, and hardware improvements would deliver performance gains for us. This belief largely held during the single-threaded era, when increasing clock speeds and improved microarchitectures steadily accelerated programs. However, when single-core processors hit power and energy-efficiency limits, hardware designers shifted toward adding more cores to improve performance. At that point, synchronization and memory-consistency abstractions were not yet well defined for compiler and system engineers. Vendors relied heavily on experience and natural-language descriptions to explain hardware behavior. Because natural language is inherently ambiguous, it became difficult to reason precisely about many concurrent program behaviors.
@@ -108,7 +108,7 @@ Memory models are generally categorized into two classes: operational and axioma
 \subsection{Axiomatic Weak Memory Model}
 \label{Background:AWMM}
 
-In Figure \ref{fig:litmus-execution-1-1} and Figure \ref{fig:litmus-execution-0-1}, we use lines to show the execution order and write-read pairs. In axiomatic models, binary relations represent these lines, and Events represent nodes or instructions; together, these binary relations compose an execution graph. 
+In Figure \ref{fig:litmus-execution-1-1} and Figure \ref{fig:litmus-execution-0-1}, we use lines to show the execution order and write-read pairs. In axiomatic models, binary relations represent these lines, and events represent nodes or instructions. Together, these binary relations compose an execution graph. 
 
 Each event is used to represent the behavior of an instruction. For example, Event R is used to define a read instruction that reads a value from a location, and Event W is used to define a write instruction that writes a value to that location. These addresses are concrete values (e.g., 0x00000000), but for clarity of presentation we denote them using symbols (e.g., x, y) in the examples. These symbolic locations strictly represent distinct locations in memory (i.e., X and Y are strictly different). Each event also has an identifier that is unique within the execution.
 
@@ -116,7 +116,7 @@ Each event is used to represent the behavior of an instruction. For example, Eve
 
 The relations between events are distinguished as primitive relations and derived relations. The latter are entirely defined from the former and are composed of primitive relations. We also define some typical primitive relations~\cite{10.1145/2627752}:
 
-\textbf{Program Order (po)}, relating events by their syntactic order: the order among instructions in the program text carries over to execution graphs with po edges. It is a total order per thread. In Figure \ref{fig:litmus-execution-0-1} and Figure \ref{fig:litmus-execution-1-1}, we have 4 events, the program order in thread 0 is e1 : W(x) = 1 then e2 : R(Y) = 1, and in thread 1 is e3 : W(Y) = 1 then e4 : R(X) = 1, we denote them as po(e1, e2) and po(e3, e4).
+\textbf{Program Order (po)}, relating events by their syntactic order: the order among instructions in the program text carries over to execution graphs with po edges. It is a total order per thread. Figure~\ref{fig:litmus-execution-1-1} and Figure~\ref{fig:litmus-execution-0-1} each contain four events. In thread 0, the program order is $e_1 : W(x)=1$ followed by $e_2 : R(Y)=1$. In thread 1, the order is $e_3 : W(Y)=1$ followed by $e_4 : R(X)=1$. We denote these as $\mathit{po}(e_1, e_2)$ and $\mathit{po}(e_3, e_4)$.
 
 \textbf{Read From (rf)}, which relates a W event to the R event reading from it. Every R event reads-from exactly one W event. For instance, when event e2 : R(X) = 1 reads 1 from location X, where that value was earlier written by e1 : W(X) = 1, then we have an rf edge from e1 to e2, alternatively denoted as rf(e1, e2).
 
