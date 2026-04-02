@@ -63,7 +63,7 @@ between Lean~4's existing \texttt{Mathlib} library and the specific needs of wea
 model reasoning. We highlight the two most important results in detail and briefly summarise
 the remaining supporting lemmas.
 
-\paragraph{Acyclicity monotonicity.}
+\paragraph{Acyclicity Monotonicity.}
 The central proof technique for comparing memory models is \emph{monotonicity}: if a
 relation~$r$ is acyclic and~$s \subseteq r$, then~$s$ is also acyclic. We formalise this as
 \texttt{acyclicMono}:
@@ -87,7 +87,7 @@ of~$r_1$ to correspond to a \emph{path} (rather than a single edge) in~$r_2$. Th
 form is useful when the relations in the two models are not in direct subset relation but one
 model's edges can be decomposed into multi-step paths in the other.
 
-\paragraph{Acyclicity via ranking functions.}
+\paragraph{Acyclicity via Ranking Functions.}
 For concrete litmus test executions, we sometimes need to show acyclicity of a specific
 finite relation. A convenient technique is to exhibit a \emph{ranking function}
 $f : \text{Event} \to \mathbb{N}$ that strictly increases along every edge:
@@ -105,7 +105,7 @@ increases~$f$ at each step, so a cycle would require $f(a) < f(a)$, contradictin
 \texttt{Nat.lt\_irrefl}. This lemma is particularly useful for the litmus test case studies
 in Section~\ref{sec:snippets}, where the ranking function can often be defined directly from the event identifiers.
 
-\paragraph{Other supporting lemmas.}
+\paragraph{Other Supporting Lemmas.}
 We proved several additional theorems that are used
 throughout the case studies. The lemmas \texttt{strictPartialOrderImpliesAcyclic} and
 {\texttt{AcyclicImpliesIrreflexive} establish the equivalence between the Cat-style

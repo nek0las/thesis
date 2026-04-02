@@ -549,11 +549,11 @@ We will explain this decision in more detail later.
 
 \subsection{BPF Memory Model}
 
-The BPF is developed based on the LKMM, as the BPF is highly related with the Linux kernel. (TODO: Introduce the bpf here, and cite)
+BPF (Berkeley Packet Filter) is a technology that allows programs to run safely inside the Linux kernel without modifying kernel source code or loading kernel modules. It was originally designed for network packet filtering, but its extended version, eBPF, has since become widely used in industry for performance monitoring, tracing, and security enforcement. Because eBPF programs execute within the kernel, they interact directly with the kernel's memory subsystem and are subject to the same weak memory ordering behaviors as the rest of the kernel.
 
-BPF (Berkeley packet filter) is a way to write a program that can be run safely in the kernel. The eBPF is widely used in the current industries to monitor performance, traces, etc. The formalized BPF memory model was introduced in 2024, as before there was no memory model that defined the BPF memory model. There is a discussion in 2024 on how to define the BPF memory model at \href{LWN.net}{https://lwn.net/Articles/976071/}, it said that the weak memory behivuos come from two things: one is the atomic instructions (xchg, cmpchg, etc.) and another is the jump instructions. To understand the BPF memory model is important because those properties form the bare minimum of what most BPF programs currently assume about ordering. But in the absence of a formalized model, it's impossible to say whether any given bug resulting from memory operations being reordered is a bug in the BPF program, the compiler, or the BPF just-in-time compiler (JIT).
+Despite this close relationship, no formal memory model for BPF existed prior to 2024. The BPF memory model was introduced in 2024 through a proposal discussed on \href{https://lwn.net/Articles/976071/}{LWN.net}~\cite{bpf-memory-model-lwn}. That proposal identifies two principal sources of weak memory behaviors in BPF: atomic instructions (such as \texttt{xchg} and \texttt{cmpxchg}), and jump instructions. Understanding these behaviors is important because they represent the bare minimum of ordering guarantees that most BPF programs currently rely on. In the absence of a formalized model, it is impossible to determine whether a bug caused by reordered memory operations is a fault in the BPF program, the compiler, or the BPF just-in-time (JIT) compiler.
 
-It has the same idea with the LKMM, because it should as weak as possible that avoid prohibiting the behivuous that the supported architectures allowed. But the problem with BPF memory model is that the BPF instructions (ISAs) can't be mapped to the LKMM directlyl, because LKMM is more like the C code, the BPF is more closer to the assembly, so it has some constraints that the LKMM can't handle, so they decide the adapt the memory model from the Arm memory model and LKMM memory model, because Arm is more sophiscated. So it uses the amo (Atomical operations) which has the same design in the ArmV8, and also the AQ and Rl, then the BPF Memory model is defiened as:
+The BPF memory model follows the same design philosophy as the LKMM: it should be as weak as possible, avoiding prohibiting behaviors that the supported architectures permit. However, BPF instructions cannot be directly mapped to the LKMM, because the LKMM is defined at the level of C-language primitives, whereas BPF is closer to assembly. Consequently, some constraints required by BPF semantics fall outside what the LKMM can express. The designers therefore chose to adapt the model from both the LKMM and the AArch64 (ARMv8) memory model, as AArch64 provides a more expressive foundation for instruction-level atomic operations. In particular, the BPF memory model adopts the atomic memory operation (AMO) design from AArch64, together with acquire (\texttt{AQ}) and release (\texttt{RL}) annotations. The BPF memory model is defined as:
 
 BPF "BPF Memory model based on LKMM"
 
@@ -644,7 +644,7 @@ acyclic pb as Propagation
 (* Atomicity *)
 empty rmw & (fre;coe) as Atomic
 
-We can see it has the similar pattern with the LKMM, but it replaces the bell files with the Arm memory atomical operations.
+The model above exhibits the same high-level structure as the LKMM: it enforces coherence (\textit{Coherence}), happens-before (\textit{Happens-before}), propagation (\textit{Propagation}), and atomicity (\textit{Atomic}) constraints. The key difference lies in how synchronization is expressed. Rather than relying on Linux kernel fence primitives declared in a bell file, the BPF model uses AArch64-style atomic memory operations as its synchronization backbone. The \textit{ppo} relation is built from explicit synchronization via \texttt{po\_amo\_fetch} and release-consistency (\texttt{rcpc}), together with syntactic dependencies (address, data, and control) and pipeline dependencies. The \textit{prop} relation captures cumulative propagation in the same spirit as the LKMM, using \textit{A-cumul} to account for stores arriving from other threads before a synchronizing operation. In this way, the BPF memory model inherits the structural discipline of the LKMM while grounding its synchronization primitives in the AArch64 memory model.
 
 \section{Mathematical Background}
 \label{sec:math-background}
@@ -653,9 +653,9 @@ To understand the axiomatic memory models, we need to use \emph{binary relations
 
 We use the notation \(a \, R \, b\) to denote that \((a,b) \in R\), and \(a \not R b\) to denote that \((a,b) \notin R\) \cite[p.~600]{rosen2012discrete}.
 
-In this thesis, the elements \(a\) and \(b\) are both \emph{events}, and these binary relations compose the directed execution graph, as described in Section~\ref{Background:AWMM}. Two relations can be composed together to obtain a new directed graph. Relation composition plays an important role in the \texttt{cat} language. 
+In this thesis, the elements \(a\) and \(b\) are both \emph{events}, and these binary relations compose the directed execution graph, as described in Section~\ref{Background:AWMM}. Two relations can be composed together to obtain a new directed graph. Relation composition plays an important role in the \texttt{cat} language.
 
-\paragraph{Definition: Composition of Relations.}
+\paragraph{Relation Composition.}
 Let $R$ be a relation from a set $A$ to a set $B$, and let $S$ be a relation from $B$ to a set $C$. The composite of $R$ and $S$ is the relation consisting of ordered pairs $(a, c)$, where $a \in A, c \in C$, and for which there exists an element $b \in B$ such that $(a, b) \in R$ and $(b, c) \in S$ \cite[p.~607]{rosen2012discrete}. We denote the composite of $R$ and $S$ by $S ; R$ \cite[p.~607]{rosen2012discrete}.
 
 Computing the composite of two relations requires finding elements that are the second component of ordered pairs in the first relation and the first component of ordered pairs in the second relation. This property is widely used in many memory models. For example, there is a relation called \emph{fr} (from-read), which represents that a read instruction observes a value that is later overwritten by another write instruction; the write instructions to the same address are totally ordered by the coherence order.
@@ -698,7 +698,7 @@ R^* = R^+ \cup \Delta = \bigcup_{n=0}^{\infty} R^n.
 \]
 In memory models, these closures are fundamental for defining global orders. For example, $hb^*$ (the reflexive-transitive closure of the happens-before relation defined in LKMM \ref{fig:lkmm-definitions}) connects two events if one happens before the other or if they are the same event.
 
-\textbf{Domain and Codomain.}
+\paragraph{Domain and Codomain.}
 Let $R$ be a relation from a set $A$ to a set $B$.
 The \emph{domain} of $R$, denoted by $\mathrm{dom}(R)$, is the set of all first components of ordered pairs in $R$~\cite[p.~607]{rosen2012discrete}:
 \[
@@ -786,7 +786,7 @@ The tactic operates by maintaining a search tree that alternates between goal no
 
 Crucially, \texttt{aesop} remains a "tactic proposer" that operates outside the trusted core. While it can be called as \texttt{aesop?} to generate a human-readable tactic script and avoid performance penalties, every proof it generates must ultimately be elaborated into a proof term accepted by the Lean 4 kernel. This ensures that while we automate the mechanical aspects of proof engineering, the logical integrity of the memory model verification remains strictly checked by the ITP.
 
-\subsection{Meta-Programming in Lean 4}
+\subsection{Metaprogramming in Lean 4}
 
 Another important reason for choosing Lean 4 is its extensibility. Lean 4 provides a metaprogramming framework that allows users to define domain-specific languages (DSLs) directly within the system. Informally, metaprogramming refers to writing programs that manipulate or generate other programs. In conventional programmithereby enabling automatic determination of programs must follow a predefined syntax understood by the compiler or interpreter. The process of parsing this syntax and translating it into intermediate representations, such as abstract syntax trees (ASTs) or control-flow graphs (CFGs), belongs to the meta-level, whereas writing ordinary programs belongs to the object-level.
 
