@@ -393,8 +393,6 @@ As shown in Figure~\ref{fig:lkmm-corr-cycle}, if this outcome were allowed, the 
 
 This cycle violates the LKMM's coherence condition, which requires $\mathit{po\_loc} \cup \mathit{com}$ to be acyclic, where $\mathit{com} = \mathit{rf} \cup \mathit{co} \cup \mathit{fr}$. Since coherence is the most basic consistency requirement in the LKMM and does not depend on the access annotations or fence instructions, this outcome is forbidden regardless of the access types used. We proved this in \texttt{CoRR\_poonceonce\_Once.lean} by explicitly constructing the cycle in the coherence relation and deriving a contradiction.
 
-TODO: (CoRR_poonceonce_Once.lean and 4 other litmus tests in lkmm)
-
 \subsection{Comparing Memory Models}
 \label{sec:comparison}
 
@@ -409,12 +407,18 @@ that is, $M_2$ permits at least as many behaviors as $M_1$. Formally, we require
   \{X \mid X \in S_c \text{ and } \mathrm{allowed}_{\mathrm{weak}}(X)\}.
 \end{equation}
 
-We will compare three different memory models, sequential consistency, total store memory model, and mips. 
+\subsubsection{Comparing SC, MIPS, and X86-TSO}
 
-\texttt{X86-TSO semantics}
-We defined tso in the Figure \ref{fig:cat-tso}, but it's not complete, we need to add two properties to it, one is called atomicity, and another is called sequential consistency per location, so the compelte definition of tso-86 will become:
+We compare three memory models: Sequential Consistency, Total Store Order (x86-TSO), 
+and MIPS. Although these models are relatively simple, x86-TSO and MIPS are 
+widely used in practice.
 
+\paragraph{X86-TSO Semantics.}
+We defined TSO in Figure~\ref{fig:cat-tso}, but that definition is incomplete. Two 
+additional properties are required: \emph{atomicity} and \emph{sequential consistency 
+per location}. The complete x86-TSO definition is therefore:
 
+\begin{lstlisting}[]
 let com = rf | fr | co
 acyclic po_loc | com as uniproc
 
@@ -424,10 +428,47 @@ let xppo = ((W*W) | (R*W) | (R*R)) & po
 let At = domain(rmw) | range(rmw)
 let implied = po;[At | F] | [At | F];po
 acyclic (implied | xppo | rfe | fr | co) as tso
+\end{lstlisting}
 
-The uniproc is the sequential consistency, it's an important property for cocurrent programming, that is, for all the operations that access the same location, they must follow a sequential conssitency order, otherwise they will be some data coccuption for the same varialbe, that will cause any program wrong. Another is the atomicity, that is, the read-modify-writes must be the atomical operations, there is no another writes between the atomic operation, with these, the X86 operations is complete.
+The \texttt{uniproc} constraint enforces sequential consistency per location, which is a 
+fundamental requirement for concurrent programming: all operations that access the same 
+memory location must appear to execute in a sequentially consistent order. Without this 
+constraint, concurrent accesses to the same variable could produce inconsistent results, 
+corrupting the observed state of any program that relies on them. The \texttt{atomic} 
+constraint ensures that read-modify-write operations are indivisible: no other write may 
+be interleaved between the read and write parts of an atomic operation. Together, these 
+two properties complete the x86-TSO model. Formally, they are expressed as:
+%
+\begin{align}
+  &\texttt{empty}\ \mathit{rmw}\ \&\ (\mathit{fre};\mathit{coe})\ \texttt{as atomic}, \\
+  &\texttt{acyclic}\ \mathit{po\_loc}\ |\ \mathit{com}\ \texttt{as uniproc}.
+\end{align}
 
-The mips memory model is more relaxed than the X86 memory model, that is, the mips memory model only reserved the operations that starts with R in the program order, any other po will be out-of-order executed, in example~\ref{fig:lb-program}, 
+\paragraph{MIPS Semantics.}
+The MIPS memory model is more relaxed than x86-TSO. Specifically, MIPS only preserves 
+program order for pairs of operations in which the first event is a read; all other 
+program-order pairs may be reordered. As a consequence, MIPS permits the execution in 
+Example~\ref{fig:mp-program}, since it does not include the $W{\times}W \cap \mathit{po}$ 
+constraint. We define the MIPS semantics as follows:
+
+\begin{lstlisting}[]
+let fencerel(r) = (po & (_ * r)) ; po
+let com = rf | fr | co
+acyclic po_loc | com as uniproc
+
+let sync = try fencerel(SYNC) with 0
+
+empty rmw & (fre;coe) as atomic
+
+let ppo = po & (R * M) | sync
+
+let ghb = ppo | rfe | fr | co
+acyclic ghb as pso
+\end{lstlisting}
+
+In LeanCat, we use the \texttt{defcat} tactic to load Cat files into Lean~4. This produces 
+a predicate for each model that takes a candidate execution as input, reflecting the 
+general proof goal: for all candidate executions, one architecture is weaker than another.
 
 \begin{lstlisting}[]
 defcat <"sc.cat">
@@ -436,13 +477,14 @@ defcat <"mips.cat">
 \end{lstlisting}
 
 \noindent
-This parses the Cat files and elaborates them into the Lean namespaces \texttt{SC} and 
-\texttt{TSO} and \texttt{MIPS}, giving us the predicates based on their defnitions.
-each of which holds when the candidate execution \texttt{X} is \emph{allowed} under the 
-respective model.
+This parses the Cat files and elaborates them into the Lean namespaces \texttt{SC}, 
+\texttt{TSO}, and \texttt{MIPS}, giving us predicates derived from their respective 
+definitions. Each predicate holds when the candidate execution \texttt{X} is 
+\emph{allowed} under the corresponding model.
 
-The theorem we want to prove is: for every candidate execution $X$, if $X$ is allowed 
-under SC, then $X$ is also allowed under TSO.
+The theorems we wish to prove are: for every candidate execution $X$, if $X$ is allowed 
+under SC then $X$ is also allowed under TSO, and if $X$ is allowed under TSO then $X$ 
+is also allowed under MIPS.
 
 \begin{lstlisting}[]
 theorem scvtso
@@ -451,13 +493,38 @@ theorem scvtso
   : sc.sc evts X -> tso.tso evts X
 \end{lstlisting}
 
-\noindent
-Together, \texttt{scvtso}, \texttt{sb\_allowed\_tso}, and \texttt{sb\_forbidden\_sc} 
-give us a complete machine-checked account of the relationship between SC and TSO. 
-Every execution allowed by SC is also allowed by TSO, but not vice versa: the 
-store-buffering execution with both reads observing $0$ is permitted by TSO yet 
-forbidden by SC. This confirms that the inclusion is strict, and that TSO is 
-\emph{strictly} weaker than SC.
+\begin{lstlisting}[]
+theorem mipsWeakerThanTso
+  (evts : Data.Events)
+  (X : CandidateExecution evts)
+  : tsox.tso evts X -> mips.pso evts X
+\end{lstlisting}
+
+When comparing MIPS and x86-TSO, we omit the \texttt{atomic} and \texttt{uniproc} 
+constraints, as they are identical in both models and can be discharged directly.
+
+Both proofs follow the same structure: we apply \texttt{acyclicMono} or 
+\texttt{acyclicMono\_trans} to reduce the goal to a subset check, and then perform 
+a case analysis to route each edge to the appropriate component of the larger relation.
+
+For \texttt{scvtso}, we show that every edge in the TSO acyclicity constraint 
+$(\mathit{implied} \cup \mathit{xppo} \cup \mathit{rfe} \cup \mathit{fr} \cup 
+\mathit{co})$ is also an edge in the SC constraint $(\mathit{po} \cup \mathit{com})$. 
+This holds because \texttt{implied} and \texttt{xppo} edges are both sub-relations 
+of $\mathit{po}$, while $\mathit{rfe}$, $\mathit{fr}$, and $\mathit{co}$ are all 
+sub-relations of $\mathit{com}$. The proof can be found at \href{https://github.com/nek0las/lean-cats/blob/main/LeanCats/TsoWeakerThanSc.lean}{LeanCats/TsoWeakerThanSc.lean}.
+
+For \texttt{mipsWeakerThanTso}, we show that every edge in the MIPS constraint 
+$(\mathit{ppo}_{\mathrm{MIPS}} \cup \mathit{rfe} \cup \mathit{fr} \cup \mathit{co})$ 
+can be realized as a path in the TSO constraint. The $\mathit{rfe}$, $\mathit{fr}$, 
+and $\mathit{co}$ components are shared between the two models. For 
+$\mathit{ppo}_{\mathrm{MIPS}}$, a read--memory-access $\mathit{po}$ edge maps 
+directly to \texttt{xppo}, and a \texttt{sync} edge maps to \texttt{implied} because 
+every MIPS SYNC event is also a fence event in TSO. The proof can be found at \href{https://github.com/nek0las/lean-cats/blob/main/LeanCats/mipsWeakerThanTSO.lean}{LeanCats/mipsWeakerThanTSO.lean}.
+
+\subsubsection{Comparing LKMM and BPF}
+
+
 
 \section{Proof Engineering and Heuristic Automation}
 
