@@ -40,7 +40,7 @@ Events and sets of events are the most fundamental data types in the Cat languag
 
 However, addresses and values are irrelevant to the problem we want to solve. LeanCat works at a high level of abstraction: we do not need to generate a DSL or assembly code to simulate litmus tests; instead, we only care about the execution graph and the relations between instructions in the program. Therefore, in our design we use \texttt{Nat} to represent both addresses and values.
 
-In cat, we use Set in Lean 4 to organize the events, and there are some primitive set of events like W (All the write events), R (All the read events), F (All the fence events), etc. These events are gathered from the herd7 tools for each litmus tests, and they call them anarchical semantics, we can simply treat them as the input of the model. Besides the primitive events, there are some sets are composed by these primitive sets, for example, the M (Set of modification events) is the union of the W and R. Besides that, there are some user defined sets, these sets are an important part of the LKMM model, the users defined these sets by the tag in the event.
+In cat, we use Set in Lean 4 to organize the events, and there are some primitive set of events like W (All the write events), R (All the read events), F (All the fence events), etc. These events are gathered from the herd7 tools for each litmus tests, and they call them anarchical semantics, we can simply treat them as the input of the model. Besides the primitive events, there are some sets are composed by these primitive sets, for example, the M (Set of modification events) is the union of the W and R. Besides that, there are some user-defined sets, which are an important part of the LKMM model; these sets are defined by the tag carried by each event.
 
 \subsection{Tagged Events}
 
@@ -70,7 +70,7 @@ structure Event where
 
 The Sigma type is a dependent type in which the first component is the type on which the second component depends. Since we only know the tag when we know the explicit candidate executions, we cannot determine the types of the tags before parsing the Cat files, as the tags are normally defined in the Bell files. We only know the explicit type when we see the definitions, and the Sigma type captures this property well, because the actual tag used in the event is determined by the tag type defined in Bell files.
 
-However, the Sigma type introduces another problem: :contentReference[oaicite:0]{index=0} cannot derive \texttt{DecidableEq}. \texttt{DecidableEq} is used frequently in practice to automatically determine whether two instances are equal. Normally this can be derived directly, but the problem with this event definition is the Sigma type: it introduces a type as an argument, so \texttt{Event} cannot derive \texttt{DecidableEq} automatically. This is because all the types in \texttt{Event} must also have \texttt{DecidableEq}, and there is no constraint that \texttt{tagType} has \texttt{DecidableEq}.
+However, the Sigma type introduces another problem: \texttt{Event} cannot derive \texttt{DecidableEq}. \texttt{DecidableEq} is used frequently in practice to automatically determine whether two instances are equal. Normally this can be derived directly, but the problem with this event definition is the Sigma type: it introduces a type as an argument, so \texttt{Event} cannot derive \texttt{DecidableEq} automatically. This is because all the types in \texttt{Event} must also have \texttt{DecidableEq}, and there is no constraint that \texttt{tagType} has \texttt{DecidableEq}.
 
 To solve this, we use an axiom:
 \begin{verbatim}
@@ -138,7 +138,7 @@ The \textit{Candidate Execution} is designed as a universal superset containing 
 We establish a formal abstraction at this boundary: while a candidate execution is typically generated from a litmus test via a parser or compiler, the correctness of that translation is not what we focus on at the memory level. In this project, we leave the correctness of the generation process to us and treat the candidate execution itself as the input. It is important to note that this is a significant assumption in practice; instructions with similar behaviors may not produce identical events and relations. For example, a Read instruction might be represented as a simple $R$ in a standard \texttt{.cat} file, whereas in LKMM it is treated as \texttt{READ\_ONCE}. These differing semantics generate different candidate executions; however, by abstracting these details and focusing solely on the candidate execution as the input, we significantly reduce the overall verification effort.
 
 \subsection{Well-Formedness Conditions}
-The wellformess is the important perperties that give each set and relation a semantic, only when the relations follow these semantics, we say they're wellformenss, otherwise they're meaningless. Most of the wellformedness conditions are adapted from the herdtools7 Coq development \cite{10.1145/2627752, 10.1145/3458926ArmedCat}.
+Well-formedness conditions are the important properties that give each set and relation a meaning. Only when the relations satisfy these conditions do we say they are well-formed; otherwise they are meaningless. Most of the wellformedness conditions are adapted from the herdtools7 Coq development \cite{10.1145/2627752, 10.1145/3458926ArmedCat}.
 
 
 
@@ -265,10 +265,10 @@ This recursive function computes the RCU lock pairs. An approach is to encode th
 Another approach is to encode the recursion using a least fixed-point formulation. Since the data types in Cat are represented using sets and relations, the semantics can be translated into SMT formulas over relations and sets. In principle, the resulting constraints could be solved by an SMT solver. However, the SMT integrations available in Lean 4 are still relatively immature, making this approach unreliable in practice. Although the problem could also be formalized and proven directly in Lean, doing so would introduce significant additional complexity. Due to time constraints, we leave this aspect for future work.
 
 \subsection{Design Choices}
-The design has some tradeoffs because of the limitation and complexity of Lean 4, and some definitions in Cat is not defined, so we need to choose the design when we implemented the system especially for the time-constraint.
+The design involves several trade-offs arising from the limitations of Lean~4 and from aspects of the Cat language that are left implicit or undefined in the specification. The following subsections describe the key decisions made during implementation.
 
 \textbf{Implicit Definitions}
-The Herd 7 is a project that under the active developement, so the documentation is outdated sometimes, we need to keep the eyes with the pracitical implementation in the herd 7. The tag names in Cat will be converted into the Captilized 
+Herd7 is a project under active development, so its documentation is sometimes outdated; it is necessary to consult the practical implementation directly. The tag names in Cat are converted into capitalized identifiers in the generated Lean code.
 
 Besides the documentation, some aspects of the Cat language are implicit. For example, the manual presents the ``semantics of instructions'' as follows \citet{catManualSyntax11}:
 \begin{quote}\small
@@ -288,7 +288,7 @@ This mainly specifies when a Cat program should return an error state, rather th
 
 \subsection{Library Theorems and Proof Support}
 \label{sec:design:theorems}
-The cat relies on the binary relations and set theory, including the the relations closures, irreflexive, etc. The Lean 4 defines the Relation in Type -> Type -> Prop or SetRel (A set of pairs), these two definitions are both correct, but the SetRel provides more flexibility for operations, (e.g, can get the domain and co-domain easily), there are lots existing theorems and definitions defined in MathLib, but it's not enough for us to mechanize the memory models, thus, we developed some theorems and definitions to help us.
+Cat relies on binary relations and set theory, including relational closures, irreflexivity, and related properties. Lean~4 supports two representations of binary relations: \texttt{Relation} (of type \texttt{Type → Type → Prop}) and \texttt{SetRel} (a set of pairs). Both representations are correct, but \texttt{SetRel} offers more flexibility for operations such as computing the domain and codomain. While Mathlib provides many relevant theorems, its coverage is insufficient for mechanizing memory models in full; consequently, we developed additional definitions and lemmas where needed.
 
 
 

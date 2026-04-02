@@ -68,6 +68,13 @@ number-unit-product = \hspace{0.16667em plus 0.08334em}}
 
 %\usepackage{graphicx}
 
+%% Suppress page numbers on blank verso pages inserted by \cleardoublepage
+\makeatletter
+\renewcommand{\cleardoublepage}{%
+  \clearpage\if@twoside\ifodd\c@page\else
+  \hbox{}\thispagestyle{empty}\newpage\fi\fi}
+\makeatother
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%% Begin of document %%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -79,9 +86,9 @@ number-unit-product = \hspace{0.16667em plus 0.08334em}}
 
 %% Defining the main parameters
 \title{Mechanizing Weak Memory Models in Lean 4}
-\subtitle{Explanatory subtitle}
+\subtitle{A Formal Verification Framework for Relaxed Memory Consistency}
 \author{Zhiyang Wang}
-\studentnumber{student number}
+\studentnumber{2792604}
 %\subject{A nice subject}
 \mastertrack{Computer System and Infrastructure}
 \affiliation{University of Amsterdam

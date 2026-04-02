@@ -1,7 +1,7 @@
 \chapter{Background}
 \label{chapter:Background}
 
-In this chapter we will introduce the weak memory, the Lean 4 programming langauge and its metaprogramming framework, and the mathematical backgrounds needed in later chapters. First, we introduce the weak memory models by some basic examples and weak behivours, Section \ref{Background:LKMM}
+In this chapter we will introduce the weak memory, the Lean 4 programming language and its metaprogramming framework, and the mathematical backgrounds needed in later chapters. First, we introduce weak memory models through some basic examples and weak behaviours (Section \ref{Background:LKMM}).
 
 \section{Weak Memory Model}
 There was a widely held belief in the software community that we did not need to optimize software; we could focus on abstraction, and hardware improvements would deliver performance gains for us. This belief largely held during the single-threaded era, when increasing clock speeds and improved microarchitectures steadily accelerated programs. However, when single-core processors hit power and energy-efficiency limits, hardware designers shifted toward adding more cores to improve performance. At that point, synchronization and memory-consistency abstractions were not yet well defined for compiler and system engineers. Vendors relied heavily on experience and natural-language descriptions to explain hardware behavior. Because natural language is inherently ambiguous, it became difficult to reason precisely about many concurrent program behaviors.
@@ -60,7 +60,7 @@ Let’s consider the following example in Figure \ref{fig:litmus-test}. It is a 
 \draw[rf] (wx1) -- (rx1);
 
 \end{tikzpicture}
-\caption{Execution Order with X = 1 and Y = 1}
+\caption{Execution Order with X = 1 and Y = 1 (solid arrows: execution order; dashed arrows: read-from (\textit{rf}))}
 \label{fig:litmus-execution-1-1}
 \end{figure}
 
@@ -97,7 +97,7 @@ Let’s consider the following example in Figure \ref{fig:litmus-test}. It is a 
 \draw[rf] (wx1) -- (rx1);
 
 \end{tikzpicture}
-\caption{Execution Order with X = 0 and Y = 1}
+\caption{Execution Order with X = 0 and Y = 1 (solid arrows: execution order; dashed arrows: read-from (\textit{rf}))}
 \label{fig:litmus-execution-0-1}
 \end{figure}
 
@@ -221,14 +221,14 @@ Some relations are composed based on the primitive relations. The following are 
 
 % From-read relations
 \draw[fr] (rx1) to[out=270, in=180] (wx1)
-    node[midway, below, font=\scriptsize] {fr};
+    node[midway, below, font=\scriptsize] {fre};
 
 \end{tikzpicture}
-\caption{Execution with internal/external read-from ($rf$), from-read ($fr$), program order ($po$), and coherence order ($co$).}
+\caption{Execution with internal read-from (\textit{rfi}, blue dashed), external read-from (\textit{rfe}, red dashed), external from-read (\textit{fre}, grey dotted), program order (\textit{po}, solid), and coherence order (\textit{co}, dotted).}
 \label{fig:litmus-execution-with-derived-relation}
 \end{figure}
 
-We can redraw Figure~\ref{fig:litmus-execution-primitive-relation} with derived relations, as shown in Figure~\ref{fig:litmus-execution-with-derived-relation}. Observe that the \textit{fr} edges always follow backwards along an \textit{rf} edge and then forwards along a \textit{co} edge (i.e., $fr = rf^{-1};co$), thus relating a read to the write that overwrites it. For instance, in the left execution we can only read $0$ from $Y$ before overwriting $Y$ with $1$. All \textit{fr} relations in both executions are external, producing \textit{fre} arrows, while the \textit{co} relations are internal, producing \textit{coi} arrows.
+We can redraw Figure~\ref{fig:litmus-execution-primitive-relation} with derived relations, as shown in Figure~\ref{fig:litmus-execution-with-derived-relation}. Observe that the \textit{fr} edges always follow backwards along an \textit{rf} edge and then forwards along a \textit{co} edge (i.e., $fr = rf^{-1};co$), thus relating a read to the write that overwrites it. For instance, in this execution we can only read $0$ from $Y$ before overwriting $Y$ with $1$. All \textit{fr} relations in this execution are external, producing \textit{fre} arrows, while the \textit{co} relations are internal, producing \textit{coi} arrows.
 
 \subsubsection{Litmus Tests} 
 
@@ -262,7 +262,7 @@ The DIY7 toolchains compile such litmus tests into real machine code and collect
 
 In the x86 SB example, the \texttt{MOV} instruction can be translated into read or write events. Based on this translation, events and relations between them are generated, while the computations in the program are ignored. The semantics then proposes the possible execution graphs, called candidate executions. We can subsequently use the memory model to determine whether any of the candidate executions are disallowed.
 
-The syntax and usage of litmus tests are not the main focus of this thesis. In \textsc{LeanCat}, we abstract litmus tests as a set of possible \texttt{candidate execution}s directly. Supporting the translation from architecture-specific instructions to candidate executions is time-consuming, and our main task is to compare different memory models. Therefore, we currently provide a set of initial \texttt{Candidate Execution} patterns and use vibe coding to generate litmus tests based on the patterns in Lean 4.
+The syntax and usage of litmus tests are not the main focus of this thesis. In \textsc{LeanCat}, we abstract litmus tests as a set of possible \texttt{candidate execution}s directly. Supporting the translation from architecture-specific instructions to candidate executions is time-consuming, and our main task is to compare different memory models. Therefore, we currently provide a set of initial \texttt{Candidate Execution} patterns and use template-based generation to construct litmus tests from these patterns in Lean~4.
 
 \subsubsection{Memory Model Semantics}
 
@@ -501,7 +501,7 @@ And these dependencies can be categorized into read--write dependencies and read
 rwdep := (dep \cup ctrl) \cap (R \times W)
 \]
 
-The read--read dependencies are the address dependencies or the \textit{dep} followed by an \textit{rfi} (starts with a read and ends with a read). The architecture Alpha does not preserve the read--read address dependencies, so LKKM adds the \textit{rd-dep} as the \textit{strong-rrdep} to model Alpha explicitly~\cite{alglave2018frightening}.
+The read--read dependencies are the address dependencies or the \textit{dep} followed by an \textit{rfi} (starts with a read and ends with a read). The architecture Alpha does not preserve the read--read address dependencies, so LKMM adds the \textit{rd-dep} as the \textit{strong-rrdep} to model Alpha explicitly~\cite{alglave2018frightening}.
 
 \textit{ppo} then uses the dependencies as the \textit{to-r} and \textit{to-w} relations. The \textit{to-w} is modeled as the internal overwrites, and overwrite is from-read (a write overwrites a read) and a coherence order (a write overwrites a write), and together with the \textit{rw-dep} to compose an order of \textit{to-w}. The \textit{to-r} is modeled as \textit{strong-rrdep} or the \textit{rfi-rel-acq}. The \textit{strong-rrdep} is explained above, and the \textit{rfi-rel-acq} is the typical release-write, acquire-read order, and we cannot reorder these release-acquire instructions.
 
@@ -577,8 +577,6 @@ fr = co ; rf^{-1},
 \]
 where \(rf^{-1}\) denotes the inverse of the relation \(rf\), meaning that the order of each pair is reversed. Intuitively, this composition connects a read event to a write event that comes later in coherence order than the write from which the read obtained its value.
 
-\emph{[provide a transition of connection of graphs]}
-
 After composing different relations, we can obtain a complete execution graph. As stated in Section~\ref{Background:AWMM}, we need to filter out disallowed executions using a set of judgments. The \texttt{cat} language provides three primitive judgments: \texttt{Acyclic}, \texttt{Irreflexive}, and \texttt{Empty}. Among them, \texttt{Acyclic} is the most important because our memory models are described by binary relations that compose the execution graph. A cycle (or circuit) in a directed graph is a path of length greater than zero that begins and ends at the same vertex \cite[pp.~665,~715]{rosen2012discrete}. A cycle in this graph usually means that some data that should have been read first was overwritten by later operations.
 
 Models defined using binary relations can be viewed as directed graphs. When we illustrate them in a diagram, cycles are easy to identify by visually connecting the points. However, to represent this structure using binary relations, we need a formal way to express both direct connections and paths that return to earlier points. For this purpose, we rely on two properties: \emph{reflexivity} and \emph{transitive closure}.
@@ -653,14 +651,7 @@ The \emph{external} relation, denoted by \texttt{ext}, consists of pairs of even
 \]
 Equivalently, $\texttt{ext} = (E \times E) \setminus \texttt{int}$. In memory models, these are used to derive specific sub-relations; for example, \texttt{rfi} (read-from internal) is defined as $rf \cap \texttt{int}$, and \texttt{rfe} (read-from external) is defined as $rf \cap \texttt{ext}$.
 
-\paragraph{Definition: Composition of Relations.}
-Let $R$ be a relation from a set $A$ to a set $B$, and let $S$ be a relation from $B$ to a set $C$. The composite of $R$ and $S$ is the relation consisting of ordered pairs $(a, c)$, where $a \in A, c \in C$, and there exists an element $b \in B$ such that $(a, b) \in R$ and $(b, c) \in S$ \cite[p.~607]{rosen2012discrete}. In this thesis, we denote the composite of $R$ and $S$ (applying $R$ then $S$) by $S \mathbin{;} R$.
-
-Computing the composite of two relations requires finding elements that are the second component of ordered pairs in the first relation and the first component of ordered pairs in the second relation. This property is widely used in many memory models. For example, there is a relation called \emph{fr} (from-read), which represents that a read instruction observes a value that is later overwritten by another write instruction. In the \texttt{cat} language, we define:
-\[
-fr = co \mathbin{;} rf^{-1},
-\]
-where $rf^{-1}$ connects the read to its source write, and $co$ (coherence order) connects that write to a subsequent write that overwrites the value.
+Relation composition, defined in Section~\ref{sec:math-background}, is central to formalizing memory models in Cat. As noted there, the \emph{fr} (from-read) relation is a key example: $fr = co \mathbin{;} rf^{-1}$.
 
 \subsection{Comparing Memory Models}
 
@@ -681,7 +672,7 @@ This subsection introduces the necessary background for readers who have never u
 
 Lean 4 is an interactive theorem prover (ITP). Traditionally, most proofs for memory models have been carried out on paper, for example in \citep{podkopaev2019bridging, 10.1145/2627752, batty2011mathematizing, doko2016program}. Although these works make important theoretical contributions, they are prone to subtle issues, such as undetected errors in existing models \citep{chakraborty2016fixing, chakraborty2017grounding} or the need for later repairs \citep{10.1145/3140587.3062352Reparing}. By using an ITP, we can dramatically increase the reliability of our proofs: they are mechanically checked by a computer, greatly reducing the chance of missed edge cases.
 
-Lean 4~\cite{deMoura2021lean4} is not only just an ITP, it is also a functional programming language like Haskell and OCaml, which means it is a general-purpose programming language that supports computation and IO. This gives us the ability to read and parse the CAT files directly from storage, instead of manually migrating the CAT files into Lean 4.
+Lean 4~\cite{deMoura2021lean4} is not only just an ITP, it is also a functional programming language like Haskell and OCaml, which means it is a general-purpose programming language that supports computation and IO. This gives us the ability to read and parse the Cat files directly from storage, instead of manually migrating the Cat files into Lean~4.
 
 For readers unfamiliar with interactive theorem provers, the following simple example illustrates how they work. We can experiment with more examples in the \href{https://adam.math.hhu.de/#/g/leanprover-community/nng4/}{Lean 4 Natural Number Game}. Suppose we want to prove that for all natural numbers \(n\), \(n + 0 = n\). While this equality is obvious at a glance, in a formal system we must justify it using previously proven theorems. In Lean 4, this is achieved using commands called \emph{tactics}. One particularly useful tactic is \texttt{rw} (rewrite). There exists a theorem \texttt{add\_zero} stating that \(\forall a, a + 0 = a\). If our goal is to prove \(n + 0 = n\), we can apply the tactic \texttt{rw [add\_zero]}. This replaces \(n + 0\) with \(n\), immediately closing the goal.
 
@@ -699,7 +690,7 @@ Crucially, \texttt{aesop} remains a "tactic proposer" that operates outside the 
 
 \subsection{Metaprogramming in Lean 4}
 
-Another important reason for choosing Lean 4 is its extensibility. Lean 4 provides a metaprogramming framework that allows users to define domain-specific languages (DSLs) directly within the system. Informally, metaprogramming refers to writing programs that manipulate or generate other programs. In conventional programmithereby enabling automatic determination of programs must follow a predefined syntax understood by the compiler or interpreter. The process of parsing this syntax and translating it into intermediate representations, such as abstract syntax trees (ASTs) or control-flow graphs (CFGs), belongs to the meta-level, whereas writing ordinary programs belongs to the object-level.
+Another important reason for choosing Lean 4 is its extensibility. Lean 4 provides a metaprogramming framework that allows users to define domain-specific languages (DSLs) directly within the system. Informally, metaprogramming refers to writing programs that manipulate or generate other programs. In conventional programming, programs must follow a predefined syntax understood by the compiler or interpreter. The process of parsing this syntax and translating it into intermediate representations, such as abstract syntax trees (ASTs) or control-flow graphs (CFGs), belongs to the meta-level, whereas writing ordinary programs belongs to the object-level.
 
 In most systems, meta-level functionality is implemented in a different language from the object-level language. However, Lean 4 integrates both levels within a single framework: most meta-level code is written in Lean itself. This design enables users to extend the language by defining new syntax constructs and providing corresponding elaboration procedures that translate them into core Lean expressions.
 
@@ -714,7 +705,7 @@ Let's say we want to translate the notation let r = co | po into the Lean 4 defi
 syntax "let" cat\_ident "=" expr : inst
 
 
-This looks similar to a regular expression pattern. The \verb|syntax| keyword declares a new piece of concrete syntax, and \verb|: inst| specifies that this syntax belongs to the syntax category \verb|inst| (a node kind in the concrete syntax tree used to organize and group related syntax constructs), we can use \texttt{syntax\_cat} to define a syntax catogry in Lean 4. Here, \verb|cat_ident| stands for the identifier (e.g., \verb|r|), and \verb|expr| represents the right-hand side. In our case, the binary operation co | po. Next, we need to define the \verb||| operator itself for expressions with the following rule: 
+This looks similar to a regular expression pattern. The \verb|syntax| keyword declares a new piece of concrete syntax, and \verb|: inst| specifies that this syntax belongs to the syntax category \verb|inst| (a node kind in the concrete syntax tree used to organize and group related syntax constructs), we can use \texttt{syntax\_cat} to define a syntax category in Lean 4. Here, \verb|cat_ident| stands for the identifier (e.g., \verb|r|), and \verb|expr| represents the right-hand side. In our case, the binary operation co | po. Next, we need to define the \verb||| operator itself for expressions with the following rule: 
 
 syntax:51 expr:51 "|" expr:50 : expr
 
