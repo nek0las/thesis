@@ -264,12 +264,6 @@ This recursive function computes the RCU lock pairs. An approach is to encode th
 
 Another approach is to encode the recursion using a least fixed-point formulation. Since the data types in Cat are represented using sets and relations, the semantics can be translated into SMT formulas over relations and sets. In principle, the resulting constraints could be solved by an SMT solver. However, the SMT integrations available in Lean 4 are still relatively immature, making this approach unreliable in practice. Although the problem could also be formalized and proven directly in Lean, doing so would introduce significant additional complexity. Due to time constraints, we leave this aspect for future work.
 
-\subsubsection{Lock Libraries}
-
-The LKMM depends on a library called \texttt{lock.cat}, which in turn depends on \texttt{cos.cat} and \texttt{stdlib.cat}. For convenience, we embed these libraries directly into LeanCat rather than parsing them through the macro system. The \texttt{lock.cat} library is used to express spin-lock related relations, such as lock and unlock.
-
-We summarized all the supported syntax in Appendix~\ref{app:cat-bell} and~\ref{app:lkmm-cat} using LKMM as the example. The yellow part is what can be supported now; the other parts are what we can't support.
-
 \subsection{Design Choices}
 The design has some tradeoffs because of the limitation and complexity of Lean 4, and some definitions in Cat is not defined, so we need to choose the design when we implemented the system especially for the time-constraint.
 
