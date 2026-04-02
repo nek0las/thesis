@@ -62,7 +62,7 @@ The \texttt{Accesses} are then used to tag the events that are in \texttt{R} (re
 We use the Sigma type to represent the tag system in this way:
 \begin{verbatim}
 structure Event where
-  id : Nat   -- Unique identifier, consistent with program order for a given thread
+  id : Nat   -- Unique identifier
   t_id : Nat -- Thread ID
   effect : Effect -- Action performed
   tag : Sigma tagType : Type, tagType
@@ -138,7 +138,7 @@ The \textit{Candidate Execution} is designed as a universal superset containing 
 We establish a formal abstraction at this boundary: while a candidate execution is typically generated from a litmus test via a parser or compiler, the correctness of that translation is not what we focus on at the memory level. In this project, we leave the correctness of the generation process to us and treat the candidate execution itself as the input. It is important to note that this is a significant assumption in practice; instructions with similar behaviors may not produce identical events and relations. For example, a Read instruction might be represented as a simple $R$ in a standard \texttt{.cat} file, whereas in LKMM it is treated as \texttt{READ\_ONCE}. These differing semantics generate different candidate executions; however, by abstracting these details and focusing solely on the candidate execution as the input, we significantly reduce the overall verification effort.
 
 \subsection{Well-Formedness Conditions}
-The wellformess is the important perperties that give each set and relation a semantic, only when the relations follow these semantics, we say they're wellformenss, otherwise they're meaningless. Most of the wellformedness conditions are adapted from the herdtools7 Coq development \cite{10.1145/2627752, 10.1145/3458926ArmedCat}
+The wellformess is the important perperties that give each set and relation a semantic, only when the relations follow these semantics, we say they're wellformenss, otherwise they're meaningless. Most of the wellformedness conditions are adapted from the herdtools7 Coq development \cite{10.1145/2627752, 10.1145/3458926ArmedCat}.
 
 
 
@@ -167,11 +167,7 @@ macro "candidateExecution_wf" : tactic =>
 \end{verbatim}
 
 \noindent
-The macro repeatedly applies two strategies. The first simplifies all goals using \texttt{simp} and then attempts to close them with \texttt{aesop}. The second destructs set-membership hypotheses of the form \texttt{e ∈ S} using \texttt{casesm}, which enumerates the finitely many elements of the concrete event set, and then tries \texttt{aesop} on each case. Together these two strategies handle the full range of well-formedness checks that arise in practice: type checks (write on the left of rf, read on the right), location checks (same location in rf), and uniqueness checks (at most one write reads-from a given read). We use \texttt{candidateExecution\_wf} in the instance declarations for \texttt{wellformed.rf}, \texttt{wellformed.co}, and related structures throughout the litmus test files.
-
-For the acyclicity proofs, the pattern is different. When we want to show that a concrete execution is allowed by a model, we apply \texttt{acyclic\_of\_rank} with an explicitly provided ranking function that maps event identifiers to natural numbers. The ranking function must strictly increase along every edge of the relation, which the tactic then verifies by unfolding the relation and checking each case with \texttt{simp}, \texttt{rcases}, and \texttt{decide}. For example, in the SB litmus test proof that TSO allows the outcome, we provide a rank function over six event IDs and the remaining proof obligation reduces to a sequence of concrete case checks that \texttt{simp\_all} and \texttt{decide} can close automatically.
-
-For the model-comparison proofs, we apply \texttt{ayclicMono} to reduce the goal to a subset check, and then use \texttt{simp} together with \texttt{rcases} to decompose the disjunction and route each case to the appropriate branch. Because \texttt{ayclicMono} is marked \texttt{@[aesop safe apply]}, \texttt{aesop} will apply it automatically when the goal matches, which further reduces the amount of manual proof scripting required.
+The macro repeatedly applies two strategies. The first simplifies all goals using \texttt{simp} and then attempts to close them with \texttt{aesop}. The second destructs set-membership hypotheses of the form \texttt{e ∈ S} using \texttt{casesm}, which enumerates the finitely many elements of the concrete event set, and then tries \texttt{aesop} on each case. We use it to automatically prove the well-formedness of the candidate executions.
 
 \subsection{Models}
 Now that we have the primitive types, we need a way to connect them. We can reuse existing definitions from Mathlib for working with \texttt{Set} and \texttt{Rel}, and then describe \textsc{tso} and \textsc{sc} using these functions.
