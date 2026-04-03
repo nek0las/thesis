@@ -523,8 +523,69 @@ directly to \texttt{xppo}, and a \texttt{sync} edge maps to \texttt{implied} bec
 every MIPS SYNC event is also a fence event in TSO. The proof can be found at \href{https://github.com/nek0las/lean-cats/blob/main/LeanCats/mipsWeakerThanTSO.lean}{LeanCats/mipsWeakerThanTSO.lean}.
 
 \subsubsection{Comparing LKMM and BPF}
+As we discussed in section (TODO, add ref to the bpf memory model in background), the BPF has the similar behivous of the LKMM, but it uses the Arm atomic instructions as the fences, but LKMM is the higher level of abstraction based on C model, we need to create a mapping from the Arm operations to LKMM operations and vice versa, the translation between these two need lots of works and tries, so it's basically outside of our work, and there is no existing work tried to mapping the operations, due to the time constraint, we can't prove anything related to the fences with bpf and LKMM.
+
+But we proved all the other properties, that is, if there is no fences operations involved, the bpf memory model is stronger than the LKMM, that said, all the operations in bpf should be allowed in LKMM, because bpf is essentially a program running in the kernel, we can't implemente the bevhiuos that the LKMM disallowed but allowed in bpf, it's unsafe.
 
 
+
+The bpf is defined as:
+
+let po_amo_fetch = ([M];po;RMW) | (RMW;po;[M])
+let load_acquire = ([AQ];po;[M])
+let store_release = ([M];po;[RL])
+let rcpc = load_acquire | store_release
+
+let addr_dep = [R];addr;[M]
+let data_dep = [R];data;[W]
+let ctrl_dep = [R];ctrl;[W]
+
+show addr_dep as addr
+show data_dep as data
+show ctrl_dep as ctrl
+
+include "cos-opt.cat"
+let com = co | rf | fr
+
+let ppo =
+ po_amo_fetch | rcpc
+| addr_dep
+| data_dep
+| ctrl_dep
+| [M];(addr|data);[W];rfi;[R]
+| [M];addr;[M];po;[W]
+| (coi | fri)
+
+let A-cumul = rfe? ; (po_amo_fetch | store_release)
+let prop = (coe | fre)? ; A-cumul* ; rfe?
+
+acyclic com | po-loc as Coherence
+
+let hb = ppo | rfe | ((prop \ id) & int)
+acyclic hb as Happens-before
+
+let pb = prop ; po_amo_fetch ; hb*
+acyclic pb as Propagation
+
+empty rmw & (fre;coe) as Atomic
+
+acyclic po_amo_fetch | com as fetch_fence
+
+The core issue is that the Lean CandidateExecution encodes fence relations (mb', wmb', fence') as opaque relations — they're just raw SetRel Event Event fields with no connection to the structurally-defined bpf.po_amo_fetch = ([M];po;RMW) | (RMW;po;[M]), we need to add mapping to prove anything related to it.
+
+(Proof strategies, please fix it: LKMM's ppo = to_r | to_w | fence, which expands to 6 cases. Here's how each maps into BPF's hb:
+
+addr → BPF's addr_dep = [R];addr;[M]. We use haddr_wf to get a ∈ R and b ∈ M, then wrap the raw addr with those guards.
+
+dep ; [Marked] ; rfi → BPF's [M];(addr|data);[W];rfi;[R]. The dep = addr|data is shared. We extract w ∈ W and b ∈ R from rf's well-typedness (rfInst.wellTyped), and a ∈ M from haddr_wf/hdata_wf.
+
+rwdep = (addr|data|ctrl);[W] → BPF's addr_dep, data_dep, or ctrl_dep. Case-split on the dependency type; each has a matching [R];dep;[W] or [R];addr;[M] in BPF's ppo.
+
+(co | fr) & int → BPF's coi | fri. These are definitionally the same thing (coi = co & int, fri = fr & int), so this is direct.
+
+addr ; [Plain] ; wmb → sorry. Vacuous if Plain = ∅, but needs a hypothesis.
+
+fence → sorry. Requires fence mapping between the two models. In short: cases 1–4 work because BPF's ppo explicitly lists all the same dependency and coherence-internal orderings that LKMM's ppo has, just with slightly different guard structure ([R];addr;[M] vs bare addr). The well-formedness hypotheses (haddr_wf, hdata_wf, hctrl_wf) bridge that gap by supplying the read/write typing that BPF's guards require.)
 
 \section{Proof Engineering and Heuristic Automation}
 
