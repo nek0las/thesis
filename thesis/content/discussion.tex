@@ -1,7 +1,7 @@
 \chapter{Discussion}
 \label{chapter:discussion}
 
-\section{Limitations in Lean 4}
+\section{Limitations in ITP}
 \label{sec:limitations}
 
 The Lean 4 parser cannot parse all .cat files as they are. For example, in some LKMM-style litmus .cat files, one finds enum-like definitions such as:
@@ -13,6 +13,9 @@ Identifiers that begin with a single quote (') have no counterpart in Lean 4’s
 There is also another approach with functionality similar to Lean 4, namely the use of SMT solvers. Some works, such as Dartagnan [\citet{10.1145/3776687}], encode the CAT language into SMT formulas, enabling them to automatically determine whether a specific program behavior is allowed or disallowed. This approach is very convenient when we only need a yes/no answer for particular executions. However, SMT solvers largely operate as black boxes: while they can efficiently produce answers (and counterexamples), their reasoning process is difficult to inspect or understand in detail. Therefore, if our goal is not merely to analyze specific programs but to understand and verify the models themselves. For example, by reasoning about cycles, emptiness, or the precise causes of allowed or disallowed behaviors, an ITP is more suitable.
 
 But an SMT solver could help in many cases, for instance, CVC5~\cite{barbosa2022cvc5} provides built-in support and lemmas for binary relations — we could significantly reduce boilerplate code by offloading certain proof obligations to the solver. Unfortunately, as of now, the SMT solver libraries available for Lean 4 are still in an early stage of development. They suffer from numerous bugs, especially in edge cases, and cannot yet be relied upon for production use or critical proofs.
+
+As our target is reuse the cat langauge and make it as general as possible, but it 
+
 
 \section{Related Work}
 
