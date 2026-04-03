@@ -522,15 +522,16 @@ $\mathit{ppo}_{\mathrm{MIPS}}$, a read--memory-access $\mathit{po}$ edge maps
 directly to \texttt{xppo}, and a \texttt{sync} edge maps to \texttt{implied} because 
 every MIPS SYNC event is also a fence event in TSO. The proof can be found at \href{https://github.com/nek0las/lean-cats/blob/main/LeanCats/mipsWeakerThanTSO.lean}{LeanCats/mipsWeakerThanTSO.lean}.
 
-\subsubsection{Comparing LKMM and BPF}
-As we discussed in section (TODO, add ref to the bpf memory model in background), the BPF has the similar behivous of the LKMM, but it uses the Arm atomic instructions as the fences, but LKMM is the higher level of abstraction based on C model, we need to create a mapping from the Arm operations to LKMM operations and vice versa, the translation between these two need lots of works and tries, so it's basically outside of our work, and there is no existing work tried to mapping the operations, due to the time constraint, we can't prove anything related to the fences with bpf and LKMM.
+\subsubsection{Comparing BPF and LKMM}
 
-But we proved all the other properties, that is, if there is no fences operations involved, the bpf memory model is stronger than the LKMM, that said, all the operations in bpf should be allowed in LKMM, because bpf is essentially a program running in the kernel, we can't implemente the bevhiuos that the LKMM disallowed but allowed in bpf, it's unsafe.
+As discussed in Section~\ref{Background:BPF}, the BPF memory model shares the same high-level structure as the LKMM: both enforce coherence, happens-before, propagation, and atomicity constraints, and both capture their ordering requirements through \textit{ppo} and \textit{prop} relations. However, their synchronization primitives are expressed at different levels of abstraction. The LKMM is defined in terms of Linux kernel C primitives --- \texttt{smp\_mb}, \texttt{smp\_wmb}, \texttt{smp\_rmb}, acquire, and release --- whereas the BPF model is defined closer to the assembly level, using AArch64-style atomic memory operations (\texttt{po\_amo\_fetch}) and explicit acquire/release annotations (\texttt{AQ}/\texttt{RL}). Establishing a formal mapping between these two fence systems requires a careful translation between the two frameworks, and to our knowledge no such mapping has been proposed in the literature. Due to this gap and the time constraints of this project, we were unable to prove any properties involving fence orderings between BPF and LKMM.
 
+The BPF model is defined in Figure~\ref{fig:bpf-definition}.
 
-
-The bpf is defined as:
-
+\begin{figure}[t]
+  \centering
+  \begin{minipage}{0.95\linewidth}
+\begin{verbatim}
 let po_amo_fetch = ([M];po;RMW) | (RMW;po;[M])
 let load_acquire = ([AQ];po;[M])
 let store_release = ([M];po;[RL])
@@ -540,52 +541,53 @@ let addr_dep = [R];addr;[M]
 let data_dep = [R];data;[W]
 let ctrl_dep = [R];ctrl;[W]
 
-show addr_dep as addr
-show data_dep as data
-show ctrl_dep as ctrl
-
-include "cos-opt.cat"
 let com = co | rf | fr
 
 let ppo =
- po_amo_fetch | rcpc
-| addr_dep
-| data_dep
-| ctrl_dep
-| [M];(addr|data);[W];rfi;[R]
-| [M];addr;[M];po;[W]
-| (coi | fri)
+    po_amo_fetch | rcpc
+  | addr_dep | data_dep | ctrl_dep
+  | [M];(addr|data);[W];rfi;[R]
+  | [M];addr;[M];po;[W]
+  | (coi | fri)
 
 let A-cumul = rfe? ; (po_amo_fetch | store_release)
 let prop = (coe | fre)? ; A-cumul* ; rfe?
 
-acyclic com | po-loc as Coherence
-
+acyclic com | po-loc       as Coherence
 let hb = ppo | rfe | ((prop \ id) & int)
-acyclic hb as Happens-before
-
+acyclic hb                 as Happens-before
 let pb = prop ; po_amo_fetch ; hb*
-acyclic pb as Propagation
-
-empty rmw & (fre;coe) as Atomic
-
+acyclic pb                 as Propagation
+empty   rmw & (fre;coe)    as Atomic
 acyclic po_amo_fetch | com as fetch_fence
+\end{verbatim}
+  \end{minipage}
+  \caption{Cat definition of the BPF memory model.}
+  \label{fig:bpf-definition}
+\end{figure}
 
-The core issue is that the Lean CandidateExecution encodes fence relations (mb', wmb', fence') as opaque relations — they're just raw SetRel Event Event fields with no connection to the structurally-defined bpf.po_amo_fetch = ([M];po;RMW) | (RMW;po;[M]), we need to add mapping to prove anything related to it.
+Despite the fence gap, we are able to prove a partial comparison: restricting attention to the fence-free fragment of both models, BPF is stronger than LKMM. Concretely, we show that every candidate execution allowed by the BPF happens-before constraint (excluding fence-induced orderings) is also allowed by the LKMM. This result is expected on safety grounds: since BPF programs execute inside the Linux kernel, they must not exhibit behaviors that the LKMM prohibits. Formally, the theorem we prove is
 
-(Proof strategies, please fix it: LKMM's ppo = to_r | to_w | fence, which expands to 6 cases. Here's how each maps into BPF's hb:
+\begin{lstlisting}[]
+theorem bpfStrongerThanLkmm
+  (evts : Data.Events)
+  (X : CandidateExecution evts)
+  : bpf.Happens_before evts X -> lkmm.hb evts X
+\end{lstlisting}
 
-addr → BPF's addr_dep = [R];addr;[M]. We use haddr_wf to get a ∈ R and b ∈ M, then wrap the raw addr with those guards.
+The proof follows the same structure as the SC-TSO and TSO-MIPS comparisons: we apply \texttt{acyclicMono} and reduce the goal to showing that every edge in the LKMM's \textit{ppo} is also an edge in BPF's \textit{hb}. The \textit{ppo} of the LKMM decomposes into six cases, of which four admit a direct mapping.
 
-dep ; [Marked] ; rfi → BPF's [M];(addr|data);[W];rfi;[R]. The dep = addr|data is shared. We extract w ∈ W and b ∈ R from rf's well-typedness (rfInst.wellTyped), and a ∈ M from haddr_wf/hdata_wf.
+\begin{itemize}
+  \item \textbf{Address dependencies.} The LKMM's $\mathit{addr}$ edge maps to BPF's $\mathit{addr\_dep} = [R];\mathit{addr};[M]$. The well-formedness hypothesis \texttt{haddr\_wf} supplies the required type guards $a \in R$ and $b \in M$.
 
-rwdep = (addr|data|ctrl);[W] → BPF's addr_dep, data_dep, or ctrl_dep. Case-split on the dependency type; each has a matching [R];dep;[W] or [R];addr;[M] in BPF's ppo.
+  \item \textbf{Dependency-rfi chains.} The LKMM's $(\mathit{addr} \cup \mathit{data});\mathit{rfi}$ maps to BPF's $[M];(\mathit{addr} \mid \mathit{data});[W];\mathit{rfi};[R]$. The intermediate write witness $w \in W$ and the endpoint $b \in R$ are obtained from the well-typedness of the reads-from relation (\texttt{rfInst.wellTyped}), and $a \in M$ follows from \texttt{haddr\_wf} or \texttt{hdata\_wf}.
 
-(co | fr) & int → BPF's coi | fri. These are definitionally the same thing (coi = co & int, fri = fr & int), so this is direct.
+  \item \textbf{Read-write dependencies.} The LKMM's $\mathit{rwdep} = (\mathit{dep} \cup \mathit{ctrl}) \cap (R \times W)$ is handled by a case split on the dependency type. Each case matches a corresponding BPF component --- $\mathit{addr\_dep}$, $\mathit{data\_dep}$, or $\mathit{ctrl\_dep}$ --- whose type guards are already satisfied by $\mathit{rwdep}$'s $(R \times W)$ constraint.
 
-addr ; [Plain] ; wmb → sorry. Vacuous if Plain = ∅, but needs a hypothesis.
+  \item \textbf{Coherence-internal overwrites.} The LKMM's $(\mathit{co} \cup \mathit{fr}) \cap \mathit{int}$ maps directly to BPF's $\mathit{coi} \cup \mathit{fri}$, since $\mathit{coi} = \mathit{co} \cap \mathit{int}$ and $\mathit{fri} = \mathit{fr} \cap \mathit{int}$ by definition.
+\end{itemize}
 
-fence → sorry. Requires fence mapping between the two models. In short: cases 1–4 work because BPF's ppo explicitly lists all the same dependency and coherence-internal orderings that LKMM's ppo has, just with slightly different guard structure ([R];addr;[M] vs bare addr). The well-formedness hypotheses (haddr_wf, hdata_wf, hctrl_wf) bridge that gap by supplying the read/write typing that BPF's guards require.)
+The remaining two cases --- $\mathit{addr};[\mathit{Plain}];\mathit{wmb}$ and the full \textit{fence} ordering --- require a formal correspondence between the LKMM's fence primitives and BPF's \texttt{po\_amo\_fetch}. The core difficulty is that the \texttt{CandidateExecution} in LeanCat encodes fence relations (\texttt{mb}, \texttt{wmb}, \texttt{fence}) as opaque \texttt{SetRel} fields with no structural connection to BPF's \texttt{po\_amo\_fetch = ([M];po;RMW) | (RMW;po;[M])}. Without an explicit mapping axiom relating these two, neither case can be discharged. These cases are therefore left with \texttt{sorry} placeholders in the Lean development, and completing them is left as future work.
 
 \section{Proof Engineering and Heuristic Automation}
 

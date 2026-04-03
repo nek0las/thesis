@@ -548,6 +548,7 @@ The LKMM also formalizes RCU operations, but these involve very complex and comp
 We will explain this decision in more detail later.
 
 \subsection{BPF Memory Model}
+\label{Background:BPF}
 
 BPF (Berkeley Packet Filter) is a technology that allows programs to run safely inside the Linux kernel without modifying kernel source code or loading kernel modules. It was originally designed for network packet filtering, but its extended version, eBPF, has since become widely used in industry for performance monitoring, tracing, and security enforcement. Because eBPF programs execute within the kernel, they interact directly with the kernel's memory subsystem and are subject to the same weak memory ordering behaviors as the rest of the kernel.
 
