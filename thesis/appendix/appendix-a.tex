@@ -43,18 +43,18 @@ We highlight in \texttt{yellow} the parts that are supported in our formalizatio
 (*@\supported{instructions W[Accesses]}@*)
 (*@\supported{instructions RMW[Accesses]}@*)
 
-enum Barriers =
+(*@\supported{enum Barriers =}@*)
     (*@\supported{'wmb}@*) ||
     (*@\supported{'rmb}@*) ||
-    'MB ||
+    (*@\supported{'MB}@*) ||
     (*@\supported{'barrier}@*) ||
     'rcu-lock ||
     'rcu-unlock ||
     'sync-rcu ||
-    'before-atomic ||
-    'after-atomic ||
-    'after-spinlock ||
-    'after-unlock-lock ||
+    (*@\supported{'before-atomic}@*) ||
+    (*@\supported{'after-atomic}@*) ||
+    (*@\supported{'after-spinlock}@*) ||
+    (*@\supported{'after-unlock-lock}@*) ||
     'after-srcu-read-unlock
 
 (*@\supported{instructions F[Barriers]}@*)
@@ -106,16 +106,16 @@ flag ~empty different-values(srcu-rscs)
 
 (* Marked vs plain accesses *)
 let (*@\supported{Marked}@*) =
-    (~M) | (*@\supported{IW | ONCE | RELEASE | ACQUIRE | MB | RMW |}@*)
-    LKR | LKW | UL | LF | RL | RU | Srcu-lock | Srcu-unlock
+    (*@\supported{(\textasciitilde{}M) | IW | ONCE | RELEASE | ACQUIRE | MB | RMW |}@*)
+    (*@\supported{LKR | LKW | UL | LF | RL | RU |}@*) Srcu-lock | Srcu-unlock
 
 let (*@\supported{Plain}@*) = M \ Marked
 
 (* Dependency propagation *)
-let carry-dep = (data ; [~ Srcu-unlock] ; rfi)*
-let addr = carry-dep ; addr
-let ctrl = carry-dep ; ctrl
-let data = carry-dep ; data
+let (*@\supported{carry-dep}@*) = (data ; [~ Srcu-unlock] ; rfi)*
+(*@\supported{let addr = carry-dep ; addr}@*)
+(*@\supported{let ctrl = carry-dep ; ctrl}@*)
+(*@\supported{let data = carry-dep ; data}@*)
 
 flag ~empty (if "lkmmv2" then 0 else _)
     as this-model-requires-variant-higher-than-lkmmv1
@@ -155,27 +155,27 @@ include "lock.cat"
 (* Release Acquire *)
 (*@\supported{let acq-po = [Acquire] ; po ; [M]}@*)
 (*@\supported{let po-rel = [M] ; po ; [Release]}@*)
-let po-unlock-rf-lock-po = po ; [UL] ; rf ; [LKR] ; po
+(*@\supported{let po-unlock-rf-lock-po = po ; [UL] ; rf ; [LKR] ; po}@*)
 
 (* Fences *)
-let R4rmb = R \ Noreturn	(* Reads for which rmb works *)
-let rmb = [R4rmb] ; fencerel(Rmb) ; [R4rmb]
-let wmb = [W] ; fencerel(Wmb) ; [W]
-let mb = ([M] ; fencerel(Mb) ; [M]) |
-	([M] ; fencerel(Before-atomic) ; [RMW] ; po? ; [M]) |
-	([M] ; po? ; [RMW] ; fencerel(After-atomic) ; [M]) |
-	([M] ; po? ; [LKW] ; fencerel(After-spinlock) ; [M]) |
-	([M] ; po ; [UL] ; (co | po) ; [LKW] ;
-		fencerel(After-unlock-lock) ; [M])
+let (*@\supported{R4rmb}@*) = R \ Noreturn	(* Reads for which rmb works *)
+(*@\supported{let rmb = [R4rmb] ; fencerel(Rmb) ; [R4rmb]}@*)
+(*@\supported{let wmb = [W] ; fencerel(Wmb) ; [W]}@*)
+(*@\supported{let mb = ([M] ; fencerel(Mb) ; [M]) |}@*)
+	(*@\supported{([M] ; fencerel(Before-atomic) ; [RMW] ; po? ; [M]) |}@*)
+	(*@\supported{([M] ; po? ; [RMW] ; fencerel(After-atomic) ; [M]) |}@*)
+	(*@\supported{([M] ; po? ; [LKW] ; fencerel(After-spinlock) ; [M]) |}@*)
+	(*@\supported{([M] ; po ; [UL] ; (co | po) ; [LKW] ;}@*)
+		(*@\supported{fencerel(After-unlock-lock) ; [M])}@*)
 let gp = po ; [Sync-rcu | Sync-srcu] ; po?
-let strong-fence = (*@\supported{mb}@*) | gp
+let (*@\supported{strong-fence}@*) = (*@\supported{mb}@*) | gp
 
-let nonrw-fence = strong-fence | po-rel | acq-po
-let fence = nonrw-fence | wmb | rmb
-let barrier = fencerel(Barrier | Rmb | Wmb | Mb | Sync-rcu | Sync-srcu |
-		Before-atomic | After-atomic | Acquire | Release |
-		Rcu-lock | Rcu-unlock | Srcu-lock | Srcu-unlock) |
-	(po ; [Release]) | ([Acquire] ; po)
+(*@\supported{let nonrw-fence = strong-fence | po-rel | acq-po}@*)
+(*@\supported{let fence = nonrw-fence | wmb | rmb}@*)
+(*@\supported{let barrier = fencerel(Barrier | Rmb | Wmb | Mb | Sync-rcu | Sync-srcu |}@*)
+		(*@\supported{Before-atomic | After-atomic | Acquire | Release |}@*)
+		(*@\supported{Rcu-lock | Rcu-unlock | Srcu-lock | Srcu-unlock) |}@*)
+	(*@\supported{(po ; [Release]) | ([Acquire] ; po)}@*)
 
 (**********************************)
 (* Fundamental coherence ordering *)
@@ -198,12 +198,12 @@ let barrier = fencerel(Barrier | Rmb | Wmb | Mb | Sync-rcu | Sync-srcu |
 (*@\supported{let overwrite = co | fr}@*)
 (*@\supported{let to-w = rwdep | (overwrite \& int) | (addr ; [Plain] ; wmb)}@*)
 (*@\supported{let to-r = addr | (dep ; [Marked] ; rfi)}@*)
-let ppo = (*@\supported{to-r | to-w | fence}@*) | (po-unlock-rf-lock-po & int)
+(*@\supported{let ppo = to-r | to-w | fence | (po-unlock-rf-lock-po \& int)}@*)
 
 (* Propagation: Ordering from release operations and strong fences. *)
 (*@\supported{let A-cumul(r) = (rfe ; [Marked])? ; r}@*)
-let cumul-fence = (*@\supported{[Marked] ; (A-cumul(strong-fence | po-rel) | wmb}@*) |
-	po-unlock-rf-lock-po(*@\supported{) ; [Marked]}@*)
+(*@\supported{let cumul-fence = [Marked] ; (A-cumul(strong-fence | po-rel) | wmb |}@*)
+	(*@\supported{po-unlock-rf-lock-po) ; [Marked]}@*)
 (*@\supported{let prop = [Marked] ; (overwrite \& ext)? ; cumul-fence* ;}@*)
 	(*@\supported{[Marked] ; rfe? ; [Marked]}@*)
 
@@ -289,45 +289,45 @@ irreflexive rb as rcu
 (*********************************)
 
 (* Warn about plain writes and marked accesses in the same region *)
-let mixed-accesses = ([Plain & W] ; (po-loc \ barrier) ; [Marked]) |
+let (*@\supported{mixed-accesses}@*) = ([Plain & W] ; (po-loc \ barrier) ; [Marked]) |
 	([Marked] ; (po-loc \ barrier) ; [Plain & W])
-flag ~empty mixed-accesses as mixed-accesses
+flag ~empty (*@\supported{mixed-accesses}@*) as (*@\supported{mixed-accesses}@*)
 
 (* Executes-before and visibility *)
 let xbstar = (hb | pb | rb)*
-let vis = cumul-fence* ; rfe? ; [Marked] ;
+let (*@\supported{vis}@*) = cumul-fence* ; rfe? ; [Marked] ;
 	((strong-fence ; [Marked] ; xbstar) | (xbstar & int))
 
 (* Boundaries for lifetimes of plain accesses *)
-let w-pre-bounded = [Marked] ; (addr | fence)?
-let r-pre-bounded = [Marked] ; (addr | nonrw-fence |
+(*@\supported{let w-pre-bounded = [Marked] ; (addr | fence)?}@*)
+let (*@\supported{r-pre-bounded}@*) = [Marked] ; (addr | nonrw-fence |
 	([R4rmb] ; fencerel(Rmb) ; [~Noreturn]))?
-let w-post-bounded = fence? ; [Marked]
-let r-post-bounded = (nonrw-fence | ([~Noreturn] ; fencerel(Rmb) ; [R4rmb]))? ;
+(*@\supported{let w-post-bounded = fence? ; [Marked]}@*)
+let (*@\supported{r-post-bounded}@*) = (nonrw-fence | ([~Noreturn] ; fencerel(Rmb) ; [R4rmb]))? ;
 	[Marked]
 
 (* Visibility and executes-before for plain accesses *)
-let ww-vis = fence | (strong-fence ; xbstar ; w-pre-bounded) |
+let (*@\supported{ww-vis}@*) = fence | (strong-fence ; xbstar ; w-pre-bounded) |
 	(w-post-bounded ; vis ; w-pre-bounded)
-let wr-vis = fence | (strong-fence ; xbstar ; r-pre-bounded) |
+let (*@\supported{wr-vis}@*) = fence | (strong-fence ; xbstar ; r-pre-bounded) |
 	(w-post-bounded ; vis ; r-pre-bounded)
-let rw-xbstar = fence | (r-post-bounded ; xbstar ; w-pre-bounded)
+let (*@\supported{rw-xbstar}@*) = fence | (r-post-bounded ; xbstar ; w-pre-bounded)
 
 (* Potential races *)
-let pre-race = ext & ((Plain * M) | ((M \ IW) * Plain))
+let (*@\supported{pre-race}@*) = ext & ((Plain * M) | ((M \ IW) * Plain))
 
 (* Coherence requirements for plain accesses *)
-let wr-incoh = pre-race & rf & rw-xbstar^-1
-let rw-incoh = pre-race & fr & wr-vis^-1
-let ww-incoh = pre-race & co & ww-vis^-1
-empty (wr-incoh | rw-incoh | ww-incoh) as plain-coherence
+let (*@\supported{wr-incoh}@*) = pre-race & rf & rw-xbstar^-1
+let (*@\supported{rw-incoh}@*) = pre-race & fr & wr-vis^-1
+let (*@\supported{ww-incoh}@*) = pre-race & co & ww-vis^-1
+(*@\supported{empty (wr-incoh | rw-incoh | ww-incoh) as plain-coherence}@*)
 
 (* Actual races *)
-let ww-nonrace = ww-vis & ((Marked * W) | rw-xbstar) & ((W * Marked) | wr-vis)
-let ww-race = (pre-race & co) \ ww-nonrace
-let wr-race = (pre-race & (co? ; rf)) \ wr-vis
-let rw-race = (pre-race & fr) \ rw-xbstar
+let (*@\supported{ww-nonrace}@*) = ww-vis & ((Marked * W) | rw-xbstar) & ((W * Marked) | wr-vis)
+let (*@\supported{ww-race}@*) = (pre-race & co) \ ww-nonrace
+let (*@\supported{wr-race}@*) = (pre-race & (co? ; rf)) \ wr-vis
+let (*@\supported{rw-race}@*) = (pre-race & fr) \ rw-xbstar
 
-flag ~empty (ww-race | wr-race | rw-race) as data-race
+flag ~empty (*@\supported{(ww-race | wr-race | rw-race) as data-race}@*)
 \end{lstlisting}
 
