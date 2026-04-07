@@ -538,10 +538,10 @@ They enforce the acyclicity of \textit{pb} to guarantee that events are overwrit
 In summary, the Linux Kernel Memory Model (LKMM) is defined by the following constraints:
 
 \[
-    acyclic(po\text{-}loc cup com)
-    empty(rmw \cap (fre ; coe))
-    acyclic(hb)
-    acyclic(pb)
+    acyclic(po\text{-}loc cup com) \\
+    empty(rmw \cap (fre ; coe)) \\
+    acyclic(hb) \\
+    acyclic(pb) \\
 \]
 
 The LKMM also formalizes RCU operations, but these involve very complex and computationally expensive constraints. For this reason, we decided to exclude the RCU-related part from our analysis.
