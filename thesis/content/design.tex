@@ -209,7 +209,6 @@ def prod (s1 s2 : Set Event) : Rel Event Event :=
 \end{verbatim}
 or directly via \texttt{Set.prod}; LeanCat uses \texttt{Set.prod} to reuse existing Mathlib lemmas \citep{mathlib2020}.
 
-\textbf{Well-formedness} Besides these basic definitions, we need to add more properties to make sense for an execution.
 
 \section{Connecting Cat Specifications to Lean 4}
 Now that we know how to represent the types and operators of the Cat language in Lean~4, we need a way to turn this representation into a convenient DSL inside Lean. In principle, we could use the data structures defined above to encode each memory model manually and then prove properties about it. However, our goal is to reuse existing Cat specifications (e.g., Figures~\ref{fig:cat-sc} and~\ref{fig:cat-tso}), rather than rewriting them by hand \citep{catOnlineDocHerd,catManualSyntax11}.
@@ -283,7 +282,7 @@ instructions aevt [annotation 1, ..., annotation n]K X <j, f, rho, omega>,
   else error.
 \end{verbatim}
 \end{quote}
-This mainly specifies when a Cat program should return an error state, rather than giving a complete, executable meaning. As a result, we must make additional design choices to turn such fragments into a usable semantics. Besides this, there are other implicit definitions, which we discuss in the definitions section.
+This mainly specifies when a Cat program should return an error state, rather than giving a complete, executable meaning. As a result, we must make additional design choices to turn such fragments into a usable semantics. In addition to this, there are other implicit definitions, which we discuss in the definitions section.
 
 \textbf{Reflexive-Transitive Closure Approximation}
 
