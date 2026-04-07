@@ -32,22 +32,22 @@ We highlight in \texttt{yellow} the parts that are supported in our formalizatio
 // SPDX-License-Identifier: GPL-2.0+
 (* Linux-kernel memory consistency model *)
 
-enum Accesses =
-    'ONCE ||
-    'RELEASE ||
-    'ACQUIRE ||
-    'NORETURN ||
-    'MB
+(*@\supported{enum Accesses =}@*)
+    (*@\supported{'ONCE ||}@*)
+    (*@\supported{'RELEASE ||}@*)
+    (*@\supported{'ACQUIRE ||}@*)
+    (*@\supported{'NORETURN ||}@*)
+    (*@\supported{'MB}@*)
 
-instructions R[Accesses]
-instructions W[Accesses]
-instructions RMW[Accesses]
+(*@\supported{instructions R[Accesses]}@*)
+(*@\supported{instructions W[Accesses]}@*)
+(*@\supported{instructions RMW[Accesses]}@*)
 
 enum Barriers =
-    'wmb ||
-    'rmb ||
+    (*@\supported{'wmb}@*) ||
+    (*@\supported{'rmb}@*) ||
     'MB ||
-    'barrier ||
+    (*@\supported{'barrier}@*) ||
     'rcu-lock ||
     'rcu-unlock ||
     'sync-rcu ||
@@ -57,14 +57,14 @@ enum Barriers =
     'after-unlock-lock ||
     'after-srcu-read-unlock
 
-instructions F[Barriers]
+(*@\supported{instructions F[Barriers]}@*)
 
 (* Filtering *)
-let FailedRMW = RMW \ (domain(rmw) | range(rmw))
+let (*@\supported{FailedRMW}@*) = RMW \ (domain(rmw) | range(rmw))
 let (*@\supported{Acquire}@*)   = ACQUIRE \ W \ FailedRMW
 let (*@\supported{Release}@*)   = RELEASE \ R \ FailedRMW
 let (*@\supported{Mb}@*)        = MB \ FailedRMW
-let Noreturn  = NORETURN \ W
+let (*@\supported{Noreturn}@*)  = NORETURN \ W
 
 (* SRCU *)
 enum SRCU = 'srcu-lock || 'srcu-unlock || 'sync-srcu
@@ -77,9 +77,9 @@ let rcu-rscs = let rec
     unmatched-locks   = Rcu-lock \ domain(matched)
 and unmatched-unlocks = Rcu-unlock \ range(matched)
 and unmatched         = unmatched-locks | unmatched-unlocks
-and unmatched-po      = [unmatched] ; (*@\supported{po}@*) ; [unmatched]
+and unmatched-po      = [unmatched] ; po ; [unmatched]
 and unmatched-locks-to-unlocks =
-    [unmatched-locks] ; (*@\supported{po}@*) ; [unmatched-unlocks]
+    [unmatched-locks] ; po ; [unmatched-unlocks]
 and matched = matched |
     (unmatched-locks-to-unlocks \
      (unmatched-po ; unmatched-po))
@@ -89,33 +89,33 @@ flag ~empty Rcu-lock \ domain(rcu-rscs)   as unmatched-rcu-lock
 flag ~empty Rcu-unlock \ range(rcu-rscs)  as unmatched-rcu-unlock
 
 (* SRCU matching *)
-let carry-srcu-data = ((*@\supported{data}@*) ; [~ Srcu-unlock] ; (*@\supported{rf}@*))*
+let carry-srcu-data = (data ; [~ Srcu-unlock] ; rf)*
 let srcu-rscs =
-    ([Srcu-lock] ; carry-srcu-data ; (*@\supported{data}@*) ; [Srcu-unlock]) & loc
+    ([Srcu-lock] ; carry-srcu-data ; data ; [Srcu-unlock]) & loc
 
 flag ~empty Srcu-lock \ domain(srcu-rscs)   as unmatched-srcu-lock
 flag ~empty Srcu-unlock \ range(srcu-rscs)  as unmatched-srcu-unlock
 flag ~empty (srcu-rscs^-1 ; srcu-rscs) \ id
     as multiple-srcu-matches
 
-flag ~empty rcu-rscs & ((*@\supported{po}@*) ; [Sync-srcu] ; (*@\supported{po}@*))
+flag ~empty rcu-rscs & (po ; [Sync-srcu] ; po)
     as invalid-sleep
 
 flag ~empty different-values(srcu-rscs)
     as srcu-bad-value-match
 
 (* Marked vs plain accesses *)
-let Marked =
-    (~M) | IW | ONCE | RELEASE | ACQUIRE | MB | RMW |
+let (*@\supported{Marked}@*) =
+    (~M) | (*@\supported{IW | ONCE | RELEASE | ACQUIRE | MB | RMW |}@*)
     LKR | LKW | UL | LF | RL | RU | Srcu-lock | Srcu-unlock
 
-let Plain = M \ Marked
+let (*@\supported{Plain}@*) = M \ Marked
 
 (* Dependency propagation *)
-let carry-dep = ((*@\supported{data}@*) ; [~ Srcu-unlock] ; rfi)*
-let (*@\supported{addr}@*) = carry-dep ; addr
-let (*@\supported{ctrl}@*) = carry-dep ; ctrl
-let (*@\supported{data}@*) = carry-dep ; data
+let carry-dep = (data ; [~ Srcu-unlock] ; rfi)*
+let addr = carry-dep ; addr
+let ctrl = carry-dep ; ctrl
+let data = carry-dep ; data
 
 flag ~empty (if "lkmmv2" then 0 else _)
     as this-model-requires-variant-higher-than-lkmmv1
@@ -153,8 +153,8 @@ include "lock.cat"
 (*******************)
 
 (* Release Acquire *)
-let acq-po = [Acquire] ; po ; [M]
-let po-rel = [M] ; po ; [Release]
+(*@\supported{let acq-po = [Acquire] ; po ; [M]}@*)
+(*@\supported{let po-rel = [M] ; po ; [Release]}@*)
 let po-unlock-rf-lock-po = po ; [UL] ; rf ; [LKR] ; po
 
 (* Fences *)
@@ -168,7 +168,7 @@ let mb = ([M] ; fencerel(Mb) ; [M]) |
 	([M] ; po ; [UL] ; (co | po) ; [LKW] ;
 		fencerel(After-unlock-lock) ; [M])
 let gp = po ; [Sync-rcu | Sync-srcu] ; po?
-let strong-fence = mb | gp
+let strong-fence = (*@\supported{mb}@*) | gp
 
 let nonrw-fence = strong-fence | po-rel | acq-po
 let fence = nonrw-fence | wmb | rmb
@@ -182,45 +182,45 @@ let barrier = fencerel(Barrier | Rmb | Wmb | Mb | Sync-rcu | Sync-srcu |
 (**********************************)
 
 (* Sequential Consistency Per Variable *)
-let com = rf | co | fr
-acyclic po-loc | com as coherence
+(*@\supported{let com = rf | co | fr}@*)
+(*@\supported{acyclic po-loc | com as coherence}@*)
 
 (* Atomic Read-Modify-Write *)
-empty rmw & (fre ; coe) as atomic
+(*@\supported{empty rmw \& (fre ; coe) as atomic}@*)
 
 (**********************************)
 (* Instruction execution ordering *)
 (**********************************)
 
 (* Preserved Program Order *)
-let dep = addr | data
-let rwdep = (dep | ctrl) ; [W]
-let overwrite = co | fr
-let to-w = rwdep | (overwrite & int) | (addr ; [Plain] ; wmb)
-let to-r = addr | (dep ; [Marked] ; rfi)
-let ppo = to-r | to-w | fence | (po-unlock-rf-lock-po & int)
+(*@\supported{let dep = addr | data}@*)
+(*@\supported{let rwdep = (dep | ctrl) ; [W]}@*)
+(*@\supported{let overwrite = co | fr}@*)
+(*@\supported{let to-w = rwdep | (overwrite \& int) | (addr ; [Plain] ; wmb)}@*)
+(*@\supported{let to-r = addr | (dep ; [Marked] ; rfi)}@*)
+let ppo = (*@\supported{to-r | to-w | fence}@*) | (po-unlock-rf-lock-po & int)
 
 (* Propagation: Ordering from release operations and strong fences. *)
-let A-cumul(r) = (rfe ; [Marked])? ; r
-let cumul-fence = [Marked] ; (A-cumul(strong-fence | po-rel) | wmb |
-	po-unlock-rf-lock-po) ; [Marked]
-let prop = [Marked] ; (overwrite & ext)? ; cumul-fence* ;
-	[Marked] ; rfe? ; [Marked]
+(*@\supported{let A-cumul(r) = (rfe ; [Marked])? ; r}@*)
+let cumul-fence = (*@\supported{[Marked] ; (A-cumul(strong-fence | po-rel) | wmb}@*) |
+	po-unlock-rf-lock-po(*@\supported{) ; [Marked]}@*)
+(*@\supported{let prop = [Marked] ; (overwrite \& ext)? ; cumul-fence* ;}@*)
+	(*@\supported{[Marked] ; rfe? ; [Marked]}@*)
 
 (*
  * Happens Before: Ordering from the passage of time.
  * No fences needed here for prop because relation confined to one process.
  *)
-let hb = [Marked] ; (ppo | rfe | ((prop \ id) & int)) ; [Marked]
-acyclic hb as happens-before
+let (*@\supported{hb}@*) = [Marked] ; (ppo | rfe | ((prop \ id) & int)) ; [Marked]
+(*@\supported{acyclic hb as happens-before}@*)
 
 (****************************************)
 (* Write and fence propagation ordering *)
 (****************************************)
 
 (* Propagation: Each non-rf link needs a strong fence. *)
-let pb = prop ; strong-fence ; hb* ; [Marked]
-acyclic pb as propagation
+(*@\supported{let pb = prop ; strong-fence ; hb* ; [Marked]}@*)
+(*@\supported{acyclic pb as propagation}@*)
 
 (*******)
 (* RCU *)
