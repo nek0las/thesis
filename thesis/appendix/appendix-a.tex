@@ -22,7 +22,7 @@
 
 
 
-In this appendix, we present the \texttt{linux.bell} and \texttt{linux.cat} files of the Linux Kernel Memory Model (LKMM). 
+In this appendix, we present the \texttt{linux.bell} and \texttt{linux.cat} files of the Linux Kernel Memory Model (LKMM).
 We highlight in \texttt{yellow} the parts that are supported in our formalization.
 
 \subsection{linux.bell}
@@ -60,11 +60,11 @@ We highlight in \texttt{yellow} the parts that are supported in our formalizatio
 (*@\supported{instructions F[Barriers]}@*)
 
 (* Filtering *)
-let (*@\supported{FailedRMW}@*) = RMW \ (domain(rmw) | range(rmw))
-let (*@\supported{Acquire}@*)   = ACQUIRE \ W \ FailedRMW
-let (*@\supported{Release}@*)   = RELEASE \ R \ FailedRMW
-let (*@\supported{Mb}@*)        = MB \ FailedRMW
-let (*@\supported{Noreturn}@*)  = NORETURN \ W
+(*@\supported{let FailedRMW = RMW \textbackslash{} (domain(rmw) | range(rmw))}@*)
+(*@\supported{let Acquire = ACQUIRE \textbackslash{} W \textbackslash{} FailedRMW}@*)
+(*@\supported{let Release = RELEASE \textbackslash{} R \textbackslash{} FailedRMW}@*)
+(*@\supported{let Mb = MB \textbackslash{} FailedRMW}@*)
+(*@\supported{let Noreturn = NORETURN \textbackslash{} W}@*)
 
 (* SRCU *)
 enum SRCU = 'srcu-lock || 'srcu-unlock || 'sync-srcu
@@ -105,14 +105,14 @@ flag ~empty different-values(srcu-rscs)
     as srcu-bad-value-match
 
 (* Marked vs plain accesses *)
-let (*@\supported{Marked}@*) =
+(*@\supported{let Marked =}@*)
     (*@\supported{(\textasciitilde{}M) | IW | ONCE | RELEASE | ACQUIRE | MB | RMW |}@*)
     (*@\supported{LKR | LKW | UL | LF | RL | RU |}@*) Srcu-lock | Srcu-unlock
 
-let (*@\supported{Plain}@*) = M \ Marked
+(*@\supported{let Plain = M \textbackslash{} Marked}@*)
 
 (* Dependency propagation *)
-let (*@\supported{carry-dep}@*) = (data ; [~ Srcu-unlock] ; rfi)*
+(*@\supported{let carry-dep = (data ; [\textasciitilde{} Srcu-unlock] ; rfi)*}@*)
 (*@\supported{let addr = carry-dep ; addr}@*)
 (*@\supported{let ctrl = carry-dep ; ctrl}@*)
 (*@\supported{let data = carry-dep ; data}@*)
@@ -131,7 +131,7 @@ flag ~empty (if "lkmmv2" then 0 else _)
  * Copyright (C) 2015 Jade Alglave ,
  * Copyright (C) 2016 Luc Maranget  for Inria
  * Copyright (C) 2017 Alan Stern ,
- *                    Andrea Parri 
+ *                    Andrea Parri
  *
  * An earlier version of this file appeared in the companion webpage for
  * "Frightening small children and disconcerting grown-ups: Concurrency
@@ -158,7 +158,7 @@ include "lock.cat"
 (*@\supported{let po-unlock-rf-lock-po = po ; [UL] ; rf ; [LKR] ; po}@*)
 
 (* Fences *)
-let (*@\supported{R4rmb}@*) = R \ Noreturn	(* Reads for which rmb works *)
+(*@\supported{let R4rmb = R \textbackslash{} Noreturn}@*)	(* Reads for which rmb works *)
 (*@\supported{let rmb = [R4rmb] ; fencerel(Rmb) ; [R4rmb]}@*)
 (*@\supported{let wmb = [W] ; fencerel(Wmb) ; [W]}@*)
 (*@\supported{let mb = ([M] ; fencerel(Mb) ; [M]) |}@*)
@@ -168,7 +168,8 @@ let (*@\supported{R4rmb}@*) = R \ Noreturn	(* Reads for which rmb works *)
 	(*@\supported{([M] ; po ; [UL] ; (co | po) ; [LKW] ;}@*)
 		(*@\supported{fencerel(After-unlock-lock) ; [M])}@*)
 let gp = po ; [Sync-rcu | Sync-srcu] ; po?
-let (*@\supported{strong-fence}@*) = (*@\supported{mb}@*) | gp
+(*@\supported{let strong-fence = mb}@*) | gp
+
 
 (*@\supported{let nonrw-fence = strong-fence | po-rel | acq-po}@*)
 (*@\supported{let fence = nonrw-fence | wmb | rmb}@*)
@@ -211,7 +212,7 @@ let (*@\supported{strong-fence}@*) = (*@\supported{mb}@*) | gp
  * Happens Before: Ordering from the passage of time.
  * No fences needed here for prop because relation confined to one process.
  *)
-let (*@\supported{hb}@*) = [Marked] ; (ppo | rfe | ((prop \ id) & int)) ; [Marked]
+(*@\supported{let hb = [Marked] ; (ppo | rfe | ((prop \textbackslash{} id) \& int)) ; [Marked]}@*)
 (*@\supported{acyclic hb as happens-before}@*)
 
 (****************************************)
@@ -289,45 +290,46 @@ irreflexive rb as rcu
 (*********************************)
 
 (* Warn about plain writes and marked accesses in the same region *)
-let (*@\supported{mixed-accesses}@*) = ([Plain & W] ; (po-loc \ barrier) ; [Marked]) |
-	([Marked] ; (po-loc \ barrier) ; [Plain & W])
-flag ~empty (*@\supported{mixed-accesses}@*) as (*@\supported{mixed-accesses}@*)
+(*@\supported{let mixed-accesses = ([Plain \& W] ; (po-loc \textbackslash{} barrier) ; [Marked]) |}@*)
+	(*@\supported{([Marked] ; (po-loc \textbackslash{} barrier) ; [Plain \& W])}@*)
+(*@\supported{flag \textasciitilde{}empty mixed-accesses as mixed-accesses}@*)
 
 (* Executes-before and visibility *)
 let xbstar = (hb | pb | rb)*
-let (*@\supported{vis}@*) = cumul-fence* ; rfe? ; [Marked] ;
-	((strong-fence ; [Marked] ; xbstar) | (xbstar & int))
+(*@\supported{let vis = cumul-fence* ; rfe? ; [Marked] ;}@*)
+	(*@\supported{((strong-fence ; [Marked] ; xbstar) | (xbstar \& int))}@*)
 
 (* Boundaries for lifetimes of plain accesses *)
 (*@\supported{let w-pre-bounded = [Marked] ; (addr | fence)?}@*)
-let (*@\supported{r-pre-bounded}@*) = [Marked] ; (addr | nonrw-fence |
-	([R4rmb] ; fencerel(Rmb) ; [~Noreturn]))?
+(*@\supported{let r-pre-bounded = [Marked] ; (addr | nonrw-fence |}@*)
+	(*@\supported{([R4rmb] ; fencerel(Rmb) ; [\textasciitilde{}Noreturn]))?}@*)
 (*@\supported{let w-post-bounded = fence? ; [Marked]}@*)
-let (*@\supported{r-post-bounded}@*) = (nonrw-fence | ([~Noreturn] ; fencerel(Rmb) ; [R4rmb]))? ;
-	[Marked]
+(*@\supported{let r-post-bounded = (nonrw-fence | ([\textasciitilde{}Noreturn] ; fencerel(Rmb) ; [R4rmb]))? ;}@*)
+	(*@\supported{[Marked]}@*)
 
 (* Visibility and executes-before for plain accesses *)
-let (*@\supported{ww-vis}@*) = fence | (strong-fence ; xbstar ; w-pre-bounded) |
-	(w-post-bounded ; vis ; w-pre-bounded)
-let (*@\supported{wr-vis}@*) = fence | (strong-fence ; xbstar ; r-pre-bounded) |
-	(w-post-bounded ; vis ; r-pre-bounded)
-let (*@\supported{rw-xbstar}@*) = fence | (r-post-bounded ; xbstar ; w-pre-bounded)
+(*@\supported{let ww-vis = fence | (strong-fence ; xbstar ; w-pre-bounded) |}@*)
+	(*@\supported{(w-post-bounded ; vis ; w-pre-bounded)}@*)
+(*@\supported{let wr-vis = fence | (strong-fence ; xbstar ; r-pre-bounded) |}@*)
+	(*@\supported{(w-post-bounded ; vis ; r-pre-bounded)}@*)
+(*@\supported{let rw-xbstar = fence | (r-post-bounded ; xbstar ; w-pre-bounded)}@*)
 
 (* Potential races *)
-let (*@\supported{pre-race}@*) = ext & ((Plain * M) | ((M \ IW) * Plain))
+(*@\supported{let pre-race = ext \& ((Plain * M) | ((M \textbackslash{} IW) * Plain))}@*)
 
 (* Coherence requirements for plain accesses *)
-let (*@\supported{wr-incoh}@*) = pre-race & rf & rw-xbstar^-1
-let (*@\supported{rw-incoh}@*) = pre-race & fr & wr-vis^-1
-let (*@\supported{ww-incoh}@*) = pre-race & co & ww-vis^-1
+(*@\supported{let wr-incoh = pre-race \& rf \& rw-xbstar\textasciicircum{}-1}@*)
+(*@\supported{let rw-incoh = pre-race \& fr \& wr-vis\textasciicircum{}-1}@*)
+(*@\supported{let ww-incoh = pre-race \& co \& ww-vis\textasciicircum{}-1}@*)
 (*@\supported{empty (wr-incoh | rw-incoh | ww-incoh) as plain-coherence}@*)
 
 (* Actual races *)
-let (*@\supported{ww-nonrace}@*) = ww-vis & ((Marked * W) | rw-xbstar) & ((W * Marked) | wr-vis)
-let (*@\supported{ww-race}@*) = (pre-race & co) \ ww-nonrace
-let (*@\supported{wr-race}@*) = (pre-race & (co? ; rf)) \ wr-vis
-let (*@\supported{rw-race}@*) = (pre-race & fr) \ rw-xbstar
+(*@\supported{let ww-nonrace = ww-vis \& ((Marked * W) | rw-xbstar) \& ((W * Marked) | wr-vis)}@*)
+(*@\supported{let ww-race = (pre-race \& co) \textbackslash{} ww-nonrace}@*)
+(*@\supported{let wr-race = (pre-race \& (co? ; rf)) \textbackslash{} wr-vis}@*)
+(*@\supported{let rw-race = (pre-race \& fr) \textbackslash{} rw-xbstar}@*)
 
-flag ~empty (*@\supported{(ww-race | wr-race | rw-race) as data-race}@*)
+(*@\supported{flag \textasciitilde{}empty (ww-race | wr-race | rw-race) as data-race}@*)
 \end{lstlisting}
+
 

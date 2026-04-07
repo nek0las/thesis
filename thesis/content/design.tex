@@ -285,6 +285,33 @@ instructions aevt [annotation 1, ..., annotation n]K X <j, f, rho, omega>,
 \end{quote}
 This mainly specifies when a Cat program should return an error state, rather than giving a complete, executable meaning. As a result, we must make additional design choices to turn such fragments into a usable semantics. Besides this, there are other implicit definitions, which we discuss in the definitions section.
 
+\textbf{Reflexive-Transitive Closure Approximation}
+
+The Cat language uses $\mathtt{e\text{*}}$ to denote the reflexive-transitive closure of a relation, and $\mathtt{e\text{+}}$ for the transitive closure. In a full model, these should produce every pair $(a, b)$ reachable by following zero or more (resp.\ one or more) edges, corresponding to \texttt{Relation.ReflTransGen} and \texttt{Relation.TransGen} in Lean~4. However, encoding these closures directly inside macro-generated definitions creates a practical difficulty: the resulting terms involve an existential quantification over arbitrarily long paths, which is not suitable for the kind of term-level definitional unfolding that tactics like \texttt{simp} and \texttt{aesop} rely on.
+
+We instead compile $\mathtt{e\text{*}}$ to $r \cup \mathit{id}$ and $\mathtt{e\text{+}}$ to $r$, where $\mathit{id}$ is the identity relation. This means both operators produce a reflexive but not transitively closed result. In the specific contexts where these operators appear in LKMM---for example, $\mathtt{hb\text{*}}$ inside the propagation relation---the approximation is acceptable because the enclosing acyclicity check ensures that no cycle is inadvertently hidden. However, this is a known limitation: relations defined via $\mathtt{e\text{*}}$ may under-approximate the intended ordering in contexts that depend on full reachability.
+
+\textbf{Primitive Relations and Ignored Directives}
+
+The Cat standard library (\texttt{cos.cat}, \texttt{lock.cat}) defines several relations computationally, including the coherence order and the \texttt{fencerel} function, which computes the set of pairs $(a, b)$ such that a fence event $f$ exists with $(a, f) \in \mathit{po}$ and $(f, b) \in \mathit{po}$. Rather than implementing the full import pipeline, we treat \texttt{include} directives as no-ops and model the imported relations---as well as architecture-specific fence relations such as \texttt{mb} and \texttt{wmb}---directly as primitive fields of \texttt{CandidateExecution}. This is consistent with the view that the candidate execution is already the output of a lower-level analysis: herd7 computes these relations from the program state before invoking the Cat consistency check, so at the memory model level they can simply be treated as given inputs.
+
+The Cat language also provides \texttt{flag} assertions, which are non-fatal warnings used to detect certain execution patterns (such as unmatched RCU lock/unlock pairs) without invalidating the execution. Since these assertions do not affect consistency, we discard them during elaboration. Concretely, the elaborator silently returns an empty command for both \texttt{include} and \texttt{flag} instructions.
+
+\textbf{Program Order as ID Comparison}
+
+In the Cat language, program order (\texttt{po}) is an abstract relation. We encode it concretely as $e_1.\mathit{id} < e_2.\mathit{id} \wedge e_1.\mathit{t\_id} = e_2.\mathit{t\_id}$, where $\mathit{id}$ is the unique event identifier and $\mathit{t\_id}$ is the thread identifier. This encoding assumes that event identifiers are assigned consistently with the program order within each thread, so that events appearing earlier in the program carry smaller IDs. It removes the need to maintain an explicit set of program-order edges, which simplifies the definition of \texttt{Events} and reduces the number of well-formedness conditions that litmus test authors must establish.
+
+This design choice interacts with the \texttt{event\_id\_unique} axiom: since two events with the same ID are definitionally equal, the ID comparison faithfully represents distinctness, and the ordering it induces within a thread is consistent with the intended program order. Litmus test authors must therefore assign event IDs carefully, but in practice this is easy to satisfy by numbering events sequentially within each thread.
+
+\textbf{From-Read as a Derived Relation}
+
+In the Cat standard library, the from-read relation $\mathit{fr}$ is defined as $\mathit{rf}^{-1}; \mathit{co}$: a read $r$ is from-read of a write $w'$ if there is some write $w$ from which $r$ reads, and $w$ coherence-precedes $w'$. This captures the intuition that $r$ observed a write that was subsequently overwritten.
+
+We follow this definition exactly, computing $\mathit{fr}$ as a derived field of \texttt{CandidateExecution} rather than a primitive one. Concretely, \texttt{fr'} is defined as \texttt{X.rf'.inv.comp X.co'}, which is transparent to the kernel: any goal involving \texttt{fr'} is unfolded automatically by \texttt{simp} into a goal about \texttt{rf'} and \texttt{co'}. This reduces the number of obligations that litmus test authors must discharge, since \texttt{fr'} does not need to be supplied manually for each test.
+
+\textbf{Coercions between Set and SetRel}
+
+Cat expressions freely mix sets of events and binary relations. For example, the identity-restriction operator $[\mathtt{S}]$ takes a set $S$ and produces the relation $\{(e_1, e_2) \mid e_1 = e_2 \wedge e_1 \in S\}$, while the domain of a relation is a set. To handle this fluently, we provide two coercions: \texttt{Set Event} can be coerced to \texttt{SetRel Event Event} via \texttt{SetRel.mkId}, and \texttt{SetRel Event Event} can be coerced to \texttt{Set Event} via \texttt{SetRel.dom}. Lean~4's coercion mechanism then inserts these conversions automatically wherever a set is used in a relation context or vice versa, so that the macro expansion of $[\mathtt{S}]$ can emit \texttt{SetRel.mkId s} without manually threading the coercion through every call site.
 
 \subsection{Library Theorems and Proof Support}
 \label{sec:design:theorems}
