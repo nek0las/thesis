@@ -230,7 +230,7 @@ The relations between events are distinguished as primitive relations and derive
 
 \textbf{Coherence Order (\texttt{co})}, which relates a W event with a W event overwriting it. For instance, when event $e_3 : W(X)=1$ first writes 1 to location $X$, which event $e_4 : W(X)=2$ then overwrites with 2, then we have an edge $\mathit{co}(e_3, e_4)$. Both \texttt{co}-related write events access the same location. Additionally, \texttt{co} is a total strict order per location.
 
-\textbf{Read Modify Write (\texttt{rmw})}, relating the R and W of a successful atomic read-modify-write instruction (RMW). The RMW instructions are special instructions within architectures, where architectures can detect whether another thread modifies the written value in-between the atomic operation. The generated R and W events access the same location and are \texttt{po}-adjacent (i.e., there are no \texttt{po}-intermediate events).
+\textbf{Read Modify Write (\texttt{rmw})}, relating the R and W of a successful atomic read-modify-write instruction (RMW). RMW instructions execute atomically, ensuring no other thread can modify the value during the operation. Some variants, like compare-and-swap, can detect if the value has changed before the operation by checking against an expected value. The generated R and W events access the same location and are \texttt{po}-adjacent (i.e., there are no \texttt{po}-intermediate events).
 
 \begin{figure}[htbp]
 \centering
