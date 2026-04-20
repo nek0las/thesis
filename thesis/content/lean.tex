@@ -74,7 +74,7 @@ Let $R$ be a relation from a set $A$ to a set $B$. The inverse relation, denoted
 \[
 R^{-1} = \{(b, a) \mid (a, b) \in R\}.
 \]
-This means that $b \, R^{-1} \, a$ if and only if $a \, R \, b$ \citep[p.~665]{rosen2012discrete}. In the context of memory models, the inverse of the read-from relation, $\mathit{rf}^{-1}$, connects a read event back to the write event that provided its value.
+This means that $b \, R^{-1} \, a$ if and only if $a \, R \, b$ \citep[p.~665]{rosen2012discrete}. In the context of memory models, the inverse of the reads-from relation, $\mathit{rf}^{-1}$, connects a read event back to the write event that provided its value.
 
 \paragraph{Optional Relation (Reflexive Closure).}
 The reflexive closure of a relation $R$ on a set $A$ is the smallest reflexive relation that contains $R$ \citep[p.~628]{rosen2012discrete}. In memory model formalisms such as the \texttt{cat} language, this is frequently referred to as an "optional" relation and is denoted by $R^?$ or $R?$. It is formed by taking the union of the relation $R$ and the diagonal relation $\Delta = \{(a, a) \mid a \in A\}$ \citep[p.~628]{rosen2012discrete}:
@@ -95,7 +95,7 @@ The \emph{external} relation, denoted by \texttt{ext}, consists of pairs of even
 \[
 \texttt{ext} = \{ (e_1, e_2) \in E \times E \mid \text{tid}(e_1) \neq \text{tid}(e_2) \}.
 \]
-Equivalently, $\texttt{ext} = (E \times E) \setminus \texttt{int}$. In memory models, these are used to derive specific sub-relations; for example, \texttt{rfi} (read-from internal) is defined as $\mathit{rf} \cap \texttt{int}$, and \texttt{rfe} (read-from external) is defined as $\mathit{rf} \cap \texttt{ext}$.
+Equivalently, $\texttt{ext} = (E \times E) \setminus \texttt{int}$. In memory models, these are used to derive specific sub-relations; for example, \texttt{rfi} (reads-from internal) is defined as $\mathit{rf} \cap \texttt{int}$, and \texttt{rfe} (reads-from external) is defined as $\mathit{rf} \cap \texttt{ext}$.
 
 Relation composition, defined in Section~\ref{sec:math-background}, is central to formalizing memory models in Cat. As noted there, the \emph{fr} (from-read) relation is a key example: $\mathit{fr} = \mathit{co} \mathbin{;} \mathit{rf}^{-1}$.
 
@@ -135,7 +135,7 @@ a := Y          & b := X
 \label{fig:litmus-test}
 \end{figure}
 
-Let’s consider the following example in Figure \ref{fig:litmus-test}. It is a Store-Buffering program in which the variables X and Y are initialized to 0. Each thread first assigns the value 1 to one variable and then reads the other variable. From the programmer’s perspective, one might expect both a and b to be 1 if the program executes in the order in which the operations are written: Thread 0 writes X and then reads Y, so if Thread 1’s write to Y is already visible, a will be 1; symmetrically, b will be 1 if Thread 0’s write to X is already visible. However, hardware store buffering allows each thread to delay its write and execute the subsequent read before the other thread’s write propagates. In this case, both a and b can be 0: Thread 0 reads Y=0 before Thread 1’s write to Y is visible, and Thread 1 reads X=0 before Thread 0’s write to X is visible. This outcome $a=0, b=0$ is forbidden under Sequential Consistency but is observable on hardware with store buffers, making it the key weak memory behavior of this test. In the execution diagrams that follow, $W(X)=v$ denotes a write of value $v$ to memory location $X$, and $R(Y)=v$ denotes a read from location $Y$ that returns value $v$. Solid arrows represent the global execution order, and dashed arrows represent read-from (\textit{rf}) edges, connecting each write to the read that observes its value. For instance, we may non-deterministically observe one of the following interleaving orders: 
+Let’s consider the following example in Figure \ref{fig:litmus-test}. It is a Store-Buffering program in which the variables X and Y are initialized to 0. Each thread first assigns the value 1 to one variable and then reads the other variable. From the programmer’s perspective, one might expect both a and b to be 1 if the program executes in the order in which the operations are written: Thread 0 writes X and then reads Y, so if Thread 1’s write to Y is already visible, a will be 1; symmetrically, b will be 1 if Thread 0’s write to X is already visible. However, hardware store buffering allows each thread to delay its write and execute the subsequent read before the other thread’s write propagates. In this case, both a and b can be 0: Thread 0 reads Y=0 before Thread 1’s write to Y is visible, and Thread 1 reads X=0 before Thread 0’s write to X is visible. This outcome $a=0, b=0$ is forbidden under Sequential Consistency but is observable on hardware with store buffers, making it the key weak memory behavior of this test. In the execution diagrams that follow, $W(X)=v$ denotes a write of value $v$ to memory location $X$, and $R(Y)=v$ denotes a read from location $Y$ that returns value $v$. Solid arrows represent the global execution order, and dashed arrows represent reads-from (\textit{rf}) edges, connecting each write to the read that observes its value. For instance, we may non-deterministically observe one of the following interleaving orders: 
 
 \begin{figure}[htbp]
 \centering
@@ -168,7 +168,7 @@ Let’s consider the following example in Figure \ref{fig:litmus-test}. It is a 
 \draw[rf] (wx1) -- (rx1);
 
 \end{tikzpicture}
-\caption{Execution Order with X = 1 and Y = 1 (solid arrows: execution order; dashed arrows: read-from (\textit{rf}))}
+\caption{Execution Order with X = 1 and Y = 1 (solid arrows: execution order; dashed arrows: reads-from (\textit{rf}))}
 \label{fig:litmus-execution-1-1}
 \end{figure}
 
@@ -205,11 +205,11 @@ Let’s consider the following example in Figure \ref{fig:litmus-test}. It is a 
 \draw[rf] (wx1) -- (rx1);
 
 \end{tikzpicture}
-\caption{Execution Order with X = 1 and Y = 0 (solid arrows: execution order; dashed arrows: read-from (\textit{rf}))}
+\caption{Execution Order with X = 1 and Y = 0 (solid arrows: execution order; dashed arrows: reads-from (\textit{rf}))}
 \label{fig:litmus-execution-0-1}
 \end{figure}
 
-Even though the order of instructions within each thread is preserved according to the program order, threads can interleave arbitrarily. The dashed read-from (\texttt{rf}) arrows indicate the relationship between write operations and subsequent reads of the same memory location in the interleaving. Depending on the specific interleaving, these read operations may observe values written by different write operations, resulting in distinct assignments to a and b upon termination. The formal study of the exact behaviors concurrent programs can exhibit is a field known as weak memory models.
+Even though the order of instructions within each thread is preserved according to the program order, threads can interleave arbitrarily. The dashed reads-from (\texttt{rf}) arrows indicate the relationship between write operations and subsequent reads of the same memory location in the interleaving. Depending on the specific interleaving, these read operations may observe values written by different write operations, resulting in distinct assignments to a and b upon termination. The formal study of the exact behaviors concurrent programs can exhibit is a field known as weak memory models.
 
 Memory models are generally categorized into two classes: operational and axiomatic. Operational models are described using buffers and queues and are abstractions derived from hardware behavior \citep{10.1145/1993498.1993520OperationalModel}. In contrast, axiomatic memory models specify disallowed program behaviors, usually by constraining relations on memory accesses \citep{10.1145/2627752}. In this thesis, we use axiomatic memory models.
 
@@ -268,7 +268,7 @@ The relations between events are distinguished as primitive relations and derive
 \label{fig:litmus-execution-primitive-relation}
 \end{figure}
 
-Using these primitive relations, we can represent executions of the Store Buffering litmus test. The execution orders are implicitly determined by these primitive relations. Figure~\ref{fig:litmus-execution-primitive-relation} shows one such execution, where the dotted lines represent the coherence order, the dashed lines represent the read-from relation, and the thick lines represent the program order. And one such an execution graph is called a \texttt{Candidate Execution}.
+Using these primitive relations, we can represent executions of the Store Buffering litmus test. The execution orders are implicitly determined by these primitive relations. Figure~\ref{fig:litmus-execution-primitive-relation} shows one such execution, where the dotted lines represent the coherence order, the dashed lines represent the reads-from relation, and the thick lines represent the program order. And one such an execution graph is called a \texttt{Candidate Execution}.
 
 A candidate execution consists of a set of events together with a collection of
 relations over these events. For example, it is represented as
@@ -332,7 +332,7 @@ Some relations are composed based on the primitive relations. The following are 
     node[midway, below, font=\scriptsize] {};
 
 \end{tikzpicture}
-\caption{Execution with internal read-from (\textit{rfi}, blue dashed), external read-from (\textit{rfe}, red dashed), external from-read (\textit{fre}, grey dotted), program order (\textit{po}, solid), and coherence order (\textit{co}, dotted).}
+\caption{Execution with internal reads-from (\textit{rfi}, blue dashed), external reads-from (\textit{rfe}, red dashed), external from-read (\textit{fre}, grey dotted), program order (\textit{po}, solid), and coherence order (\textit{co}, dotted).}
 \label{fig:litmus-execution-with-derived-relation}
 \end{figure}
 

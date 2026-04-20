@@ -95,7 +95,7 @@ fun evts x a =>
 \end{verbatim}
 
 \subsection{Candidate Execution}
-Candidate executions play a crucial role in the Cat language: they represent a specific possible execution and may comprise an execution graph. \citet{catManualSyntax11} abstracted each execution as a candidate execution, providing sets of events, each of which satisfies a specific property, such as read-from, initial writes, and so on. We separately represent these sets: a candidate execution contains a set of events as a parameter, and it also includes primitive relations that can be used to filter these events.
+Candidate executions play a crucial role in the Cat language: they represent a specific possible execution and may comprise an execution graph. \citet{catManualSyntax11} abstracted each execution as a candidate execution, providing sets of events, each of which satisfies a specific property, such as reads-from, initial writes, and so on. We separately represent these sets: a candidate execution contains a set of events as a parameter, and it also includes primitive relations that can be used to filter these events.
 
 In addition to these definitions, we treat the coherence order and from-read relations as primitive relations, following their definitions in the Cat standard library. The standard library defines the coherence order as a series of computations, but this computation is difficult to represent in Lean~4. For example, defining the coherence order requires the use of an operation called \texttt{cross}:
 \[
