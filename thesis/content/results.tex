@@ -160,29 +160,29 @@ First, we use our classical Store Buffering (SB) example. The execution graph fo
   \node[event, below=of wy] (rx) {$R(X) = 0$};
  
   % co: init -> writes (dotted)
-  \draw[co] (init) -- node[above left, pos=0.4] {$co$} (wx);
-  \draw[co] (init) -- node[above right, pos=0.4] {$co$} (wy);
- 
+  \draw[co] (init) -- node[above left, pos=0.4] {$\mathit{co}$} (wx);
+  \draw[co] (init) -- node[above right, pos=0.4] {$\mathit{co}$} (wy);
+
   % rf: init -> reads, routed around the outside
   % Left rf: init -> R(Y)=0, goes wide left
   \draw[rf] (init.west) .. controls +(-3.5,-1.5) and +(-2.5,1.5) ..
-    node[left, pos=0.5] {$rf$} (ry.west);
- 
+    node[left, pos=0.5] {$\mathit{rf}$} (ry.west);
+
   % Right rf: init -> R(X)=0, goes wide right
   \draw[rf] (init.east) .. controls +(3.5,-1.5) and +(2.5,1.5) ..
-    node[right, pos=0.5] {$rf$} (rx.east);
- 
+    node[right, pos=0.5] {$\mathit{rf}$} (rx.east);
+
   % po: within threads (solid thick)
-  \draw[po] (wx) -- node[left] {$po$} (ry);
-  \draw[po] (wy) -- node[right] {$po$} (rx);
- 
+  \draw[po] (wx) -- node[left] {$\mathit{po}$} (ry);
+  \draw[po] (wy) -- node[right] {$\mathit{po}$} (rx);
+
   % fre: from-read external (red dashed, forming the cycle)
-  \draw[fre] (ry) -- node[above, pos=0.5] {$fre$} (wy);
-  \draw[fre] (rx) -- node[below, pos=0.5] {$fre$} (wx);
- 
+  \draw[fre] (ry) -- node[above, pos=0.5] {$\mathit{fre}$} (wy);
+  \draw[fre] (rx) -- node[below, pos=0.5] {$\mathit{fre}$} (wx);
+
 \end{tikzpicture}
 \caption{Store Buffering execution with $a = 0$ and $b = 0$.
-  The cycle $W(X) \xrightarrow{po} R(Y) \xrightarrow{fre} W(Y) \xrightarrow{po} R(X) \xrightarrow{fre} W(X)$
+  The cycle $W(X) \xrightarrow{\mathit{po}} R(Y) \xrightarrow{\mathit{fre}} W(Y) \xrightarrow{\mathit{po}} R(X) \xrightarrow{\mathit{fre}} W(X)$
   violates the acyclicity constraint of SC.}
 \label{fig:sb-fre-cycle}
 \end{figure}
@@ -235,23 +235,23 @@ Outcome: $a = 1$ and $b = 0$
   \node[above=0.4cm of ry, font=\small\bfseries] {Thread 1};
 
   % po edges
-  \draw[po] (wx) -- node[left] {$po$} (wy);
-  \draw[po] (ry) -- node[right] {$po$} (rx);
+  \draw[po] (wx) -- node[left] {$\mathit{po}$} (wy);
+  \draw[po] (ry) -- node[right] {$\mathit{po}$} (rx);
 
   % rfe edge
-  \draw[rfe] (wy) -- node[above, pos=0.5] {$rfe$} (ry);
+  \draw[rfe] (wy) -- node[above, pos=0.5] {$\mathit{rfe}$} (ry);
 
   % fre edge
-  \draw[fre] (rx) -- node[below, pos=0.5] {$fre$} (wx);
+  \draw[fre] (rx) -- node[below, pos=0.5] {$\mathit{fre}$} (wx);
 
 \end{tikzpicture}
-\caption{Message Passing execution graph. The cycle $W(X) \xrightarrow{po} W(Y) \xrightarrow{rfe} R(Y) \xrightarrow{po} R(X) \xrightarrow{fre} W(X)$ is permitted under MIPS but forbidden under x86-TSO.}
+\caption{Message Passing execution graph. The cycle $W(X) \xrightarrow{\mathit{po}} W(Y) \xrightarrow{\mathit{rfe}} R(Y) \xrightarrow{\mathit{po}} R(X) \xrightarrow{\mathit{fre}} W(X)$ is permitted under MIPS but forbidden under x86-TSO.}
 \label{fig:mp-rfe-cycle}
 \end{figure}
 
-Under Sequential Consistency (SC), this outcome is disallowed as it violates the foundational requirement of global instruction interleaving. Within the x86-TSO model, the outcome is also forbidden due to the axiomatic invariant that both Store-Store and Load-Load program-order pairs must be preserved. Consequently, as illustrated in Figure~\ref{fig:mp-rfe-cycle}, the $po$ edges in both threads are included in the preserved program order, and the resulting cycle is detected as a violation of the acyclicity condition.
+Under Sequential Consistency (SC), this outcome is disallowed as it violates the foundational requirement of global instruction interleaving. Within the x86-TSO model, the outcome is also forbidden due to the axiomatic invariant that both Store-Store and Load-Load program-order pairs must be preserved. Consequently, as illustrated in Figure~\ref{fig:mp-rfe-cycle}, the $\mathit{po}$ edges in both threads are included in the preserved program order, and the resulting cycle is detected as a violation of the acyclicity condition.
 
-In contrast, the MIPS model permits this behavior. As a relaxed architecture, MIPS does not enforce ordering between independent memory accesses unless an explicit synchronization barrier is present. In our \texttt{LeanCat} formalization, these $po$ edges are excluded from the \textit{ppo} relation for MIPS, effectively breaking the cycle shown in Figure~\ref{fig:mp-rfe-cycle}. The acyclicity check therefore passes, providing a machine-checked proof that MIPS allows weak behaviors that TSO strictly forbids.
+In contrast, the MIPS model permits this behavior. As a relaxed architecture, MIPS does not enforce ordering between independent memory accesses unless an explicit synchronization barrier is present. In our \texttt{LeanCat} formalization, these $\mathit{po}$ edges are excluded from the \textit{ppo} relation for MIPS, effectively breaking the cycle shown in Figure~\ref{fig:mp-rfe-cycle}. The acyclicity check therefore passes, providing a machine-checked proof that MIPS allows weak behaviors that TSO strictly forbids.
 
 \subsubsection{Load Buffering}
 
@@ -296,16 +296,16 @@ Can we get $a = 1$ and $b = 1$?
   \node[above=0.4cm of ry, font=\small\bfseries] {Thread 1};
 
   % po: within threads (solid thick)
-  \draw[po] (rx) -- node[left] {$po$} (wy);
-  \draw[po] (ry) -- node[right] {$po$} (wx);
+  \draw[po] (rx) -- node[left] {$\mathit{po}$} (wy);
+  \draw[po] (ry) -- node[right] {$\mathit{po}$} (wx);
 
   % rfe: straight lines crossing diagonally
-  \draw[rfe] (wx) -- node[below, pos=0.5] {$rfe$} (rx);
-  \draw[rfe] (wy) -- node[above, pos=0.5] {$rfe$} (ry);
+  \draw[rfe] (wx) -- node[below, pos=0.5] {$\mathit{rfe}$} (rx);
+  \draw[rfe] (wy) -- node[above, pos=0.5] {$\mathit{rfe}$} (ry);
 
 \end{tikzpicture}
-\caption{Load Buffering execution with $a = 1$ and $b = 1$. 
-  The cycle $R(X) \xrightarrow{po} W(Y) \xrightarrow{rfe} R(Y) \xrightarrow{po} W(X) \xrightarrow{rfe} R(X)$ 
+\caption{Load Buffering execution with $a = 1$ and $b = 1$.
+  The cycle $R(X) \xrightarrow{\mathit{po}} W(Y) \xrightarrow{\mathit{rfe}} R(Y) \xrightarrow{\mathit{po}} W(X) \xrightarrow{\mathit{rfe}} R(X)$
   is disallowed under MIPS and forbidden under x86-TSO.}
 \label{fig:lb-rfe-cycle}
 \end{figure}
@@ -364,31 +364,31 @@ Outcome: $r_0 = 1 \wedge r_1 = 0$
   \node[above right=0.4cm and 0cm of r0, font=\small\bfseries] {P1};
 
   % co: init -> W(X)=1
-  \draw[co] (init) -- node[above left, pos=0.4] {$co$} (wx);
+  \draw[co] (init) -- node[above left, pos=0.4] {$\mathit{co}$} (wx);
 
   % rf: W(X)=1 -> R(X)=1
-  \draw[rf] (wx) -- node[above, pos=0.5] {$rf$} (r0);
+  \draw[rf] (wx) -- node[above, pos=0.5] {$\mathit{rf}$} (r0);
 
   % rf: init -> R(X)=0
   \draw[rf] (init) .. controls +(3.5,-1.5) and +(2.5,1.5) ..
-    node[right, pos=0.5] {$rf$} (r1);
+    node[right, pos=0.5] {$\mathit{rf}$} (r1);
 
   % po_loc: R(X)=1 -> R(X)=0 (same location, same thread)
-  \draw[po] (r0) -- node[right] {$po\_loc$} (r1);
+  \draw[po] (r0) -- node[right] {$\mathit{po\_loc}$} (r1);
 
   % fr: R(X)=0 -> W(X)=1
-  \draw[fr] (r1) -- node[below, pos=0.5] {$fr$} (wx);
+  \draw[fr] (r1) -- node[below, pos=0.5] {$\mathit{fr}$} (wx);
 
 \end{tikzpicture}
 \caption{CoRR execution under the LKMM with $r_0 = 1$ and $r_1 = 0$.
-  The cycle $R(X){=}1 \xrightarrow{po\_loc} R(X){=}0 \xrightarrow{fr} W(X){=}1 \xrightarrow{rf} R(X){=}1$
+  The cycle $R(X){=}1 \xrightarrow{\mathit{po\_loc}} R(X){=}0 \xrightarrow{\mathit{fr}} W(X){=}1 \xrightarrow{\mathit{rf}} R(X){=}1$
   violates the LKMM coherence condition.}
 \label{fig:lkmm-corr-cycle}
 \end{figure}
 
 In this test, all accesses are annotated with \texttt{ONCE}, the weakest marked access type in the LKMM. P0 performs a single write \texttt{WRITE\_ONCE(*x, 1)}, while P1 reads $X$ twice using \texttt{READ\_ONCE}. The question is whether P1 can first observe the updated value $r_0 = 1$ and then observe the initial value $r_1 = 0$.
 
-As shown in Figure~\ref{fig:lkmm-corr-cycle}, if this outcome were allowed, the execution would contain a cycle in $po\_loc \cup com$. The two reads on P1 access the same location $X$ and are related by $po\_loc$. The second read $R(X) = 0$ reads from the initial write, which is coherence-before $W(X) = 1$, giving rise to a from-read ($fr$) edge from $R(X) = 0$ to $W(X) = 1$. Finally, $W(X) = 1$ feeds back to the first read $R(X) = 1$ via a reads-from ($rf$) edge.
+As shown in Figure~\ref{fig:lkmm-corr-cycle}, if this outcome were allowed, the execution would contain a cycle in $\mathit{po\_loc} \cup \mathit{com}$. The two reads on P1 access the same location $X$ and are related by $\mathit{po\_loc}$. The second read $R(X) = 0$ reads from the initial write, which is coherence-before $W(X) = 1$, giving rise to a from-read ($\mathit{fr}$) edge from $R(X) = 0$ to $W(X) = 1$. Finally, $W(X) = 1$ feeds back to the first read $R(X) = 1$ via a reads-from ($\mathit{rf}$) edge.
 
 This cycle violates the LKMM's coherence condition, which requires $\mathit{po\_loc} \cup \mathit{com}$ to be acyclic, where $\mathit{com} = \mathit{rf} \cup \mathit{co} \cup \mathit{fr}$. Since coherence is the most basic consistency requirement in the LKMM and does not depend on the access annotations or fence instructions, this outcome is forbidden regardless of the access types used. We proved this in \texttt{CoRR\_poonceonce\_Once.lean} by explicitly constructing the cycle in the coherence relation and deriving a contradiction.
 

@@ -28,19 +28,19 @@
     \toprule
     Symbol & Definition \\
     \midrule\endhead
-    $po$   & Program Order -- relates events by their syntactic order within a single thread; a strict total order per thread \\
+    \texttt{po}   & Program Order -- relates events by their syntactic order within a single thread; a strict total order per thread \\
     \midrule
     \texttt{rf}   & Read-From -- relates a write event to the read event that reads the value it wrote \\
     \midrule
-    $co$   & Coherence Order -- relates a write event to the write event that overwrites it at the same memory location; a strict total order per location \\
+    \texttt{co}   & Coherence Order -- relates a write event to the write event that overwrites it at the same memory location; a strict total order per location \\
     \midrule
-    $rmw$  & Read-Modify-Write -- relates the read and write parts of a successful atomic RMW instruction; the two events are $po$-adjacent \\
+    \texttt{rmw}  & Read-Modify-Write -- relates the read and write parts of a successful atomic RMW instruction; the two events are \texttt{po}-adjacent \\
     \midrule
-    $addr$ & Address Dependency -- the result of a read is used as the memory address of a subsequent instruction \\
+    \texttt{addr} & Address Dependency -- the result of a read is used as the memory address of a subsequent instruction \\
     \midrule
-    $data$ & Data Dependency -- the result of a read is used as the data value of a subsequent instruction \\
+    \texttt{data} & Data Dependency -- the result of a read is used as the data value of a subsequent instruction \\
     \midrule
-    $ctrl$ & Control Dependency -- the result of a read determines the control flow leading to a subsequent instruction \\
+    \texttt{ctrl} & Control Dependency -- the result of a read determines the control flow leading to a subsequent instruction \\
     \bottomrule
 \end{longtable}
 
@@ -49,55 +49,55 @@
     \toprule
     Symbol & Definition \\
     \midrule\endhead
-    $fr$                      & From-Read -- relates a read to a write that overwrites the value it read; $fr = rf^{-1} \mathbin{;} co$ \\
+    \texttt{fr}                      & From-Read -- relates a read to a write that overwrites the value it read; $\mathit{fr} = \mathit{rf}^{-1} \mathbin{;} \mathit{co}$ \\
     \midrule
-    $com$                     & Communication -- $com = rf \cup co \cup fr$ \\
+    \texttt{com}                     & Communication -- $\mathit{com} = \mathit{rf} \cup \mathit{co} \cup \mathit{fr}$ \\
     \midrule
-    $rfe$                     & External Read-From -- $rf$ edges between events on different threads \\
+    \texttt{rfe}                     & External Read-From -- \texttt{rf} edges between events on different threads \\
     \midrule
-    $rfi$                     & Internal Read-From -- $rf$ edges between events on the same thread \\
+    \texttt{rfi}                     & Internal Read-From -- \texttt{rf} edges between events on the same thread \\
     \midrule
-    $coe$                     & External Coherence Order -- $co$ edges between events on different threads \\
+    \texttt{coe}                     & External Coherence Order -- \texttt{co} edges between events on different threads \\
     \midrule
-    $coi$                     & Internal Coherence Order -- $co$ edges between events on the same thread \\
+    \texttt{coi}                     & Internal Coherence Order -- \texttt{co} edges between events on the same thread \\
     \midrule
-    $fre$                     & External From-Read -- $fr$ edges between events on different threads \\
+    \texttt{fre}                     & External From-Read -- \texttt{fr} edges between events on different threads \\
     \midrule
-    $fri$                     & Internal From-Read -- $fr$ edges between events on the same thread \\
+    \texttt{fri}                     & Internal From-Read -- \texttt{fr} edges between events on the same thread \\
     \midrule
-    $dep$                     & Dependency -- $dep = addr \cup data$ \\
+    \texttt{dep}                     & Dependency -- $\mathit{dep} = \mathit{addr} \cup \mathit{data}$ \\
     \midrule
-    $rwdep$                   & Read-Write Dependency -- $(dep \cup ctrl) \cap (R \times W)$ \\
+    \texttt{rwdep}                   & Read-Write Dependency -- $(\mathit{dep} \cup \mathit{ctrl}) \cap (R \times W)$ \\
     \midrule
-    $rrdep$                   & Read-Read Dependency -- $addr \cup (dep \mathbin{;} rfi)$ \\
+    \texttt{rrdep}                   & Read-Read Dependency -- $\mathit{addr} \cup (\mathit{dep} \mathbin{;} \mathit{rfi})$ \\
     \midrule
-    $overwrite$               & Overwrite -- $overwrite = co \cup fr$ \\
+    \texttt{overwrite}               & Overwrite -- $\mathit{overwrite} = \mathit{co} \cup \mathit{fr}$ \\
     \midrule
-    $to\text{-}w$             & To-Write ordering -- $rwdep \cup (overwrite \cap int)$ \\
+    \texttt{to-w}             & To-Write ordering -- $\mathit{rwdep} \cup (\mathit{overwrite} \cap \mathit{int})$ \\
     \midrule
-    $to\text{-}r$             & To-Read ordering -- $strong\text{-}rrdep \cup rfi\text{-}rel\text{-}acq$ \\
+    \texttt{to-r}             & To-Read ordering -- $\mathit{strong\text{-}rrdep} \cup \mathit{rfi\text{-}rel\text{-}acq}$ \\
     \midrule
-    $ppo$                     & Preserved Program Order -- $rrdep^{*} \mathbin{;} (to\text{-}r \cup to\text{-}w \cup fence)$ \\
+    \texttt{ppo}                     & Preserved Program Order -- $\mathit{rrdep}^{*} \mathbin{;} (\mathit{to\text{-}r} \cup \mathit{to\text{-}w} \cup \mathit{fence})$ \\
     \midrule
-    $fence$                   & Fence -- $strong\text{-}fence \cup po\text{-}rel \cup wmb \cup rmb \cup acq\text{-}po$ \\
+    \texttt{fence}                   & Fence -- $\mathit{strong\text{-}fence} \cup \mathit{po\text{-}rel} \cup \mathit{wmb} \cup \mathit{rmb} \cup \mathit{acq\text{-}po}$ \\
     \midrule
-    $strong\text{-}fence$     & Strong Fence -- the full memory barrier relation $mb$ \\
+    \texttt{strong-fence}     & Strong Fence -- the full memory barrier relation $\mathit{mb}$ \\
     \midrule
-    $cumul\text{-}fence$      & Cumulative Fence -- $A\text{-}cumul(strong\text{-}fence \cup po\text{-}rel) \cup wmb$ \\
+    \texttt{cumul-fence}      & Cumulative Fence -- $A\text{-}cumul(\mathit{strong\text{-}fence} \cup \mathit{po\text{-}rel}) \cup \mathit{wmb}$ \\
     \midrule
-    $prop$                    & Propagation -- $(overwrite \cap ext)^{?} \mathbin{;} cumul\text{-}fence^{*} \mathbin{;} rfe^{?}$ \\
+    \texttt{prop}                    & Propagation -- $(\mathit{overwrite} \cap \mathit{ext})^{?} \mathbin{;} \mathit{cumul\text{-}fence}^{*} \mathbin{;} \mathit{rfe}^{?}$ \\
     \midrule
-    $hb$                      & Happens-Before -- $((prop \setminus id) \cap int) \cup ppo \cup rfe$ \\
+    \texttt{hb}                      & Happens-Before -- $((\mathit{prop} \setminus \mathit{id}) \cap \mathit{int}) \cup \mathit{ppo} \cup \mathit{rfe}$ \\
     \midrule
-    $pb$                      & Propagates-Before -- $prop \mathbin{;} strong\text{-}fence \mathbin{;} hb^{*}$ \\
+    \texttt{pb}                      & Propagates-Before -- $\mathit{prop} \mathbin{;} \mathit{strong\text{-}fence} \mathbin{;} \mathit{hb}^{*}$ \\
     \midrule
-    $xppo$                    & TSO Preserved Program Order -- $((W \times W) \cup (R \times W) \cup (R \times R)) \cap po$ \\
+    \texttt{xppo}                    & TSO Preserved Program Order -- $((W \times W) \cup (R \times W) \cup (R \times R)) \cap \mathit{po}$ \\
     \midrule
-    $implied$                 & TSO Implied Ordering -- $po \mathbin{;} [At \cup F] \cup [At \cup F] \mathbin{;} po$ \\
+    \texttt{implied}                 & TSO Implied Ordering -- $\mathit{po} \mathbin{;} [\mathit{At} \cup F] \cup [\mathit{At} \cup F] \mathbin{;} \mathit{po}$ \\
     \midrule
-    $At$                      & Atomic events -- $dom(rmw) \cup codom(rmw)$ \\
+    \texttt{At}                      & Atomic events -- $\mathrm{dom}(\mathit{rmw}) \cup \mathrm{codom}(\mathit{rmw})$ \\
     \midrule
-    $A\text{-}cumul(r)$       & A-Cumulative fence -- $rfe^{?} \mathbin{;} r$ \\
+    \texttt{A-cumul($r$)}       & A-Cumulative fence -- $\mathit{rfe}^{?} \mathbin{;} r$ \\
     \bottomrule
 \end{longtable}
 
@@ -155,21 +155,21 @@
     \midrule
     $R^{*}$                   & Reflexive-transitive closure of $R$ \\
     \midrule
-    $R^{?}$                   & Optional relation: $R^{?} = id \cup R$ \\
+    $R^{?}$                   & Optional relation: $R^{?} = \mathit{id} \cup R$ \\
     \midrule
     $[S]$                     & Identity relation restricted to set $S$: $\{(e,e) \mid e \in S\}$ \\
     \midrule
     $S_1 \times S_2$          & Cartesian product as a relation: $\{(e_1,e_2) \mid e_1 \in S_1 \land e_2 \in S_2\}$ \\
     \midrule
-    $dom(R)$                  & Domain of $R$: $\{a \mid \exists b.\ (a,b) \in R\}$ \\
+    $\mathrm{dom}(R)$         & Domain of $R$: $\{a \mid \exists b.\ (a,b) \in R\}$ \\
     \midrule
-    $codom(R)$                & Codomain of $R$: $\{b \mid \exists a.\ (a,b) \in R\}$ \\
+    $\mathrm{codom}(R)$       & Codomain of $R$: $\{b \mid \exists a.\ (a,b) \in R\}$ \\
     \midrule
-    $id$                      & Identity relation: $\{(e,e) \mid e \in E\}$ \\
+    \texttt{id}               & Identity relation: $\{(e,e) \mid e \in E\}$ \\
     \midrule
-    $int$                     & Internal: pairs of events belonging to the same thread \\
+    \texttt{int}              & Internal: pairs of events belonging to the same thread \\
     \midrule
-    $ext$                     & External: pairs of events belonging to different threads \\
+    \texttt{ext}              & External: pairs of events belonging to different threads \\
     \midrule
     \textsc{Acyclic}$(R)$     & No event $a$ satisfies $R^{+}(a,a)$; the relation contains no directed cycle \\
     \midrule

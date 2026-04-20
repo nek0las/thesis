@@ -101,7 +101,7 @@ Let’s consider the following example in Figure \ref{fig:litmus-test}. It is a 
 \label{fig:litmus-execution-0-1}
 \end{figure}
 
-Even though the order of instructions within each thread is preserved according to the program order, threads can interleave arbitrarily. The dashed read-from (rf) arrows indicate the relationship between write operations and subsequent reads of the same memory location in the interleaving. Depending on the specific interleaving, these read operations may observe values written by different write operations, resulting in distinct assignments to a and b upon termination. The formal study of the exact behaviors concurrent programs can exhibit is a field known as weak memory models.
+Even though the order of instructions within each thread is preserved according to the program order, threads can interleave arbitrarily. The dashed read-from (\texttt{rf}) arrows indicate the relationship between write operations and subsequent reads of the same memory location in the interleaving. Depending on the specific interleaving, these read operations may observe values written by different write operations, resulting in distinct assignments to a and b upon termination. The formal study of the exact behaviors concurrent programs can exhibit is a field known as weak memory models.
 
 Memory models are generally categorized into two classes: operational and axiomatic. Operational models are described using buffers and queues and are abstractions derived from hardware behavior [\citet{10.1145/1993498.1993520OperationalModel}]. In contrast, axiomatic memory models specify disallowed program behaviors, usually by constraining relations on memory accesses [\citet{10.1145/2627752}]. In this thesis, we use an axiomatic memory model.
 
@@ -116,13 +116,13 @@ Each event is used to represent the behavior of an instruction. For example, Eve
 
 The relations between events are distinguished as primitive relations and derived relations. The latter are entirely defined from the former and are composed of primitive relations. We also define some typical primitive relations~\cite{10.1145/2627752}:
 
-\textbf{Program Order (po)}, relating events by their syntactic order: the order among instructions in the program text carries over to execution graphs with po edges. It is a total order per thread. Figure~\ref{fig:litmus-execution-1-1} and Figure~\ref{fig:litmus-execution-0-1} each contain four events. In thread 0, the program order is $e_1 : W(x)=1$ followed by $e_2 : R(Y)=1$. In thread 1, the order is $e_3 : W(Y)=1$ followed by $e_4 : R(X)=1$. We denote these as $\mathit{po}(e_1, e_2)$ and $\mathit{po}(e_3, e_4)$.
+\textbf{Program Order (\texttt{po})}, relating events by their syntactic order: the order among instructions in the program text carries over to execution graphs with \texttt{po} edges. It is a total order per thread. Figure~\ref{fig:litmus-execution-1-1} and Figure~\ref{fig:litmus-execution-0-1} each contain four events. In thread 0, the program order is $e_1 : W(x)=1$ followed by $e_2 : R(Y)=1$. In thread 1, the order is $e_3 : W(Y)=1$ followed by $e_4 : R(X)=1$. We denote these as $\mathit{po}(e_1, e_2)$ and $\mathit{po}(e_3, e_4)$.
 
-\textbf{Read From (rf)}, which relates a W event to the R event reading from it. Every R event reads-from exactly one W event. For instance, when event e2 : R(X) = 1 reads 1 from location X, where that value was earlier written by e1 : W(X) = 1, then we have an rf edge from e1 to e2, alternatively denoted as rf(e1, e2).
+\textbf{Read From (\texttt{rf})}, which relates a W event to the R event reading from it. Every R event reads-from exactly one W event. For instance, when event e2 : R(X) = 1 reads 1 from location X, where that value was earlier written by e1 : W(X) = 1, then we have an \texttt{rf} edge from e1 to e2, alternatively denoted as \texttt{rf}(e1, e2).
 
-\textbf{Coherence Order (co)}, which relates a W event with a W event overwriting it. For instance, when event e3 : W(X, 1) first writes 1 to location X, which event e4 : W(X, 2) then overwrites with 2, then we have an edge co(e3, e4). Both co-related write events access the same location. Additionally, co is a total strict order per location.
+\textbf{Coherence Order (\texttt{co})}, which relates a W event with a W event overwriting it. For instance, when event e3 : W(X, 1) first writes 1 to location X, which event e4 : W(X, 2) then overwrites with 2, then we have an edge \texttt{co}(e3, e4). Both \texttt{co}-related write events access the same location. Additionally, \texttt{co} is a total strict order per location.
 
-\textbf{Read Modify Write (rmw)}, relating the R and W of a successful atomic read-modify-write instruction (RMW). The RMW instructions are special instructions within architectures, where architectures can detect whether another thread modifies the written value in-between the atomic operation. The generated R and W events access the same location and are po-adjacent (i.e., there are no po-intermediate events).
+\textbf{Read Modify Write (\texttt{rmw})}, relating the R and W of a successful atomic read-modify-write instruction (RMW). The RMW instructions are special instructions within architectures, where architectures can detect whether another thread modifies the written value in-between the atomic operation. The generated R and W events access the same location and are \texttt{po}-adjacent (i.e., there are no \texttt{po}-intermediate events).
 
 \begin{figure}[htbp]
 \centering
@@ -165,9 +165,9 @@ Using these primitive relations, we can represent executions of the Store Buffer
 A candidate execution consists of a set of events together with a collection of
 relations over these events. For example, it may be represented as
 \[
-X = \langle E, po, rf, co, rmw \rangle,
+X = \langle E, \mathit{po}, \mathit{rf}, \mathit{co}, \mathit{rmw} \rangle,
 \]
-where $E$ is a set of events and $po, rf, co, rmw \subseteq E \times E$ are
+where $E$ is a set of events and $\mathit{po}, \mathit{rf}, \mathit{co}, \mathit{rmw} \subseteq E \times E$ are
 relations over $E$. We do not fix the exact set of relations included in a candidate execution.
 Additional primitive relations may be introduced later, or some derived
 relations may be treated as primitive ones to simplify proofs.
@@ -177,7 +177,7 @@ relations may be treated as primitive ones to simplify proofs.
 
 Some relations are composed based on the primitive relations. The following are commonly used derived relations:
 
-\textbf{From-read (fr)}: if a read instruction reads from a location that is later overwritten by another write, we relate these two events. For instance, consider $e_1 : r(x) = 1$, $e_2 : w(x) = 1$, and $e_3 : w(x) = 2$. Event $e_1$ first reads the value written by $e_2$, giving $rf(e_2, e_1)$. Later, this value is overwritten by $e_3$, giving $co(e_2, e_3)$. The \texttt{fr} relation is therefore derived as $rf^{-1};co$. The $^{-1}$ is the inverse of a relation.
+\textbf{From-read (\texttt{fr})}: if a read instruction reads from a location that is later overwritten by another write, we relate these two events. For instance, consider $e_1 : r(x) = 1$, $e_2 : w(x) = 1$, and $e_3 : w(x) = 2$. Event $e_1$ first reads the value written by $e_2$, giving $\mathit{rf}(e_2, e_1)$. Later, this value is overwritten by $e_3$, giving $\mathit{co}(e_2, e_3)$. The \texttt{fr} relation is therefore derived as $\mathit{rf}^{-1}\mathbin{;}\mathit{co}$. The $^{-1}$ is the inverse of a relation.
 
 \textbf{External relations} are relations between events from different threads. For instance, \texttt{rfe} consists of all \texttt{rf} edges between threads; \texttt{coe} denotes external \texttt{co}, and \texttt{fre} denotes external \texttt{fr}. Conversely, \texttt{internal relations} are relations between events within the same thread, such as \texttt{rfi}, \texttt{coi}, and \texttt{fri}. We consider initialization \texttt{W} events to be internal with events on any thread.
 
@@ -214,10 +214,10 @@ Some relations are composed based on the primitive relations. The following are 
 
 % Read-from relations
 \draw[rf-int] (wy1) -- (ry1)
-    node[midway, right, font=\scriptsize] {$rfe$};
+    node[midway, right, font=\scriptsize] {$\mathit{rfe}$};
 
 \draw[rf-ext] (init) -- (rx1)
-    node[pos=0.65, sloped, above, font=\scriptsize] {$rfi$};
+    node[pos=0.65, sloped, above, font=\scriptsize] {$\mathit{rfi}$};
 
 % From-read relations
 \draw[fr] (rx1) to[bend right=45] (wx1)
@@ -228,7 +228,7 @@ Some relations are composed based on the primitive relations. The following are 
 \label{fig:litmus-execution-with-derived-relation}
 \end{figure}
 
-We can redraw Figure~\ref{fig:litmus-execution-primitive-relation} with derived relations, as shown in Figure~\ref{fig:litmus-execution-with-derived-relation}. Observe that the \textit{fr} edges always follow backwards along an \textit{rf} edge and then forwards along a \textit{co} edge (i.e., $fr = rf^{-1};co$), thus relating a read to the write that overwrites it. For instance, in this execution we can only read $0$ from $Y$ before overwriting $Y$ with $1$. All \textit{fr} relations in this execution are external, producing \textit{fre} arrows, while the \textit{co} relations are internal, producing \textit{coi} arrows.
+We can redraw Figure~\ref{fig:litmus-execution-primitive-relation} with derived relations, as shown in Figure~\ref{fig:litmus-execution-with-derived-relation}. Observe that the \textit{fr} edges always follow backwards along an \textit{rf} edge and then forwards along a \textit{co} edge (i.e., $\mathit{fr} = \mathit{rf}^{-1}\mathbin{;}\mathit{co}$), thus relating a read to the write that overwrites it. For instance, in this execution we can only read $0$ from $Y$ before overwriting $Y$ with $1$. All \textit{fr} relations in this execution are external, producing \textit{fre} arrows, while the \textit{co} relations are internal, producing \textit{coi} arrows.
 
 \subsubsection{Litmus Tests} 
 
@@ -367,14 +367,14 @@ to make TSO-x86 more accurately reflect the behavior of real hardware.
 
 We define \textit{At} (atomic operations) as
 \[
-At = dom(rmw) \cup codom(rmw),
+\mathit{At} = \mathrm{dom}(\mathit{rmw}) \cup \mathrm{codom}(\mathit{rmw}),
 \]
 where \texttt{dom} denotes the domain of a relation and \texttt{codom} denotes
 the codomain (range) of a relation.
 
 Using this set, we define the relation
 \[
-implied = po;[At \cup F] \;\cup\; [At \cup F];po,
+\mathit{implied} = \mathit{po}\mathbin{;}[\mathit{At} \cup F] \;\cup\; [\mathit{At} \cup F]\mathbin{;}\mathit{po},
 \]
 
 And we add this implied to our tso model acyclic constraint, which enforces ordering in the local thread whenever an atomic operation or fence is involved. As a result, the model disallows write--read reordering when an \texttt{rmw} operation occurs between them. This behavior can be observed in
@@ -398,20 +398,20 @@ acyclic (implied | xppo | rfe | fr | co) as tso
 \begin{figure}[h]
 \centering
 \begin{align*}
-dep &:= addr \cup data \\
-rwdep &:= (dep \cup ctrl) \cap (R \times W) \\
-overwrite &:= co \cup fr \\
-to\text{-}w &:= rwdep \cup (overwrite \cap int) \\
-rrdep &:= addr \cup (dep ; rfi) \\
-strong\text{-}rrdep &:= rrdep^{+} \cap rb\text{-}dep \\
-to\text{-}r &:= strong\text{-}rrdep \cup rfi\text{-}rel\text{-}acq \\
-strong\text{-}fence &:= mb \\
-fence &:= strong\text{-}fence \cup po\text{-}rel \cup wmb \cup rmb \cup acq\text{-}po \\
-ppo &:= rrdep^{*} ; (to\text{-}r \cup to\text{-}w \cup fence) \\
-cumul\text{-}fence &:= A\text{-}cumul(strong\text{-}fence \cup po\text{-}rel) \cup wmb \\
-prop &:= (overwrite \cap ext)^{?} ; cumul\text{-}fence^{*} ; rfe^{?} \\
-hb &:= ((prop \setminus id) \cap int) \cup ppo \cup rfe \\
-pb &:= prop ; strong\text{-}fence ; hb^{*}
+\mathit{dep} &:= \mathit{addr} \cup \mathit{data} \\
+\mathit{rwdep} &:= (\mathit{dep} \cup \mathit{ctrl}) \cap (R \times W) \\
+\mathit{overwrite} &:= \mathit{co} \cup \mathit{fr} \\
+\mathit{to}\text{-}\mathit{w} &:= \mathit{rwdep} \cup (\mathit{overwrite} \cap \mathit{int}) \\
+\mathit{rrdep} &:= \mathit{addr} \cup (\mathit{dep} \mathbin{;} \mathit{rfi}) \\
+\mathit{strong}\text{-}\mathit{rrdep} &:= \mathit{rrdep}^{+} \cap \mathit{rb}\text{-}\mathit{dep} \\
+\mathit{to}\text{-}\mathit{r} &:= \mathit{strong}\text{-}\mathit{rrdep} \cup \mathit{rfi}\text{-}\mathit{rel}\text{-}\mathit{acq} \\
+\mathit{strong}\text{-}\mathit{fence} &:= \mathit{mb} \\
+\mathit{fence} &:= \mathit{strong}\text{-}\mathit{fence} \cup \mathit{po}\text{-}\mathit{rel} \cup \mathit{wmb} \cup \mathit{rmb} \cup \mathit{acq}\text{-}\mathit{po} \\
+\mathit{ppo} &:= \mathit{rrdep}^{*} \mathbin{;} (\mathit{to}\text{-}\mathit{r} \cup \mathit{to}\text{-}\mathit{w} \cup \mathit{fence}) \\
+\mathit{cumul}\text{-}\mathit{fence} &:= \mathit{A}\text{-}\mathit{cumul}(\mathit{strong}\text{-}\mathit{fence} \cup \mathit{po}\text{-}\mathit{rel}) \cup \mathit{wmb} \\
+\mathit{prop} &:= (\mathit{overwrite} \cap \mathit{ext})^{?} \mathbin{;} \mathit{cumul}\text{-}\mathit{fence}^{*} \mathbin{;} \mathit{rfe}^{?} \\
+\mathit{hb} &:= ((\mathit{prop} \setminus \mathit{id}) \cap \mathit{int}) \cup \mathit{ppo} \cup \mathit{rfe} \\
+\mathit{pb} &:= \mathit{prop} \mathbin{;} \mathit{strong}\text{-}\mathit{fence} \mathbin{;} \mathit{hb}^{*}
 \end{align*}
 \caption{LKMM Definitions}
 \label{fig:lkmm-definitions}
@@ -498,7 +498,7 @@ The dependencies are composed of address dependencies and data dependencies. The
 
 And these dependencies can be categorized into read--write dependencies and read--read dependencies. The read--write dependencies include the \textit{ctrl} dependencies, but the relation has to be the read--write pair as:
 \[
-rwdep := (dep \cup ctrl) \cap (R \times W)
+\mathit{rwdep} := (\mathit{dep} \cup \mathit{ctrl}) \cap (R \times W)
 \]
 
 The read--read dependencies are the address dependencies or the \textit{dep} followed by an \textit{rfi} (starts with a read and ends with a read). The architecture Alpha does not preserve the read--read address dependencies, so LKMM adds the \textit{rd-dep} as the \textit{strong-rrdep} to model Alpha explicitly~\cite{alglave2018frightening}.
@@ -508,24 +508,24 @@ The read--read dependencies are the address dependencies or the \textit{dep} fol
 The fence also contributes to the \textit{ppo}. The \textit{strong-fence} is the \textit{mb} (memory barrier); it orders the events separated by \texttt{smp\_mb}. It also orders the events separated by \texttt{rmb} and \texttt{wmb}, or when the first event is the acquire (\textit{po-acquire}) or the second event is the release (\textit{po-rel}). The ppo is defined as: 
 
 \[
-ppo := rrdep^{*} ; (to\text{-}r \cup to\text{-}w \cup fence)
+\mathit{ppo} := \mathit{rrdep}^{*} \mathbin{;} (\mathit{to\text{-}r} \cup \mathit{to\text{-}w} \cup \mathit{fence})
 \]
 
 Besides this local thread ordering (\textit{ppo}), we also need to constrain the order involving other threads. The \textit{prop} (propagation) is used to make sure the ordering of propagation writes. The propagation is used to describe the write instructions interacting with other threads (we ignore the hardware abstraction, e.g., caches and memory systems, because it is complex). That is, when we use a fence related to writes that come from another thread, we need to make sure that all the stores \textit{po}-later than this fence must be executed later than the store (from another thread) to this thread.
 
 They use a value called \textit{A-cumul} to describe this behavior:
 \[
-A\text{-}cumul(r) := rfe? ; r
+\mathit{A\text{-}cumul}(r) := \mathit{rfe}^? \mathbin{;} r
 \]
 
 because the \textit{rfe} is the interaction with the store from another thread. We want to make sure the read instruction reads the store propagated from another thread before the fence. Then the \textit{cumul-fence} becomes
 \[
-cumul\text{-}fence := A\text{-}cumul(strong\text{-}fence \cup po\text{-}rel) \cup wmb
+\mathit{cumul\text{-}fence} := \mathit{A\text{-}cumul}(\mathit{strong\text{-}fence} \cup \mathit{po\text{-}rel}) \cup \mathit{wmb}
 \]
 
 The \textit{strong-fence} and \textit{po-rel} need to be \textit{A-cumul} because they cannot find the correct write from another thread if we do not put the \textit{rfe} on them. Then the \textit{prop} can be defined as
 \[
-prop := (overwrite \cap ext)? ; cumul\text{-}fence^{*} ; rfe?
+\mathit{prop} := (\mathit{overwrite} \cap \mathit{ext})^? \mathbin{;} \mathit{cumul\text{-}fence}^{*} \mathbin{;} \mathit{rfe}^?
 \]
 
 The final definition generalizes the cumulative behaviors of propagation by adding the \textit{overwrites} and \textit{rfe}.
@@ -539,10 +539,10 @@ In summary, the Linux Kernel Memory Model (LKMM) is defined by the following con
 
 \[
 \begin{aligned}
-&\mathrm{acyclic}(po\text{-}loc \cup com) \\
-&\mathrm{empty}(rmw \cap (fre ; coe)) \\
-&\mathrm{acyclic}(hb) \\
-&\mathrm{acyclic}(pb)
+&\mathrm{acyclic}(\mathit{po}\text{-}\mathit{loc} \cup \mathit{com}) \\
+&\mathrm{empty}(\mathit{rmw} \cap (\mathit{fre} \mathbin{;} \mathit{coe})) \\
+&\mathrm{acyclic}(\mathit{hb}) \\
+&\mathrm{acyclic}(\mathit{pb})
 \end{aligned}
 \]
 
@@ -608,7 +608,7 @@ The reflexive-transitive closure, denoted by $R^*$, is the smallest relation tha
 \[
 R^* = R^+ \cup \Delta = \bigcup_{n=0}^{\infty} R^n.
 \]
-In memory models, these closures are fundamental for defining global orders. For example, $hb^*$ (the reflexive-transitive closure of the happens-before relation defined in LKMM \ref{fig:lkmm-definitions}) connects two events if one happens before the other or if they are the same event.
+In memory models, these closures are fundamental for defining global orders. For example, $\mathit{hb}^*$ (the reflexive-transitive closure of the happens-before relation defined in LKMM \ref{fig:lkmm-definitions}) connects two events if one happens before the other or if they are the same event.
 
 \paragraph{Domain and Codomain.}
 Let $R$ be a relation from a set $A$ to a set $B$.
@@ -621,7 +621,7 @@ The \emph{codomain} (or \emph{range}) of $R$, denoted by $\mathrm{codom}(R)$, is
   \mathrm{codom}(R) = \{ b \in B \mid \exists\, a \in A.\; (a, b) \in R \}.
 \]
 In the context of memory models, these are used to identify events that participate in a relation.
-For example, in the TSO model we define the set of atomic events as $At = \mathrm{dom}(rmw) \cup \mathrm{codom}(rmw)$, which collects all events involved in a read-modify-write operation.
+For example, in the TSO model we define the set of atomic events as $\mathit{At} = \mathrm{dom}(\mathit{rmw}) \cup \mathrm{codom}(\mathit{rmw})$, which collects all events involved in a read-modify-write operation.
 
 \paragraph{Paths in Directed Graphs.}
 To represent these structures using binary relations, we rely on the concept of paths. A path from $a$ to $b$ in a directed graph $G$ is a sequence of edges $(x_0, x_1), (x_1, x_2), \dots, (x_{n-1}, x_n)$ in $G$, where $n$ is a nonnegative integer, $x_0 = a$, and $x_n = b$ \cite[p.~629]{rosen2012discrete}. The length of this path is $n$ \cite[p.~629]{rosen2012discrete}. The connectivity relation $R^*$ consists of the ordered pairs $(a, b)$ such that there is a path of length at least one from $a$ to $b$ in $R$ \cite[p.~631]{rosen2012discrete}. A fundamental result in relation theory is that the transitive closure of a relation $R$ is equal to the connectivity relation $R^*$ \cite[p.~631]{rosen2012discrete}.
@@ -631,14 +631,14 @@ Let $R$ be a relation from a set $A$ to a set $B$. The inverse relation, denoted
 \[
 R^{-1} = \{(b, a) \mid (a, b) \in R\}.
 \]
-This means that $b \, R^{-1} \, a$ if and only if $a \, R \, b$ \cite[p.~665]{rosen2012discrete}. In the context of memory models, the inverse of the read-from relation, $rf^{-1}$, connects a read event back to the write event that provided its value.
+This means that $b \, R^{-1} \, a$ if and only if $a \, R \, b$ \cite[p.~665]{rosen2012discrete}. In the context of memory models, the inverse of the read-from relation, $\mathit{rf}^{-1}$, connects a read event back to the write event that provided its value.
 
 \paragraph{Optional Relation (Reflexive Closure).}
 The reflexive closure of a relation $R$ on a set $A$ is the smallest reflexive relation that contains $R$ \cite[p.~628]{rosen2012discrete}. In memory model formalisms such as the \texttt{cat} language, this is frequently referred to as an "optional" relation and is denoted by $R^?$ or $R?$. It is formed by taking the union of the relation $R$ and the diagonal relation $\Delta = \{(a, a) \mid a \in A\}$ \cite[p.~628]{rosen2012discrete}:
 \[
 R^? = R \cup \Delta.
 \]
-Intuitively, $R^?$ represents that two events are either related by $R$ or are the exact same event. This is used extensively in LKMM definitions (e.g., $rfe?$) to indicate that a property may hold through a relation or via an identity transition.
+Intuitively, $R^?$ represents that two events are either related by $R$ or are the exact same event. This is used extensively in LKMM definitions (e.g., $\mathit{rfe}^?$) to indicate that a property may hold through a relation or via an identity transition.
 
 \paragraph{Internal and External Relations.}
 In the context of multi-threaded execution, every event $e$ is associated with a specific thread identifier. Let $E$ be the set of all events and $T$ be the set of thread identifiers. We define a function $\text{tid}: E \to T$ that maps each event to the thread that executed it.
@@ -652,9 +652,9 @@ The \emph{external} relation, denoted by \texttt{ext}, consists of pairs of even
 \[
 \texttt{ext} = \{ (e_1, e_2) \in E \times E \mid \text{tid}(e_1) \neq \text{tid}(e_2) \}.
 \]
-Equivalently, $\texttt{ext} = (E \times E) \setminus \texttt{int}$. In memory models, these are used to derive specific sub-relations; for example, \texttt{rfi} (read-from internal) is defined as $rf \cap \texttt{int}$, and \texttt{rfe} (read-from external) is defined as $rf \cap \texttt{ext}$.
+Equivalently, $\texttt{ext} = (E \times E) \setminus \texttt{int}$. In memory models, these are used to derive specific sub-relations; for example, \texttt{rfi} (read-from internal) is defined as $\mathit{rf} \cap \texttt{int}$, and \texttt{rfe} (read-from external) is defined as $\mathit{rf} \cap \texttt{ext}$.
 
-Relation composition, defined in Section~\ref{sec:math-background}, is central to formalizing memory models in Cat. As noted there, the \emph{fr} (from-read) relation is a key example: $fr = co \mathbin{;} rf^{-1}$.
+Relation composition, defined in Section~\ref{sec:math-background}, is central to formalizing memory models in Cat. As noted there, the \emph{fr} (from-read) relation is a key example: $\mathit{fr} = \mathit{co} \mathbin{;} \mathit{rf}^{-1}$.
 
 \subsection{Comparing Memory Models}
 
