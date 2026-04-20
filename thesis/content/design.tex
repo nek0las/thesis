@@ -284,12 +284,6 @@ instructions aevt [annotation 1, ..., annotation n]K X <j, f, rho, omega>,
 \end{quote}
 This mainly specifies when a Cat program should return an error state, rather than giving a complete, executable meaning. As a result, we must make additional design choices to turn such fragments into a usable semantics. In addition to this, there are other implicit definitions, which we discuss in the definitions section.
 
-\textbf{Reflexive-Transitive Closure Approximation}
-
-The Cat language uses $\mathtt{e\text{*}}$ to denote the reflexive-transitive closure of a relation, and $\mathtt{e\text{+}}$ for the transitive closure. In a full model, these should produce every pair $(a, b)$ reachable by following zero or more (resp.\ one or more) edges, corresponding to \texttt{Relation.ReflTransGen} and \texttt{Relation.TransGen} in Lean~4. However, encoding these closures directly inside macro-generated definitions creates a practical difficulty: the resulting terms involve an existential quantification over arbitrarily long paths, which is not suitable for the kind of term-level definitional unfolding that tactics like \texttt{simp} and \texttt{aesop} rely on.
-
-We instead compile $\mathtt{e\text{*}}$ to $r \cup \mathit{id}$ and $\mathtt{e\text{+}}$ to $r$, where $\mathit{id}$ is the identity relation. This means both operators produce a reflexive but not transitively closed result. In the specific contexts where these operators appear in LKMM---for example, $\mathtt{hb\text{*}}$ inside the propagation relation---the approximation is acceptable because the enclosing acyclicity check ensures that no cycle is inadvertently hidden. However, this is a known limitation: relations defined via $\mathtt{e\text{*}}$ may under-approximate the intended ordering in contexts that depend on full reachability.
-
 \textbf{Primitive Relations and Ignored Directives}
 
 The Cat standard library (\texttt{cos.cat}, \texttt{lock.cat}) defines several relations computationally, including the coherence order and the \texttt{fencerel} function, which computes the set of pairs $(a, b)$ such that a fence event $f$ exists with $(a, f) \in \mathit{po}$ and $(f, b) \in \mathit{po}$. Rather than implementing the full import pipeline, we treat \texttt{include} directives as no-ops and model the imported relations---as well as architecture-specific fence relations such as \texttt{mb} and \texttt{wmb}---directly as primitive fields of \texttt{CandidateExecution}. This is consistent with the view that the candidate execution is already the output of a lower-level analysis: herd7 computes these relations from the program state before invoking the Cat consistency check, so at the memory model level they can simply be treated as given inputs.
@@ -312,7 +306,7 @@ We follow this definition exactly, computing $\mathit{fr}$ as a derived field of
 
 Cat expressions freely mix sets of events and binary relations. For example, the identity-restriction operator $[\mathtt{S}]$ takes a set $S$ and produces the relation $\{(e_1, e_2) \mid e_1 = e_2 \wedge e_1 \in S\}$, while the domain of a relation is a set. To handle this fluently, we provide two coercions: \texttt{Set Event} can be coerced to \texttt{SetRel Event Event} via \texttt{SetRel.mkId}, and \texttt{SetRel Event Event} can be coerced to \texttt{Set Event} via \texttt{SetRel.dom}. Lean~4's coercion mechanism then inserts these conversions automatically wherever a set is used in a relation context or vice versa, so that the macro expansion of $[\mathtt{S}]$ can emit \texttt{SetRel.mkId s} without manually threading the coercion through every call site.
 
-\subsection{Library Theorems and Proof Support}
+\subsubsection{SetRel as Binary Relation}
 \label{sec:design:theorems}
 Cat relies on binary relations and set theory, including relational closures, irreflexivity, and related properties. Lean~4 supports two representations of binary relations: \texttt{Relation} (of type \texttt{Type → Type → Prop}) and \texttt{SetRel} (a set of pairs). Both representations are correct, but \texttt{SetRel} offers more flexibility for operations such as computing the domain and codomain. While Mathlib provides many relevant theorems, its coverage is insufficient for mechanizing memory models in full; consequently, we developed additional definitions and lemmas where needed.
 
