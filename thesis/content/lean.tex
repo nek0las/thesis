@@ -135,7 +135,7 @@ a := Y          & b := X
 \label{fig:litmus-test}
 \end{figure}
 
-Let’s consider the following example in Figure \ref{fig:litmus-test}. It is a Store-Buffering program in which the variables X and Y are initialized to 0. Each thread first assigns the value 1 to one variable and then reads the other variable. From the programmer’s perspective, one might expect both a and b to be 1 if the program executes in the order in which the operations are written: Thread 0 writes X and then reads Y, so if Thread 1’s write to Y is already visible, a will be 1; symmetrically, b will be 1 if Thread 0’s write to X is already visible. However, hardware store buffering allows each thread to delay its write and execute the subsequent read before the other thread’s write propagates. In this case, both a and b can be 0: Thread 0 reads Y=0 before Thread 1’s write to Y is visible, and Thread 1 reads X=0 before Thread 0’s write to X is visible. This outcome $a=0, b=0$ is forbidden under Sequential Consistency but is observable on hardware with store buffers, making it the key weak memory behavior of this test. For instance, we may non-deterministically observe one of the following interleaving orders, marked with solid arrows: 
+Let’s consider the following example in Figure \ref{fig:litmus-test}. It is a Store-Buffering program in which the variables X and Y are initialized to 0. Each thread first assigns the value 1 to one variable and then reads the other variable. From the programmer’s perspective, one might expect both a and b to be 1 if the program executes in the order in which the operations are written: Thread 0 writes X and then reads Y, so if Thread 1’s write to Y is already visible, a will be 1; symmetrically, b will be 1 if Thread 0’s write to X is already visible. However, hardware store buffering allows each thread to delay its write and execute the subsequent read before the other thread’s write propagates. In this case, both a and b can be 0: Thread 0 reads Y=0 before Thread 1’s write to Y is visible, and Thread 1 reads X=0 before Thread 0’s write to X is visible. This outcome $a=0, b=0$ is forbidden under Sequential Consistency but is observable on hardware with store buffers, making it the key weak memory behavior of this test. In the execution diagrams that follow, $W(X)=v$ denotes a write of value $v$ to memory location $X$, and $R(Y)=v$ denotes a read from location $Y$ that returns value $v$. Solid arrows represent the global execution order, and dashed arrows represent read-from (\textit{rf}) edges, connecting each write to the read that observes its value. For instance, we may non-deterministically observe one of the following interleaving orders: 
 
 \begin{figure}[htbp]
 \centering
@@ -187,7 +187,7 @@ Let’s consider the following example in Figure \ref{fig:litmus-test}. It is a 
 
 % Thread 0
 \node[event, below left=1cm and 0.5cm of init] (wx1) {$W(X)=1$};
-\node[event, below=of wx1] (ry1) {$R(Y)=1$};
+\node[event, below=of wx1] (ry1) {$R(Y)=0$};
 
 % Thread 1
 \node[event, below right=1cm and 0.5cm of init] (wy1) {$W(Y)=1$};
