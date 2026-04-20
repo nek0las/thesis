@@ -226,7 +226,7 @@ The relations between events are distinguished as primitive relations and derive
 
 \textbf{Program Order (\texttt{po})}, relating events by their syntactic order: the order among instructions in the program text carries over to execution graphs with \texttt{po} edges. It is a total order per thread. Figure~\ref{fig:litmus-execution-1-1} and Figure~\ref{fig:litmus-execution-0-1} each contain four events. In thread 0, the program order is $e_1 : W(x)=1$ followed by $e_2 : R(Y)=1$. In thread 1, the order is $e_3 : W(Y)=1$ followed by $e_4 : R(X)=1$. We denote these as $\mathit{po}(e_1, e_2)$ and $\mathit{po}(e_3, e_4)$.
 
-\textbf{Read From (\texttt{rf})}, which relates a W event to the R event reading from it. Every R event reads-from exactly one W event. For instance, when event $e_2 : R(X) = 1$ reads 1 from location $X$, where that value was earlier written by $e_1 : W(X) = 1$, then we have an \texttt{rf} edge from $e_1$ to $e_2$, alternatively denoted as $\mathit{rf}(e_1, e_2)$.
+\textbf{Reads From (\texttt{rf})}, which relates a W event to the R event reading from it. Every R event reads-from one W event or an initial write event. For instance, when event $e_2 : R(X) = 1$ reads 1 from location $X$, where that value was earlier written by $e_1 : W(X) = 1$, then we have an \texttt{rf} edge from $e_1$ to $e_2$, alternatively denoted as $\mathit{rf}(e_1, e_2)$.
 
 \textbf{Coherence Order (\texttt{co})}, which relates a W event with a W event overwriting it. For instance, when event $e_3 : W(X)=1$ first writes 1 to location $X$, which event $e_4 : W(X)=2$ then overwrites with 2, then we have an edge $\mathit{co}(e_3, e_4)$. Both \texttt{co}-related write events access the same location. Additionally, \texttt{co} is a total strict order per location.
 
@@ -271,7 +271,7 @@ The relations between events are distinguished as primitive relations and derive
 Using these primitive relations, we can represent executions of the Store Buffering litmus test. The execution orders are implicitly determined by these primitive relations. Figure~\ref{fig:litmus-execution-primitive-relation} shows one such execution, where the dotted lines represent the coherence order, the dashed lines represent the read-from relation, and the thick lines represent the program order. And one such an execution graph is called a \texttt{Candidate Execution}.
 
 A candidate execution consists of a set of events together with a collection of
-relations over these events. For example, it may be represented as
+relations over these events. For example, it is represented as
 \[
 X = \langle E, \mathit{po}, \mathit{rf}, \mathit{co}, \mathit{rmw} \rangle,
 \]
