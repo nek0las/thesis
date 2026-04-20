@@ -3,6 +3,114 @@
 
 In this chapter, we introduce weak memory, the Lean 4 programming language and its metaprogramming framework, and the mathematical background needed in later chapters. First, we introduce weak memory models through some basic examples and weak behaviors (Section \ref{Background:LKMM}).
 
+\section{Mathematical Background}
+\label{sec:math-background}
+
+To understand the axiomatic memory models, we need to use \emph{binary relations}. Relationships between elements of two sets are represented using a structure called a binary relation. A binary relation from a set $A$ to a set $B$ is formally defined as a subset of the Cartesian product $A \times B$ \cite[p.~599]{rosen2012discrete}. There are two common methods for representing relations: using square matrices and using directed graphs \cite[p.~621]{rosen2012discrete}. In this thesis, we mainly use the second method, i.e., directed graphs, to represent binary relations.
+
+We use the notation \(a \, R \, b\) to denote that \((a,b) \in R\), and \(a \not R b\) to denote that \((a,b) \notin R\) \cite[p.~600]{rosen2012discrete}.
+
+In this thesis, the elements \(a\) and \(b\) are both \emph{events}, and these binary relations compose the directed execution graph, as described in Section~\ref{Background:AWMM}. Two relations can be composed together to obtain a new directed graph. Relation composition plays an important role in the \texttt{cat} language.
+
+\paragraph{Relation Composition.}
+Let $R$ be a relation from a set $A$ to a set $B$, and let $S$ be a relation from $B$ to a set $C$. The composite of $R$ and $S$ is the relation consisting of ordered pairs $(a, c)$, where $a \in A, c \in C$, and for which there exists an element $b \in B$ such that $(a, b) \in R$ and $(b, c) \in S$ \cite[p.~607]{rosen2012discrete}. We denote the composite of $R$ and $S$ by $S ; R$ \cite[p.~607]{rosen2012discrete}.
+
+Computing the composite of two relations requires finding elements that are the second component of ordered pairs in the first relation and the first component of ordered pairs in the second relation. This property is widely used in many memory models. For example, there is a relation called \emph{fr} (from-read), which represents that a read instruction observes a value that is later overwritten by another write instruction; the write instructions to the same address are totally ordered by the coherence order.
+
+In \texttt{cat}, we define
+\[
+fr = co ; rf^{-1},
+\]
+where \(rf^{-1}\) denotes the inverse of the relation \(rf\), meaning that the order of each pair is reversed. Intuitively, this composition connects a read event to a write event that comes later in coherence order than the write from which the read obtained its value.
+
+After composing different relations, we can obtain a complete execution graph. As stated in Section~\ref{Background:AWMM}, we need to filter out disallowed executions using a set of judgments. The \texttt{cat} language provides three primitive judgments: \texttt{Acyclic}, \texttt{Irreflexive}, and \texttt{Empty}. Among them, \texttt{Acyclic} is the most important because our memory models are described by binary relations that compose the execution graph. A cycle (or circuit) in a directed graph is a path of length greater than zero that begins and ends at the same vertex \cite[pp.~665,~715]{rosen2012discrete}. A cycle in this graph usually means that some data that should have been read first was overwritten by later operations.
+
+Models defined using binary relations can be viewed as directed graphs. When we illustrate them in a diagram, cycles are easy to identify by visually connecting the points. However, to represent this structure using binary relations, we need a formal way to express both direct connections and paths that return to earlier points. For this purpose, we rely on two properties: \emph{reflexivity} and \emph{transitive closure}.
+
+\paragraph{Reflexivity.}
+A relation $R$ on a set $A$ is called reflexive if $(a, a) \in R$ for every element $a \in A$ \cite[p.~602]{rosen2012discrete}. Formally:
+\[
+\forall a \in A, (a, a) \in R.
+\]
+
+\paragraph{Transitivity.}
+A relation $R$ on a set $A$ is called transitive if whenever $(a, b) \in R$ and $(b, c) \in R$, then $(a, c) \in R$, for all $a, b, c \in A$ \cite[p.~604]{rosen2012discrete}. Formally:
+\[
+\forall a, b, c \in A, ((a, b) \in R \land (b, c) \in R) \Rightarrow (a, c) \in R.
+\]
+
+\paragraph{Transitive Closure.}
+The transitive closure of a relation $R$ on a set $A$ is the smallest transitive relation that contains $R$ \cite[p.~628]{rosen2012discrete}. Formally, the transitive closure, often denoted by $R^+$, can be expressed as the union of all powers $R^n$ for $n \ge 1$ \cite[p.~631]{rosen2012discrete}:
+\[
+R^+ = \bigcup_{n=1}^{\infty} R^n.
+\]
+An ordered pair $(a, b)$ is in $R^+$ if and only if there is a path of length at least one from $a$ to $b$ in the directed graph representing $R$ \cite[p.~631]{rosen2012discrete}.
+
+\paragraph{Reflexive-Transitive Closure.}
+The reflexive-transitive closure, denoted by $R^*$, is the smallest relation that is both reflexive and transitive and contains $R$. It is also known as the connectivity relation and consists of all ordered pairs $(a, b)$ such that there is a path of any length (including length zero) from $a$ to $b$ \cite[p.~631]{rosen2012discrete}. It is formed by taking the union of the transitive closure $R^+$ and the diagonal relation $\Delta = \{(a, a) \mid a \in A\}$, which represents paths of length zero \cite[p.~631]{rosen2012discrete}:
+\[
+R^* = R^+ \cup \Delta = \bigcup_{n=0}^{\infty} R^n.
+\]
+In memory models, these closures are fundamental for defining global orders. For example, $\mathit{hb}^*$ (the reflexive-transitive closure of the happens-before relation defined in LKMM \ref{fig:lkmm-definitions}) connects two events if one happens before the other or if they are the same event.
+
+\paragraph{Domain and Codomain.}
+Let $R$ be a relation from a set $A$ to a set $B$.
+The \emph{domain} of $R$, denoted by $\mathrm{dom}(R)$, is the set of all first components of ordered pairs in $R$~\cite[p.~607]{rosen2012discrete}:
+\[
+  \mathrm{dom}(R) = \{ a \in A \mid \exists\, b \in B.\; (a, b) \in R \}.
+\]
+The \emph{codomain} (or \emph{range}) of $R$, denoted by $\mathrm{codom}(R)$, is the set of all second components of ordered pairs in $R$~\cite[p.~607]{rosen2012discrete}:
+\[
+  \mathrm{codom}(R) = \{ b \in B \mid \exists\, a \in A.\; (a, b) \in R \}.
+\]
+In the context of memory models, these are used to identify events that participate in a relation.
+For example, in the TSO model we define the set of atomic events as $\mathit{At} = \mathrm{dom}(\mathit{rmw}) \cup \mathrm{codom}(\mathit{rmw})$, which collects all events involved in a read-modify-write operation.
+
+\paragraph{Paths in Directed Graphs.}
+To represent these structures using binary relations, we rely on the concept of paths. A path from $a$ to $b$ in a directed graph $G$ is a sequence of edges $(x_0, x_1), (x_1, x_2), \dots, (x_{n-1}, x_n)$ in $G$, where $n$ is a nonnegative integer, $x_0 = a$, and $x_n = b$ \cite[p.~629]{rosen2012discrete}. The length of this path is $n$ \cite[p.~629]{rosen2012discrete}. The connectivity relation $R^*$ consists of the ordered pairs $(a, b)$ such that there is a path of length at least one from $a$ to $b$ in $R$ \cite[p.~631]{rosen2012discrete}. A fundamental result in relation theory is that the transitive closure of a relation $R$ is equal to the connectivity relation $R^*$ \cite[p.~631]{rosen2012discrete}.
+
+\paragraph{Relation Inverse.}
+Let $R$ be a relation from a set $A$ to a set $B$. The inverse relation, denoted by $R^{-1}$, is the relation from $B$ to $A$ consisting of the ordered pairs $(b, a)$ such that $(a, b) \in R$ \cite[p.~665]{rosen2012discrete}. Formally:
+\[
+R^{-1} = \{(b, a) \mid (a, b) \in R\}.
+\]
+This means that $b \, R^{-1} \, a$ if and only if $a \, R \, b$ \cite[p.~665]{rosen2012discrete}. In the context of memory models, the inverse of the read-from relation, $\mathit{rf}^{-1}$, connects a read event back to the write event that provided its value.
+
+\paragraph{Optional Relation (Reflexive Closure).}
+The reflexive closure of a relation $R$ on a set $A$ is the smallest reflexive relation that contains $R$ \cite[p.~628]{rosen2012discrete}. In memory model formalisms such as the \texttt{cat} language, this is frequently referred to as an "optional" relation and is denoted by $R^?$ or $R?$. It is formed by taking the union of the relation $R$ and the diagonal relation $\Delta = \{(a, a) \mid a \in A\}$ \cite[p.~628]{rosen2012discrete}:
+\[
+R^? = R \cup \Delta.
+\]
+Intuitively, $R^?$ represents that two events are either related by $R$ or are the exact same event. This is used extensively in LKMM definitions (e.g., $\mathit{rfe}^?$) to indicate that a property may hold through a relation or via an identity transition.
+
+\paragraph{Internal and External Relations.}
+In the context of multi-threaded execution, every event $e$ is associated with a specific thread identifier. Let $E$ be the set of all events and $T$ be the set of thread identifiers. We define a function $\text{tid}: E \to T$ that maps each event to the thread that executed it.
+
+The \emph{internal} relation, denoted by \texttt{int}, consists of pairs of events that belong to the same thread. Formally, it is the equivalence relation on $E$ induced by the thread identifier function \cite[p.~642]{rosen2012discrete}:
+\[
+\texttt{int} = \{ (e_1, e_2) \in E \times E \mid \text{tid}(e_1) = \text{tid}(e_2) \}.
+\]
+
+The \emph{external} relation, denoted by \texttt{ext}, consists of pairs of events that belong to different threads. It is defined as the complement of the internal relation with respect to the Cartesian product $E \times E$ \cite[p.~602]{rosen2012discrete}:
+\[
+\texttt{ext} = \{ (e_1, e_2) \in E \times E \mid \text{tid}(e_1) \neq \text{tid}(e_2) \}.
+\]
+Equivalently, $\texttt{ext} = (E \times E) \setminus \texttt{int}$. In memory models, these are used to derive specific sub-relations; for example, \texttt{rfi} (read-from internal) is defined as $\mathit{rf} \cap \texttt{int}$, and \texttt{rfe} (read-from external) is defined as $\mathit{rf} \cap \texttt{ext}$.
+
+Relation composition, defined in Section~\ref{sec:math-background}, is central to formalizing memory models in Cat. As noted there, the \emph{fr} (from-read) relation is a key example: $\mathit{fr} = \mathit{co} \mathbin{;} \mathit{rf}^{-1}$.
+
+\subsection{Comparing Memory Models}
+
+From a high-level perspective, when comparing different models, we check whether one model allows more program behaviors than another. If it does, we say that this model is \emph{weaker} than the other. A program generates a set of candidate executions, denoted by \( S^c \), and the memory model filters these to determine which executions are allowed. A weaker memory model should include all executions allowed by a stricter memory model. Formally, we require:
+
+\[
+\{ X \mid X \in S^c \text{ and } \text{allowed}_{\text{strict}}(X) \}
+\;\subseteq\;
+\{ X \mid X \in S^c \text{ and } \text{allowed}_{\text{weak}}(X) \}.
+\]
+
+This captures the idea that every execution permitted by the stricter model must also be permitted by the weaker one.
+
 \section{Weak Memory Model}
 There was a widely held belief in the software community that we did not need to optimize software; we could focus on abstraction, and hardware improvements would deliver performance gains for us. This belief largely held during the single-threaded era, when increasing clock speeds and improved microarchitectures steadily accelerated programs. However, when single-core processors hit power and energy-efficiency limits, hardware designers shifted toward adding more cores to improve performance. At that point, synchronization and memory-consistency abstractions were not yet well defined for compiler and system engineers. Vendors relied heavily on experience and natural-language descriptions to explain hardware behavior. Because natural language is inherently ambiguous, it became difficult to reason precisely about many concurrent program behaviors.
 
@@ -560,113 +668,7 @@ The BPF memory model follows the same design philosophy as the LKMM: it should b
 
 The BPF model exhibits the same high-level structure as the LKMM: it enforces coherence (\textit{Coherence}), happens-before (\textit{Happens-before}), propagation (\textit{Propagation}), and atomicity (\textit{Atomic}) constraints. The key difference lies in how synchronization is expressed. Rather than relying on Linux kernel fence primitives declared in a bell file, the BPF model uses AArch64-style atomic memory operations as its synchronization backbone. The \textit{ppo} relation is built from explicit synchronization via \texttt{po\_amo\_fetch} and release-consistency (\texttt{rcpc}), together with syntactic dependencies (address, data, and control) and pipeline dependencies. The \textit{prop} relation captures cumulative propagation in the same spirit as the LKMM, using \textit{A-cumul} to account for stores arriving from other threads before a synchronizing operation. In this way, the BPF memory model inherits the structural discipline of the LKMM while grounding its synchronization primitives in the AArch64 memory model.
 
-\section{Mathematical Background}
-\label{sec:math-background}
 
-To understand the axiomatic memory models, we need to use \emph{binary relations}. Relationships between elements of two sets are represented using a structure called a binary relation. A binary relation from a set $A$ to a set $B$ is formally defined as a subset of the Cartesian product $A \times B$ \cite[p.~599]{rosen2012discrete}. There are two common methods for representing relations: using square matrices and using directed graphs \cite[p.~621]{rosen2012discrete}. In this thesis, we mainly use the second method, i.e., directed graphs, to represent binary relations.
-
-We use the notation \(a \, R \, b\) to denote that \((a,b) \in R\), and \(a \not R b\) to denote that \((a,b) \notin R\) \cite[p.~600]{rosen2012discrete}.
-
-In this thesis, the elements \(a\) and \(b\) are both \emph{events}, and these binary relations compose the directed execution graph, as described in Section~\ref{Background:AWMM}. Two relations can be composed together to obtain a new directed graph. Relation composition plays an important role in the \texttt{cat} language.
-
-\paragraph{Relation Composition.}
-Let $R$ be a relation from a set $A$ to a set $B$, and let $S$ be a relation from $B$ to a set $C$. The composite of $R$ and $S$ is the relation consisting of ordered pairs $(a, c)$, where $a \in A, c \in C$, and for which there exists an element $b \in B$ such that $(a, b) \in R$ and $(b, c) \in S$ \cite[p.~607]{rosen2012discrete}. We denote the composite of $R$ and $S$ by $S ; R$ \cite[p.~607]{rosen2012discrete}.
-
-Computing the composite of two relations requires finding elements that are the second component of ordered pairs in the first relation and the first component of ordered pairs in the second relation. This property is widely used in many memory models. For example, there is a relation called \emph{fr} (from-read), which represents that a read instruction observes a value that is later overwritten by another write instruction; the write instructions to the same address are totally ordered by the coherence order.
-
-In \texttt{cat}, we define
-\[
-fr = co ; rf^{-1},
-\]
-where \(rf^{-1}\) denotes the inverse of the relation \(rf\), meaning that the order of each pair is reversed. Intuitively, this composition connects a read event to a write event that comes later in coherence order than the write from which the read obtained its value.
-
-After composing different relations, we can obtain a complete execution graph. As stated in Section~\ref{Background:AWMM}, we need to filter out disallowed executions using a set of judgments. The \texttt{cat} language provides three primitive judgments: \texttt{Acyclic}, \texttt{Irreflexive}, and \texttt{Empty}. Among them, \texttt{Acyclic} is the most important because our memory models are described by binary relations that compose the execution graph. A cycle (or circuit) in a directed graph is a path of length greater than zero that begins and ends at the same vertex \cite[pp.~665,~715]{rosen2012discrete}. A cycle in this graph usually means that some data that should have been read first was overwritten by later operations.
-
-Models defined using binary relations can be viewed as directed graphs. When we illustrate them in a diagram, cycles are easy to identify by visually connecting the points. However, to represent this structure using binary relations, we need a formal way to express both direct connections and paths that return to earlier points. For this purpose, we rely on two properties: \emph{reflexivity} and \emph{transitive closure}.
-
-\paragraph{Reflexivity.}
-A relation $R$ on a set $A$ is called reflexive if $(a, a) \in R$ for every element $a \in A$ \cite[p.~602]{rosen2012discrete}. Formally:
-\[
-\forall a \in A, (a, a) \in R.
-\]
-
-\paragraph{Transitivity.}
-A relation $R$ on a set $A$ is called transitive if whenever $(a, b) \in R$ and $(b, c) \in R$, then $(a, c) \in R$, for all $a, b, c \in A$ \cite[p.~604]{rosen2012discrete}. Formally:
-\[
-\forall a, b, c \in A, ((a, b) \in R \land (b, c) \in R) \Rightarrow (a, c) \in R.
-\]
-
-\paragraph{Transitive Closure.}
-The transitive closure of a relation $R$ on a set $A$ is the smallest transitive relation that contains $R$ \cite[p.~628]{rosen2012discrete}. Formally, the transitive closure, often denoted by $R^+$, can be expressed as the union of all powers $R^n$ for $n \ge 1$ \cite[p.~631]{rosen2012discrete}:
-\[
-R^+ = \bigcup_{n=1}^{\infty} R^n.
-\]
-An ordered pair $(a, b)$ is in $R^+$ if and only if there is a path of length at least one from $a$ to $b$ in the directed graph representing $R$ \cite[p.~631]{rosen2012discrete}.
-
-\paragraph{Reflexive-Transitive Closure.}
-The reflexive-transitive closure, denoted by $R^*$, is the smallest relation that is both reflexive and transitive and contains $R$. It is also known as the connectivity relation and consists of all ordered pairs $(a, b)$ such that there is a path of any length (including length zero) from $a$ to $b$ \cite[p.~631]{rosen2012discrete}. It is formed by taking the union of the transitive closure $R^+$ and the diagonal relation $\Delta = \{(a, a) \mid a \in A\}$, which represents paths of length zero \cite[p.~631]{rosen2012discrete}:
-\[
-R^* = R^+ \cup \Delta = \bigcup_{n=0}^{\infty} R^n.
-\]
-In memory models, these closures are fundamental for defining global orders. For example, $\mathit{hb}^*$ (the reflexive-transitive closure of the happens-before relation defined in LKMM \ref{fig:lkmm-definitions}) connects two events if one happens before the other or if they are the same event.
-
-\paragraph{Domain and Codomain.}
-Let $R$ be a relation from a set $A$ to a set $B$.
-The \emph{domain} of $R$, denoted by $\mathrm{dom}(R)$, is the set of all first components of ordered pairs in $R$~\cite[p.~607]{rosen2012discrete}:
-\[
-  \mathrm{dom}(R) = \{ a \in A \mid \exists\, b \in B.\; (a, b) \in R \}.
-\]
-The \emph{codomain} (or \emph{range}) of $R$, denoted by $\mathrm{codom}(R)$, is the set of all second components of ordered pairs in $R$~\cite[p.~607]{rosen2012discrete}:
-\[
-  \mathrm{codom}(R) = \{ b \in B \mid \exists\, a \in A.\; (a, b) \in R \}.
-\]
-In the context of memory models, these are used to identify events that participate in a relation.
-For example, in the TSO model we define the set of atomic events as $\mathit{At} = \mathrm{dom}(\mathit{rmw}) \cup \mathrm{codom}(\mathit{rmw})$, which collects all events involved in a read-modify-write operation.
-
-\paragraph{Paths in Directed Graphs.}
-To represent these structures using binary relations, we rely on the concept of paths. A path from $a$ to $b$ in a directed graph $G$ is a sequence of edges $(x_0, x_1), (x_1, x_2), \dots, (x_{n-1}, x_n)$ in $G$, where $n$ is a nonnegative integer, $x_0 = a$, and $x_n = b$ \cite[p.~629]{rosen2012discrete}. The length of this path is $n$ \cite[p.~629]{rosen2012discrete}. The connectivity relation $R^*$ consists of the ordered pairs $(a, b)$ such that there is a path of length at least one from $a$ to $b$ in $R$ \cite[p.~631]{rosen2012discrete}. A fundamental result in relation theory is that the transitive closure of a relation $R$ is equal to the connectivity relation $R^*$ \cite[p.~631]{rosen2012discrete}.
-
-\paragraph{Relation Inverse.}
-Let $R$ be a relation from a set $A$ to a set $B$. The inverse relation, denoted by $R^{-1}$, is the relation from $B$ to $A$ consisting of the ordered pairs $(b, a)$ such that $(a, b) \in R$ \cite[p.~665]{rosen2012discrete}. Formally:
-\[
-R^{-1} = \{(b, a) \mid (a, b) \in R\}.
-\]
-This means that $b \, R^{-1} \, a$ if and only if $a \, R \, b$ \cite[p.~665]{rosen2012discrete}. In the context of memory models, the inverse of the read-from relation, $\mathit{rf}^{-1}$, connects a read event back to the write event that provided its value.
-
-\paragraph{Optional Relation (Reflexive Closure).}
-The reflexive closure of a relation $R$ on a set $A$ is the smallest reflexive relation that contains $R$ \cite[p.~628]{rosen2012discrete}. In memory model formalisms such as the \texttt{cat} language, this is frequently referred to as an "optional" relation and is denoted by $R^?$ or $R?$. It is formed by taking the union of the relation $R$ and the diagonal relation $\Delta = \{(a, a) \mid a \in A\}$ \cite[p.~628]{rosen2012discrete}:
-\[
-R^? = R \cup \Delta.
-\]
-Intuitively, $R^?$ represents that two events are either related by $R$ or are the exact same event. This is used extensively in LKMM definitions (e.g., $\mathit{rfe}^?$) to indicate that a property may hold through a relation or via an identity transition.
-
-\paragraph{Internal and External Relations.}
-In the context of multi-threaded execution, every event $e$ is associated with a specific thread identifier. Let $E$ be the set of all events and $T$ be the set of thread identifiers. We define a function $\text{tid}: E \to T$ that maps each event to the thread that executed it.
-
-The \emph{internal} relation, denoted by \texttt{int}, consists of pairs of events that belong to the same thread. Formally, it is the equivalence relation on $E$ induced by the thread identifier function \cite[p.~642]{rosen2012discrete}:
-\[
-\texttt{int} = \{ (e_1, e_2) \in E \times E \mid \text{tid}(e_1) = \text{tid}(e_2) \}.
-\]
-
-The \emph{external} relation, denoted by \texttt{ext}, consists of pairs of events that belong to different threads. It is defined as the complement of the internal relation with respect to the Cartesian product $E \times E$ \cite[p.~602]{rosen2012discrete}:
-\[
-\texttt{ext} = \{ (e_1, e_2) \in E \times E \mid \text{tid}(e_1) \neq \text{tid}(e_2) \}.
-\]
-Equivalently, $\texttt{ext} = (E \times E) \setminus \texttt{int}$. In memory models, these are used to derive specific sub-relations; for example, \texttt{rfi} (read-from internal) is defined as $\mathit{rf} \cap \texttt{int}$, and \texttt{rfe} (read-from external) is defined as $\mathit{rf} \cap \texttt{ext}$.
-
-Relation composition, defined in Section~\ref{sec:math-background}, is central to formalizing memory models in Cat. As noted there, the \emph{fr} (from-read) relation is a key example: $\mathit{fr} = \mathit{co} \mathbin{;} \mathit{rf}^{-1}$.
-
-\subsection{Comparing Memory Models}
-
-From a high-level perspective, when comparing different models, we check whether one model allows more program behaviors than another. If it does, we say that this model is \emph{weaker} than the other. A program generates a set of candidate executions, denoted by \( S^c \), and the memory model filters these to determine which executions are allowed. A weaker memory model should include all executions allowed by a stricter memory model. Formally, we require:
-
-\[
-\{ X \mid X \in S^c \text{ and } \text{allowed}_{\text{strict}}(X) \}
-\;\subseteq\;
-\{ X \mid X \in S^c \text{ and } \text{allowed}_{\text{weak}}(X) \}.
-\]
-
-This captures the idea that every execution permitted by the stricter model must also be permitted by the weaker one.
 
 \section{Lean 4 and Its Metaprogramming Framework}
 This subsection introduces the necessary background for readers who have never used Lean 4 before. We cover only the most important concepts used in this project and do not introduce complex topics such as monads. Before presenting the key features of Lean 4, we first explain why we chose it as our tool for this project.
