@@ -285,7 +285,7 @@ relations may be treated as primitive ones to simplify proofs.
 
 Some relations are composed based on the primitive relations. The following are commonly used derived relations:
 
-\textbf{From-read (\texttt{fr})}: if a read instruction reads from a location that is later overwritten by another write, we relate these two events. For instance, consider $e_1 : r(x) = 1$, $e_2 : w(x) = 1$, and $e_3 : w(x) = 2$. Event $e_1$ first reads the value written by $e_2$, giving $\mathit{rf}(e_2, e_1)$. Later, this value is overwritten by $e_3$, giving $\mathit{co}(e_2, e_3)$. The \texttt{fr} relation is therefore derived as $\mathit{rf}^{-1}\mathbin{;}\mathit{co}$. The $^{-1}$ is the inverse of a relation.
+\textbf{From-read (\texttt{fr})}: if a read instruction reads from a location that is later overwritten by another write, we relate these two events. For instance, consider $e_1 : r(x) = 1$, $e_2 : w(x) = 1$, and $e_3 : w(x) = 2$. Event $e_1$ first reads the value written by $e_2$, giving $\mathit{rf}(e_2, e_1)$. Later, this value is overwritten by $e_3$, giving $\mathit{co}(e_2, e_3)$. The \texttt{fr} relation is therefore derived as $\mathit{rf}^{-1}\mathbin{;}\mathit{co}$, as illustrated in Figure~\ref{fig:fr-example}. The $^{-1}$ is the inverse of a relation.
 
 \begin{figure}[htbp]
 \centering
@@ -303,7 +303,7 @@ Some relations are composed based on the primitive relations. The following are 
 
 \draw[rf] (e2) -- (e1) node[midway, left, font=\scriptsize] {$\mathit{rf}$};
 \draw[co] (e2) -- (e3) node[midway, above, font=\scriptsize] {$\mathit{co}$};
-\draw[fr] (e1) to[bend right=20] (e3) node[midway, below, font=\scriptsize] {$\mathit{fr}$};
+\draw[fr] (e1) to[bend right=20] node[midway, below, font=\scriptsize] {$\mathit{fr}$} (e3);
 
 \end{tikzpicture}
 \caption{From-read (\textit{fr}, grey dotted) derived as $\mathit{rf}^{-1}\mathbin{;}\mathit{co}$: $e_1$ reads from $e_2$ via \textit{rf} (red dashed), and $e_2$ is later overwritten by $e_3$ via \textit{co} (dotted).}
