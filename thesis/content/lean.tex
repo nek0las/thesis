@@ -6,14 +6,14 @@ In this chapter, we introduce weak memory, the Lean 4 programming language and i
 \section{Mathematical Background}
 \label{sec:math-background}
 
-To understand the axiomatic memory models, we need to use \emph{binary relations}. Relationships between elements of two sets are represented using a structure called a binary relation. A binary relation from a set $A$ to a set $B$ is formally defined as a subset of the Cartesian product $A \times B$ \cite[p.~599]{rosen2012discrete}. There are two common methods for representing relations: using square matrices and using directed graphs \cite[p.~621]{rosen2012discrete}. In this thesis, we mainly use the second method, i.e., directed graphs, to represent binary relations.
+To understand the axiomatic memory models, we need to use \emph{binary relations}. Relationships between elements of two sets are represented using a structure called a binary relation. A binary relation from a set $A$ to a set $B$ is formally defined as a subset of the Cartesian product $A \times B$ \citep[p.~599]{rosen2012discrete}. There are two common methods for representing relations: using square matrices and using directed graphs \citep[p.~621]{rosen2012discrete}. In this thesis, we mainly use the second method, i.e., directed graphs, to represent binary relations.
 
-We use the notation \(a \, R \, b\) to denote that \((a,b) \in R\), and \(a \not R b\) to denote that \((a,b) \notin R\) \cite[p.~600]{rosen2012discrete}.
+We use the notation \(a \, R \, b\) to denote that \((a,b) \in R\), and \(a \not R b\) to denote that \((a,b) \notin R\) \citep[p.~600]{rosen2012discrete}.
 
 In this thesis, the elements \(a\) and \(b\) are both \emph{events}, and these binary relations compose the directed execution graph, as described in Section~\ref{Background:AWMM}. Two relations can be composed together to obtain a new directed graph. Relation composition plays an important role in the \texttt{cat} language.
 
 \paragraph{Relation Composition.}
-Let $R$ be a relation from a set $A$ to a set $B$, and let $S$ be a relation from $B$ to a set $C$. The composite of $R$ and $S$ is the relation consisting of ordered pairs $(a, c)$, where $a \in A, c \in C$, and for which there exists an element $b \in B$ such that $(a, b) \in R$ and $(b, c) \in S$ \cite[p.~607]{rosen2012discrete}. We denote the composite of $R$ and $S$ by $S ; R$ \cite[p.~607]{rosen2012discrete}.
+Let $R$ be a relation from a set $A$ to a set $B$, and let $S$ be a relation from $B$ to a set $C$. The composite of $R$ and $S$ is the relation consisting of ordered pairs $(a, c)$, where $a \in A, c \in C$, and for which there exists an element $b \in B$ such that $(a, b) \in R$ and $(b, c) \in S$ \citep[p.~607]{rosen2012discrete}. We denote the composite of $R$ and $S$ by $S ; R$ \citep[p.~607]{rosen2012discrete}.
 
 Computing the composite of two relations requires finding elements that are the second component of ordered pairs in the first relation and the first component of ordered pairs in the second relation. This property is widely used in many memory models. For example, there is a relation called \emph{fr} (from-read), which represents that a read instruction observes a value that is later overwritten by another write instruction; the write instructions to the same address are totally ordered by the coherence order.
 
@@ -28,26 +28,26 @@ After composing different relations, we can obtain a complete execution graph. A
 Models defined using binary relations can be viewed as directed graphs. When we illustrate them in a diagram, cycles are easy to identify by visually connecting the points. However, to represent this structure using binary relations, we need a formal way to express both direct connections and paths that return to earlier points. For this purpose, we rely on two properties: \emph{reflexivity} and \emph{transitive closure}.
 
 \paragraph{Reflexivity.}
-A relation $R$ on a set $A$ is called reflexive if $(a, a) \in R$ for every element $a \in A$ \cite[p.~602]{rosen2012discrete}. Formally:
+A relation $R$ on a set $A$ is called reflexive if $(a, a) \in R$ for every element $a \in A$ \citep[p.~602]{rosen2012discrete}. Formally:
 \[
 \forall a \in A, (a, a) \in R.
 \]
 
 \paragraph{Transitivity.}
-A relation $R$ on a set $A$ is called transitive if whenever $(a, b) \in R$ and $(b, c) \in R$, then $(a, c) \in R$, for all $a, b, c \in A$ \cite[p.~604]{rosen2012discrete}. Formally:
+A relation $R$ on a set $A$ is called transitive if whenever $(a, b) \in R$ and $(b, c) \in R$, then $(a, c) \in R$, for all $a, b, c \in A$ \citep[p.~604]{rosen2012discrete}. Formally:
 \[
 \forall a, b, c \in A, ((a, b) \in R \land (b, c) \in R) \Rightarrow (a, c) \in R.
 \]
 
 \paragraph{Transitive Closure.}
-The transitive closure of a relation $R$ on a set $A$ is the smallest transitive relation that contains $R$ \cite[p.~628]{rosen2012discrete}. Formally, the transitive closure, often denoted by $R^+$, can be expressed as the union of all powers $R^n$ for $n \ge 1$ \cite[p.~631]{rosen2012discrete}:
+The transitive closure of a relation $R$ on a set $A$ is the smallest transitive relation that contains $R$ \citep[p.~628]{rosen2012discrete}. Formally, the transitive closure, often denoted by $R^+$, can be expressed as the union of all powers $R^n$ for $n \ge 1$ \citep[p.~631]{rosen2012discrete}:
 \[
 R^+ = \bigcup_{n=1}^{\infty} R^n.
 \]
-An ordered pair $(a, b)$ is in $R^+$ if and only if there is a path of length at least one from $a$ to $b$ in the directed graph representing $R$ \cite[p.~631]{rosen2012discrete}.
+An ordered pair $(a, b)$ is in $R^+$ if and only if there is a path of length at least one from $a$ to $b$ in the directed graph representing $R$ \citep[p.~631]{rosen2012discrete}.
 
 \paragraph{Reflexive-Transitive Closure.}
-The reflexive-transitive closure, denoted by $R^*$, is the smallest relation that is both reflexive and transitive and contains $R$. It is also known as the connectivity relation and consists of all ordered pairs $(a, b)$ such that there is a path of any length (including length zero) from $a$ to $b$ \cite[p.~631]{rosen2012discrete}. It is formed by taking the union of the transitive closure $R^+$ and the diagonal relation $\Delta = \{(a, a) \mid a \in A\}$, which represents paths of length zero \cite[p.~631]{rosen2012discrete}:
+The reflexive-transitive closure, denoted by $R^*$, is the smallest relation that is both reflexive and transitive and contains $R$. It is also known as the connectivity relation and consists of all ordered pairs $(a, b)$ such that there is a path of any length (including length zero) from $a$ to $b$ \citep[p.~631]{rosen2012discrete}. It is formed by taking the union of the transitive closure $R^+$ and the diagonal relation $\Delta = \{(a, a) \mid a \in A\}$, which represents paths of length zero \citep[p.~631]{rosen2012discrete}:
 \[
 R^* = R^+ \cup \Delta = \bigcup_{n=0}^{\infty} R^n.
 \]
@@ -55,11 +55,11 @@ In memory models, these closures are fundamental for defining global orders. For
 
 \paragraph{Domain and Codomain.}
 Let $R$ be a relation from a set $A$ to a set $B$.
-The \emph{domain} of $R$, denoted by $\mathrm{dom}(R)$, is the set of all first components of ordered pairs in $R$~\cite[p.~607]{rosen2012discrete}:
+The \emph{domain} of $R$, denoted by $\mathrm{dom}(R)$, is the set of all first components of ordered pairs in $R$~\citep[p.~607]{rosen2012discrete}:
 \[
   \mathrm{dom}(R) = \{ a \in A \mid \exists\, b \in B.\; (a, b) \in R \}.
 \]
-The \emph{codomain} (or \emph{range}) of $R$, denoted by $\mathrm{codom}(R)$, is the set of all second components of ordered pairs in $R$~\cite[p.~607]{rosen2012discrete}:
+The \emph{codomain} (or \emph{range}) of $R$, denoted by $\mathrm{codom}(R)$, is the set of all second components of ordered pairs in $R$~\citep[p.~607]{rosen2012discrete}:
 \[
   \mathrm{codom}(R) = \{ b \in B \mid \exists\, a \in A.\; (a, b) \in R \}.
 \]
@@ -67,17 +67,17 @@ In the context of memory models, these are used to identify events that particip
 For example, in the TSO model we define the set of atomic events as $\mathit{At} = \mathrm{dom}(\mathit{rmw}) \cup \mathrm{codom}(\mathit{rmw})$, which collects all events involved in a read-modify-write operation.
 
 \paragraph{Paths in Directed Graphs.}
-To represent these structures using binary relations, we rely on the concept of paths. A path from $a$ to $b$ in a directed graph $G$ is a sequence of edges $(x_0, x_1), (x_1, x_2), \dots, (x_{n-1}, x_n)$ in $G$, where $n$ is a nonnegative integer, $x_0 = a$, and $x_n = b$ \cite[p.~629]{rosen2012discrete}. The length of this path is $n$ \cite[p.~629]{rosen2012discrete}. The connectivity relation $R^*$ consists of the ordered pairs $(a, b)$ such that there is a path of length at least one from $a$ to $b$ in $R$ \cite[p.~631]{rosen2012discrete}. A fundamental result in relation theory is that the transitive closure of a relation $R$ is equal to the connectivity relation $R^*$ \cite[p.~631]{rosen2012discrete}.
+To represent these structures using binary relations, we rely on the concept of paths. A path from $a$ to $b$ in a directed graph $G$ is a sequence of edges $(x_0, x_1), (x_1, x_2), \dots, (x_{n-1}, x_n)$ in $G$, where $n$ is a nonnegative integer, $x_0 = a$, and $x_n = b$ \citep[p.~629]{rosen2012discrete}. The length of this path is $n$ \citep[p.~629]{rosen2012discrete}. The connectivity relation $R^*$ consists of the ordered pairs $(a, b)$ such that there is a path of length at least one from $a$ to $b$ in $R$ \citep[p.~631]{rosen2012discrete}. A fundamental result in relation theory is that the transitive closure of a relation $R$ is equal to the connectivity relation $R^*$ \citep[p.~631]{rosen2012discrete}.
 
 \paragraph{Relation Inverse.}
-Let $R$ be a relation from a set $A$ to a set $B$. The inverse relation, denoted by $R^{-1}$, is the relation from $B$ to $A$ consisting of the ordered pairs $(b, a)$ such that $(a, b) \in R$ \cite[p.~665]{rosen2012discrete}. Formally:
+Let $R$ be a relation from a set $A$ to a set $B$. The inverse relation, denoted by $R^{-1}$, is the relation from $B$ to $A$ consisting of the ordered pairs $(b, a)$ such that $(a, b) \in R$ \citep[p.~665]{rosen2012discrete}. Formally:
 \[
 R^{-1} = \{(b, a) \mid (a, b) \in R\}.
 \]
-This means that $b \, R^{-1} \, a$ if and only if $a \, R \, b$ \cite[p.~665]{rosen2012discrete}. In the context of memory models, the inverse of the read-from relation, $\mathit{rf}^{-1}$, connects a read event back to the write event that provided its value.
+This means that $b \, R^{-1} \, a$ if and only if $a \, R \, b$ \citep[p.~665]{rosen2012discrete}. In the context of memory models, the inverse of the read-from relation, $\mathit{rf}^{-1}$, connects a read event back to the write event that provided its value.
 
 \paragraph{Optional Relation (Reflexive Closure).}
-The reflexive closure of a relation $R$ on a set $A$ is the smallest reflexive relation that contains $R$ \cite[p.~628]{rosen2012discrete}. In memory model formalisms such as the \texttt{cat} language, this is frequently referred to as an "optional" relation and is denoted by $R^?$ or $R?$. It is formed by taking the union of the relation $R$ and the diagonal relation $\Delta = \{(a, a) \mid a \in A\}$ \cite[p.~628]{rosen2012discrete}:
+The reflexive closure of a relation $R$ on a set $A$ is the smallest reflexive relation that contains $R$ \citep[p.~628]{rosen2012discrete}. In memory model formalisms such as the \texttt{cat} language, this is frequently referred to as an "optional" relation and is denoted by $R^?$ or $R?$. It is formed by taking the union of the relation $R$ and the diagonal relation $\Delta = \{(a, a) \mid a \in A\}$ \citep[p.~628]{rosen2012discrete}:
 \[
 R^? = R \cup \Delta.
 \]
@@ -86,12 +86,12 @@ Intuitively, $R^?$ represents that two events are either related by $R$ or are t
 \paragraph{Internal and External Relations.}
 In the context of multi-threaded execution, every event $e$ is associated with a specific thread identifier. Let $E$ be the set of all events and $T$ be the set of thread identifiers. We define a function $\text{tid}: E \to T$ that maps each event to the thread that executed it.
 
-The \emph{internal} relation, denoted by \texttt{int}, consists of pairs of events that belong to the same thread. Formally, it is the equivalence relation on $E$ induced by the thread identifier function \cite[p.~642]{rosen2012discrete}:
+The \emph{internal} relation, denoted by \texttt{int}, consists of pairs of events that belong to the same thread. Formally, it is the equivalence relation on $E$ induced by the thread identifier function \citep[p.~642]{rosen2012discrete}:
 \[
 \texttt{int} = \{ (e_1, e_2) \in E \times E \mid \text{tid}(e_1) = \text{tid}(e_2) \}.
 \]
 
-The \emph{external} relation, denoted by \texttt{ext}, consists of pairs of events that belong to different threads. It is defined as the complement of the internal relation with respect to the Cartesian product $E \times E$ \cite[p.~602]{rosen2012discrete}:
+The \emph{external} relation, denoted by \texttt{ext}, consists of pairs of events that belong to different threads. It is defined as the complement of the internal relation with respect to the Cartesian product $E \times E$ \citep[p.~602]{rosen2012discrete}:
 \[
 \texttt{ext} = \{ (e_1, e_2) \in E \times E \mid \text{tid}(e_1) \neq \text{tid}(e_2) \}.
 \]
@@ -211,7 +211,7 @@ Let’s consider the following example in Figure \ref{fig:litmus-test}. It is a 
 
 Even though the order of instructions within each thread is preserved according to the program order, threads can interleave arbitrarily. The dashed read-from (\texttt{rf}) arrows indicate the relationship between write operations and subsequent reads of the same memory location in the interleaving. Depending on the specific interleaving, these read operations may observe values written by different write operations, resulting in distinct assignments to a and b upon termination. The formal study of the exact behaviors concurrent programs can exhibit is a field known as weak memory models.
 
-Memory models are generally categorized into two classes: operational and axiomatic. Operational models are described using buffers and queues and are abstractions derived from hardware behavior [\citet{10.1145/1993498.1993520OperationalModel}]. In contrast, axiomatic memory models specify disallowed program behaviors, usually by constraining relations on memory accesses [\citet{10.1145/2627752}]. In this thesis, we use an axiomatic memory model.
+Memory models are generally categorized into two classes: operational and axiomatic. Operational models are described using buffers and queues and are abstractions derived from hardware behavior \citep{10.1145/1993498.1993520OperationalModel}. In contrast, axiomatic memory models specify disallowed program behaviors, usually by constraining relations on memory accesses \citep{10.1145/2627752}. In this thesis, we use an axiomatic memory model.
 
 \subsection{Axiomatic Weak Memory Model}
 \label{Background:AWMM}
@@ -222,7 +222,7 @@ Each event is used to represent the behavior of an instruction. For example, Eve
 
 \subsubsection{Primitive Relations}
 
-The relations between events are distinguished as primitive relations and derived relations. The latter are entirely defined from the former and are composed of primitive relations. We also define some typical primitive relations~\cite{10.1145/2627752}:
+The relations between events are distinguished as primitive relations and derived relations. The latter are entirely defined from the former and are composed of primitive relations. We also define some typical primitive relations~\citep{10.1145/2627752}:
 
 \textbf{Program Order (\texttt{po})}, relating events by their syntactic order: the order among instructions in the program text carries over to execution graphs with \texttt{po} edges. It is a total order per thread. Figure~\ref{fig:litmus-execution-1-1} and Figure~\ref{fig:litmus-execution-0-1} each contain four events. In thread 0, the program order is $e_1 : W(x)=1$ followed by $e_2 : R(Y)=1$. In thread 1, the order is $e_3 : W(Y)=1$ followed by $e_4 : R(X)=1$. We denote these as $\mathit{po}(e_1, e_2)$ and $\mathit{po}(e_3, e_4)$.
 
@@ -367,7 +367,7 @@ A litmus test specification typically consists of three main sections:
 
 \textbf{Final condition.} This section specifies constraints on the final values of registers and memory locations.
 
-The DIY7 toolchains compile such litmus tests into real machine code and collect the results after running them a specific number of times. The semantics of a program is the set of all executions the program can exhibit when running on an architecture \cite{DennisPhdThesis}. 
+The DIY7 toolchains compile such litmus tests into real machine code and collect the results after running them a specific number of times. The semantics of a program is the set of all executions the program can exhibit when running on an architecture \citep{DennisPhdThesis}. 
 
 In the x86 SB example, the \texttt{MOV} instruction can be translated into read or write events. Based on this translation, events and relations between them are generated, while the computations in the program are ignored. The semantics then proposes the possible execution graphs, called candidate executions. We can subsequently use the memory model to determine whether any of the candidate executions are disallowed.
 
@@ -375,7 +375,7 @@ The syntax and usage of litmus tests are not the main focus of this thesis. In \
 
 \subsubsection{Memory Model Semantics}
 
-Having shown how to use binary relations to draw a litmus test, we have not yet demonstrated how to define a memory model. The Inria team~\cite{10.1145/2627752} developed a specification language called Cat, which uses binary relations to define memory models. Many memory models, such as RISC-V, Arm, and X86-TSO~\cite{sewell2010x86tso}, are already defined in Cat; in this section we introduce sequential consistency and total store order as representative examples.
+Having shown how to use binary relations to draw a litmus test, we have not yet demonstrated how to define a memory model. The Inria team~\citep{10.1145/2627752} developed a specification language called Cat, which uses binary relations to define memory models. Many memory models, such as RISC-V, Arm, and X86-TSO~\citep{sewell2010x86tso}, are already defined in Cat; in this section we introduce sequential consistency and total store order as representative examples.
 
 \citet{lam1675439} introduced what is called Sequential consistency: \textit{the result of any execution is the same as if the operations of all the processors were executed in some sequential order, and the operations of each individual processor appear in this sequence in the order specified by its program. A multiprocessor satisfying this condition will be called sequentially consistent.}
 
@@ -447,12 +447,12 @@ acyclic po | com as sc
 \label{fig:sequential-consistency}
 \end{figure}
 
-Based on Sequential Consistency, we can build the Total Store Order (TSO)
+Based on SC, we can build the Total Store Order (TSO)~\citep{sewell2010x86tso}
 memory model. The TSO model can be described by a hardware model where each
 thread has a write buffer. A write instruction first stores its value into the
 buffer instead of writing directly to memory. Because write instructions are
 more expensive than reads, the processor can postpone the write and execute
-later read instructions first to improve performance. This write buffer architecture is commonly illustrated in the literature \cite{sewell2010x86tso}.
+later read instructions first to improve performance. This write buffer architecture is commonly illustrated in the literature \citep{sewell2010x86tso}.
 
 From the programmer's perspective, the program allows the reordering of
 write--read pairs within a local thread. That is, a read instruction may happen
@@ -528,12 +528,12 @@ acyclic (implied | xppo | rfe | fr | co) as tso
 
 
 We now turn to a more complex memory model, namely the Linux Kernel Memory
-Model (LKMM). The Linux system supports a wide range of architectures, such as
+Model (LKMM)~\citep{alglave2018frightening}. The Linux system supports a wide range of architectures, such as
 ARM, RISC-V, IBM Power, and AMD/Intel. Each architecture has its own memory
 model, and therefore they may disagree on the values that a read can return in
 a multiprocessor system. Supporting all of them in an efficient and secure way
 is challenging. A poorly designed memory model can lead to efficiency problems
-and security problems \cite{alglave2018frightening}. The LKMM must therefore be
+and security problems \citep{alglave2018frightening}. The LKMM must therefore be
 fairly permissive, in the sense that any behavior allowed by one of these
 architectures must also be allowed by the LKMM. The LKMM is defined in Figure~\ref{fig:lkmm-definitions}. 
 
@@ -547,7 +547,7 @@ $R[\text{once}]$, and \texttt{WRITE\_ONCE} as the set $W[\text{once}]$.
 The brackets denote tags. The notation
 $\langle annotatable\text{-}events \rangle[\text{tag}]$
 indicates the set of annotatable events that carry the given tag
-\cite{10.1145/2627752}.
+\citep{10.1145/2627752}.
 
 Besides the READ\_ONCE and WRITE\_ONCE instructions, there are also synchronization primitives in the LKMM. 
 
@@ -610,7 +610,7 @@ And these dependencies can be categorized into read--write dependencies and read
 \mathit{rwdep} := (\mathit{dep} \cup \mathit{ctrl}) \cap (R \times W)
 \]
 
-The read--read dependencies are the address dependencies or the \textit{dep} followed by an \textit{rfi} (starts with a read and ends with a read). The architecture Alpha does not preserve the read--read address dependencies, so LKMM adds the \textit{rd-dep} as the \textit{strong-rrdep} to model Alpha explicitly~\cite{alglave2018frightening}.
+The read--read dependencies are the address dependencies or the \textit{dep} followed by an \textit{rfi} (starts with a read and ends with a read). The architecture Alpha does not preserve the read--read address dependencies, so LKMM adds the \textit{rd-dep} as the \textit{strong-rrdep} to model Alpha explicitly~\citep{alglave2018frightening}.
 
 \textit{ppo} then uses the dependencies as the \textit{to-r} and \textit{to-w} relations. The \textit{to-w} is modeled as the internal overwrites, and overwrite is from-read (a write overwrites a read) and a coherence order (a write overwrites a write), and together with the \textit{rw-dep} to compose an order of \textit{to-w}. The \textit{to-r} is modeled as \textit{strong-rrdep} or the \textit{rfi-rel-acq}. The \textit{strong-rrdep} is explained above, and the \textit{rfi-rel-acq} is the typical release-write, acquire-read order, and we cannot reorder these release-acquire instructions.
 
@@ -663,7 +663,7 @@ We will explain this decision in more detail later.
 
 BPF (Berkeley Packet Filter) is a technology that allows programs to run safely inside the Linux kernel without modifying kernel source code or loading kernel modules. It was originally designed for network packet filtering, but its extended version, eBPF, has since become widely used in industry for performance monitoring, tracing, and security enforcement. Because eBPF programs execute within the kernel, they interact directly with the kernel's memory subsystem and are subject to the same weak memory ordering behaviors as the rest of the kernel.
 
-Despite this close relationship, no formal memory model for BPF existed prior to 2024. The BPF memory model was introduced in 2024 through a proposal discussed on \href{https://lwn.net/Articles/976071/}{LWN.net}~\cite{bpf-memory-model-lwn}. That proposal identifies two principal sources of weak memory behaviors in BPF: atomic instructions (such as \texttt{xchg} and \texttt{cmpxchg}), and jump instructions. Understanding these behaviors is important because they represent the bare minimum of ordering guarantees that most BPF programs currently rely on. In the absence of a formalized model, it is impossible to determine whether a bug caused by reordered memory operations is a fault in the BPF program, the compiler, or the BPF just-in-time (JIT) compiler.
+Despite this close relationship, no formal memory model for BPF existed prior to 2024. The BPF memory model was introduced in 2024 through a proposal discussed on \href{https://lwn.net/Articles/976071/}{LWN.net}~\citep{bpf-memory-model-lwn}. That proposal identifies two principal sources of weak memory behaviors in BPF: atomic instructions (such as \texttt{xchg} and \texttt{cmpxchg}), and jump instructions. Understanding these behaviors is important because they represent the bare minimum of ordering guarantees that most BPF programs currently rely on. In the absence of a formalized model, it is impossible to determine whether a bug caused by reordered memory operations is a fault in the BPF program, the compiler, or the BPF just-in-time (JIT) compiler.
 
 The BPF memory model follows the same design philosophy as the LKMM: it should be as weak as possible, avoiding prohibiting behaviors that the supported architectures permit. However, BPF instructions cannot be directly mapped to the LKMM, because the LKMM is defined at the level of C-language primitives, whereas BPF is closer to assembly. Consequently, some constraints required by BPF semantics fall outside what the LKMM can express. The designers therefore chose to adapt the model from both the LKMM and the AArch64 (ARMv8) memory model, as AArch64 provides a more expressive foundation for instruction-level atomic operations. In particular, the BPF memory model adopts the atomic memory operation (AMO) design from AArch64, together with acquire (\texttt{AQ}) and release (\texttt{RL}) annotations. The BPF memory model is defined in \href{https://github.com/herd/herdtools7/blob/master/herd/libdir/bpf.cat}{herd/libdir/bpf.cat}.
 
@@ -678,7 +678,7 @@ This subsection introduces the necessary background for readers who have never u
 
 Lean 4 is an interactive theorem prover (ITP). Traditionally, most proofs for memory models have been carried out on paper, for example in \citep{podkopaev2019bridging, 10.1145/2627752, batty2011mathematizing, doko2016program}. Although these works make important theoretical contributions, they are prone to subtle issues, such as undetected errors in existing models \citep{chakraborty2016fixing, chakraborty2017grounding} or the need for later repairs \citep{10.1145/3140587.3062352Reparing}. By using an ITP, we can dramatically increase the reliability of our proofs: they are mechanically checked by a computer, greatly reducing the chance of missed edge cases.
 
-Lean 4~\cite{deMoura2021lean4} is not only just an ITP, it is also a functional programming language like Haskell and OCaml, which means it is a general-purpose programming language that supports computation and IO. This gives us the ability to read and parse the Cat files directly from storage, instead of manually migrating the Cat files into Lean~4.
+Lean 4~\citep{deMoura2021lean4} is not only just an ITP, it is also a functional programming language like Haskell and OCaml, which means it is a general-purpose programming language that supports computation and IO. This gives us the ability to read and parse the Cat files directly from storage, instead of manually migrating the Cat files into Lean~4.
 
 For readers unfamiliar with interactive theorem provers, the following simple example illustrates how they work. We can experiment with more examples in the \href{https://adam.math.hhu.de/#/g/leanprover-community/nng4/}{Lean 4 Natural Number Game}. Suppose we want to prove that for all natural numbers \(n\), \(n + 0 = n\). While this equality is obvious at a glance, in a formal system we must justify it using previously proven theorems. In Lean 4, this is achieved using commands called \emph{tactics}. One particularly useful tactic is \texttt{rw} (rewrite). There exists a theorem \texttt{add\_zero} stating that \(\forall a, a + 0 = a\). If our goal is to prove \(n + 0 = n\), we can apply the tactic \texttt{rw [add\_zero]}. This replaces \(n + 0\) with \(n\), immediately closing the goal.
 
@@ -746,7 +746,7 @@ macro_rules
   | `($e₁:expr "|" $e₂:expr) => `(Set.union $e₁ $e₂)
 \end{verbatim}
 
-This is a simple illustration of how the meta-programming framework works. In our project, the implementation is more complex and it is not necessary to introduce all of them. After we defining the Macro rules, Lean 4 checks that the final elaborated terms are type-safe using its small trusted kernel. Macros and elaborators operate outside the kernel and can define arbitrary syntax or transformations, but their output must ultimately be accepted by the kernel~\cite{deMoura2021lean4}. This means even if we define unsafe or incorrect syntax transformations, they cannot break soundness because the kernel will reject any ill-typed terms.
+This is a simple illustration of how the meta-programming framework works. In our project, the implementation is more complex and it is not necessary to introduce all of them. After we defining the Macro rules, Lean 4 checks that the final elaborated terms are type-safe using its small trusted kernel. Macros and elaborators operate outside the kernel and can define arbitrary syntax or transformations, but their output must ultimately be accepted by the kernel~\citep{deMoura2021lean4}. This means even if we define unsafe or incorrect syntax transformations, they cannot break soundness because the kernel will reject any ill-typed terms.
 
 
 

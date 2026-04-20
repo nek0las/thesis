@@ -1,7 +1,7 @@
 \chapter{Implementation in Lean 4}
 \label{chapter:design}
 
-When we work with pen and paper, we usually do not focus on the subtle parts of a proof; instead, we prioritize the interesting aspects. In contrast, mechanization requires us to define every detail of the specification. These challenges are independent of the particular proof assistant we choose, so we propose a general design whose ideas can be easily implemented in other languages. In this section, we identify and clarify the issues involved in mechanizing weak memory models and show how we address them using Lean 4’s existing MathLib and Meta-Programming framework [\citet{deMoura2021lean4,10.1145/3110278Lean4Meta,mathlib2020}].
+When we work with pen and paper, we usually do not focus on the subtle parts of a proof; instead, we prioritize the interesting aspects. In contrast, mechanization requires us to define every detail of the specification. These challenges are independent of the particular proof assistant we choose, so we propose a general design whose ideas can be easily implemented in other languages. In this section, we identify and clarify the issues involved in mechanizing weak memory models and show how we address them using Lean 4’s existing MathLib and Meta-Programming framework \citep{deMoura2021lean4,10.1145/3110278Lean4Meta,mathlib2020}.
 
 \begin{figure}[t]
   \centering
@@ -33,7 +33,7 @@ acyclic ghb as tso
 
 \section{Core Types for Memory Models in Lean 4}
 \label{sec:design:core-types}
-To parse the weak memory models, we need to define the data types we operate on firstly. We use \citet{catOnlineDocHerd,catManualSyntax11} as our reference. The \citet{catManualSyntax11} defines the syntax and semantics of the Cat language in a formal way, but it is not always up to date. For example, it does not define the \texttt{[]} unary operator, while the \citet{catOnlineDocHerd} defines it and is continuously updated. Therefore, most of the time we use the online documentation as our primary reference.
+To parse the weak memory models, we need to define the data types we operate on firstly. We use~\citep{catOnlineDocHerd,catManualSyntax11} as our reference. The Cat syntax manual~\citep{catManualSyntax11} defines the syntax and semantics of the Cat language in a formal way, but it is not always up to date. For example, it does not define the \texttt{[]} unary operator, while the online documentation~\citep{catOnlineDocHerd} defines it and is continuously updated. Therefore, most of the time we use the online documentation as our primary reference.
 
 \subsection{Event and Set}
 Events and sets of events are the most fundamental data types in the Cat language: Cat defines predicates and binary relations over them in \citet{catOnlineDocHerd}. One event represents an instruction, so it has an ID, a thread ID, an address, a value, etc. We can represent the thread ID and the ID using \texttt{Nat}, but the address and value are not fixed by Cat. Different architectures may have different address spaces; for example, some machines use 32-bit addresses, while others use 64-bit addresses or even wider representations. Similarly, values may range over signed integers or floating-point numbers. These details are intentionally left unspecified by Cat \citet{catOnlineDocHerd,catManualSyntax11}.
@@ -133,12 +133,12 @@ structure CandidateExecution (evts : Events) where
     → e₁.id ≠ e₂.id
 \end{verbatim}
 
-The \textit{Candidate Execution} is designed as a universal superset containing all possible relations and event types. Because different architectures, such as RISC-V \cite{riscv-spec} and Arm \cite{arm-arm} --possess distinct sets of relations and events, our framework maintains compatibility by supporting these variations within a single, unified structure. This approach is consistent with the Linux Kernel Memory Model (LKMM) \cite{alglave2018frightening}, which must account for the various behaviors of multiple underlying architectures, including dependencies such as \textit{data}, \textit{address}, and \textit{control}.
+The \textit{Candidate Execution} is designed as a universal superset containing all possible relations and event types. Because different architectures, such as RISC-V \citep{riscv-spec} and Arm \citep{arm-arm} --possess distinct sets of relations and events, our framework maintains compatibility by supporting these variations within a single, unified structure. This approach is consistent with the Linux Kernel Memory Model (LKMM) \citep{alglave2018frightening}, which must account for the various behaviors of multiple underlying architectures, including dependencies such as \textit{data}, \textit{address}, and \textit{control}.
 
 We establish a formal abstraction at this boundary: while a candidate execution is typically generated from a litmus test via a parser or compiler, the correctness of that translation is not what we focus on at the memory level. In this project, we assume the correctness of the generation process and treat the candidate execution itself as the input. It is important to note that this is a significant assumption in practice; instructions with similar behaviors may not produce identical events and relations. For example, a Read instruction might be represented as a simple $R$ in a standard \texttt{.cat} file, whereas in LKMM it is treated as \texttt{READ\_ONCE}. These differing semantics generate different candidate executions; however, by abstracting these details and focusing solely on the candidate execution as the input, we significantly reduce the overall verification effort.
 
 \subsection{Well-Formedness Conditions}
-Well-formedness conditions are the important properties that give each set and relation a meaning. Only when the relations satisfy these conditions do we say they are well-formed; otherwise they are meaningless. Most of the well-formedness conditions are adapted from the herdtools7 Coq development \cite{10.1145/2627752, 10.1145/3458926ArmedCat}.
+Well-formedness conditions are the important properties that give each set and relation a meaning. Only when the relations satisfy these conditions do we say they are well-formed; otherwise they are meaningless. Most of the well-formedness conditions are adapted from the herdtools7 Coq development \citep{10.1145/2627752, 10.1145/3458926ArmedCat}.
 
 
 
@@ -269,7 +269,7 @@ The design involves several trade-offs arising from the limitations of Lean~4 an
 \textbf{Implicit Definitions}
 Herd7 is a project under active development, so its documentation is sometimes outdated; it is necessary to consult the practical implementation directly. The tag names in Cat are converted into capitalized identifiers in the generated Lean code.
 
-Besides the documentation, some aspects of the Cat language are implicit. For example, the manual presents the ``semantics of instructions'' as follows \citet{catManualSyntax11}:
+Besides the documentation, some aspects of the Cat language are implicit. For example, the manual presents the ``semantics of instructions'' as follows~\citep{catManualSyntax11}:
 \begin{quote}\small
 \begin{verbatim}
 instructions aevt [annotation 1, ..., annotation n]K X <j, f, rho, omega>,

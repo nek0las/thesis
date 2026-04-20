@@ -5,17 +5,17 @@ Modern computer architectures run programs concurrently in shared memory, where 
 
 Writing a proof for each architecture and each memory model on paper is time-consuming. Proof assistants can reduce boilerplate work by reusing existing proofs, and they also provide tactics to automate certain proof steps. Many existing mechanizations, however, focus only on the essential ideas and do not directly reuse Cat specifications. This introduces several problems: it requires additional translation work since many memory models are already defined in Cat; it risks inconsistency between the mechanized definitions and the original Cat model, meaning that properties proved in the proof assistant may not faithfully reflect the actual specification; and any future changes to the Cat model must be separately propagated to the mechanization, making it difficult to keep the two in sync.
 
-The Arm team mechanized the ARMv8 memory model in Rocq \citet{10.1145/3458926ArmedCat}, but this work targets only Arm and does not provide a general framework. Similarly, in his PhD thesis, Sprokholt develops an Agda framework for verifying the correctness of transformations between architectures without relying on Cat files \citet{DennisPhdThesis}. Neither approach, therefore, provides a general proof framework that directly reuses existing Cat specifications.
+The Arm team mechanized the ARMv8 memory model in Rocq \citep{10.1145/3458926ArmedCat}, but this work targets only Arm and does not provide a general framework. Similarly, in his PhD thesis, Sprokholt develops an Agda framework for verifying the correctness of transformations between architectures without relying on Cat files \citep{DennisPhdThesis}. Neither approach, therefore, provides a general proof framework that directly reuses existing Cat specifications.
 
 In this project, we propose a domain-specific proof framework, LeanCat, to mechanize weak memory models in Lean 4. LeanCat relies on existing Cat files: it parses Cat specifications and introduces their semantics into Lean. It also provides necessary primitives and abstractions to help users prove interesting properties, such as whether one memory model is weaker than another. LeanCat greatly reduces the mechanization effort and the amount of boilerplate code required for weak memory transformation proofs.
 
 \section{Contributions}
 
-We design and implement LeanCat, a domain-specific proof framework that mechanizes weak memory models in Lean 4. LeanCat parses existing Cat specifications directly and introduces their semantics into Lean 4 using its metaprogramming framework, so that users do not need to translate or rewrite memory model definitions manually. We implement a core subset of the Cat language targeting LKMM, including support for tagged events, relation operators, and the acyclicity, irreflexivity, and emptiness judgments.
+We design and implement LeanCat, a domain-specific proof framework that mechanizes weak memory models in Lean 4. LeanCat parses existing Cat specifications directly and introduces their semantics into Lean 4 using its metaprogramming framework, so that users do not need to translate or rewrite memory model definitions manually. We implement a core subset of the Cat language targeting the Linux Kernel Memory Model (LKMM)~\citep{alglave2018frightening}, including support for tagged events, relation operators, and the acyclicity, irreflexivity, and emptiness judgments.
 
 We define the core types and well-formedness conditions needed to represent program executions in Lean 4, and we develop a library of theorems about binary relations and acyclicity that bridge the gap between Lean 4's existing Mathlib library and the specific needs of weak memory model reasoning. In particular, we prove an acyclicity monotonicity lemma that serves as the central proof technique for comparing memory models.
 
-We demonstrate LeanCat through two case studies. First, we check concrete litmus test executions (see Section~\ref{sec:litmus-tests}) against memory models, including SC~\cite{lam1675439}, TSO~\cite{sewell2010x86tso}, MIPS~\cite{10.1145/2627752}, and LKMM~\cite{alglave2018frightening}. Second, we formally compare memory models with each other. In particular, we present a machine-checked proof that Sequential Consistency is strictly stronger than Total Store Order, and Total Store Order is strictly stronger than MIPS, reducing the comparison to a monotonicity argument over acyclicity constraints. We also provide a counterexample execution that TSO permits but SC forbids, completing the strict separation.
+We demonstrate LeanCat through two case studies. First, we check concrete litmus test executions (see Section~\ref{sec:litmus-tests}) against memory models, including Sequential Consistency (SC)~\citep{lam1675439}, Total Store Order (TSO)~\citep{sewell2010x86tso}, MIPS~\citep{10.1145/2627752}, and LKMM. Second, we formally compare memory models with each other. In particular, we present a machine-checked proof that SC is strictly stronger than TSO, and TSO is strictly stronger than MIPS, reducing the comparison to a monotonicity argument over acyclicity constraints. We also provide a counterexample execution that TSO permits but SC forbids, completing the strict separation.
 
 We integrate execution graph visualization into the Lean 4 development environment using ProofWidgets, allowing users to inspect program executions graphically during proof development.
 
@@ -25,12 +25,11 @@ The remainder of this thesis is structured as follows.
 
 Chapter~\ref{chapter:Background} introduces the necessary background. We begin with an
 overview of weak memory models, covering both operational perspectives, which model
-hardware behavior using abstract machines such as store buffers~\cite{10.1145/1993498.1993520OperationalModel},
+hardware behavior using abstract machines such as store buffers~\citep{10.1145/1993498.1993520OperationalModel},
 and axiomatic perspectives, which specify disallowed executions by constraining binary
-relations over memory accesses~\cite{10.1145/2627752}, and walk through concrete
+relations over memory accesses~\citep{10.1145/2627752}, and walk through concrete
 examples using the Store Buffering litmus test. We then 
-introduce the axiomatic memory models in detail, including Sequential Consistency, 
-Total Store Order, and the Linux Kernel Memory Model. We follow this with the 
+introduce the axiomatic memory models in detail, including SC, TSO, and LKMM. We follow this with the 
 mathematical background on binary relations needed throughout the thesis, and conclude 
 the chapter with an introduction to Lean~4 and its metaprogramming framework.
 
