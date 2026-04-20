@@ -205,18 +205,18 @@ Let’s consider the following example in Figure \ref{fig:litmus-test}. It is a 
 \draw[rf] (wx1) -- (rx1);
 
 \end{tikzpicture}
-\caption{Execution Order with X = 0 and Y = 1 (solid arrows: execution order; dashed arrows: read-from (\textit{rf}))}
+\caption{Execution Order with X = 1 and Y = 0 (solid arrows: execution order; dashed arrows: read-from (\textit{rf}))}
 \label{fig:litmus-execution-0-1}
 \end{figure}
 
 Even though the order of instructions within each thread is preserved according to the program order, threads can interleave arbitrarily. The dashed read-from (\texttt{rf}) arrows indicate the relationship between write operations and subsequent reads of the same memory location in the interleaving. Depending on the specific interleaving, these read operations may observe values written by different write operations, resulting in distinct assignments to a and b upon termination. The formal study of the exact behaviors concurrent programs can exhibit is a field known as weak memory models.
 
-Memory models are generally categorized into two classes: operational and axiomatic. Operational models are described using buffers and queues and are abstractions derived from hardware behavior \citep{10.1145/1993498.1993520OperationalModel}. In contrast, axiomatic memory models specify disallowed program behaviors, usually by constraining relations on memory accesses \citep{10.1145/2627752}. In this thesis, we use an axiomatic memory model.
+Memory models are generally categorized into two classes: operational and axiomatic. Operational models are described using buffers and queues and are abstractions derived from hardware behavior \citep{10.1145/1993498.1993520OperationalModel}. In contrast, axiomatic memory models specify disallowed program behaviors, usually by constraining relations on memory accesses \citep{10.1145/2627752}. In this thesis, we use axiomatic memory models.
 
-\subsection{Axiomatic Weak Memory Model}
+\subsection{Axiomatic Weak Memory Models}
 \label{Background:AWMM}
 
-In Figure \ref{fig:litmus-execution-1-1} and Figure \ref{fig:litmus-execution-0-1}, we use lines to show the execution order and write-read pairs. In axiomatic models, binary relations represent these lines, and events represent nodes or instructions. Together, these binary relations compose an execution graph. 
+In Figure \ref{fig:litmus-execution-1-1} and Figure \ref{fig:litmus-execution-0-1}, we use lines to show the execution order and write-read pairs. In axiomatic models, these lines represent binary relations, and events represent nodes or instructions. Together, these binary relations compose an execution graph. 
 
 Each event is used to represent the behavior of an instruction. For example, Event R is used to define a read instruction that reads a value from a location, and Event W is used to define a write instruction that writes a value to that location. These addresses are concrete values (e.g., 0x00000000), but for clarity of presentation we denote them using symbols (e.g., x, y) in the examples. These symbolic locations strictly represent distinct locations in memory (i.e., X and Y are strictly different). Each event also has an identifier that is unique within the execution.
 
