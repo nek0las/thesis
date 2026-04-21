@@ -351,8 +351,7 @@ Some relations are composed based on the primitive relations. The following are 
     node[pos=0.65, sloped, above, font=\scriptsize] {$\mathit{rfi}$};
 
 % From-read relations
-\draw[fr] (rx1) to[bend right=45] (wx1)
-    node[midway, below, font=\scriptsize] {};
+\draw[fr] (rx1) to[bend right=45] node[midway, below, font=\scriptsize] {$\mathit{fre}$} (wx1);
 
 \end{tikzpicture}
 \caption{Execution with internal reads-from (\textit{rfi}, blue dashed), external reads-from (\textit{rfe}, red dashed), external from-read (\textit{fre}, grey dotted), program order (\textit{po}, solid), and coherence order (\textit{co}, dotted).}
@@ -366,11 +365,9 @@ We can redraw Figure~\ref{fig:litmus-execution-primitive-relation} with derived 
 
 The Store Buffering example in Figure~\ref{fig:litmus-test} is often used together with a small concurrent program to demonstrate the possible behaviors of a memory model. And in these concurrent programs, the results are always non-deterministic. Such small programs are called litmus tests. We can observe these unexpected behaviors by running a litmus test on real hardware (e.g., RISC-V, Arm, x86, etc.).
 
-The Inria team~\citep{10.1145/2627752} developed a tool called \href{https://diy.inria.fr/}{DIY7} that automatically generates litmus tests for different architectures using their litmus program specifications. For example, the Store Buffering example in Figure~\ref{fig:litmus-test} on x86 can be represented as the following litmus test.
+The Inria team~\citep{10.1145/2627752} developed a tool called \href{https://diy.inria.fr/}{DIY7} that automatically generates litmus tests for different architectures using their litmus program specifications. For example, the Store Buffering example in Figure~\ref{fig:litmus-test} on x86 can be represented as the following litmus test, \texttt{SB.litmus}:
 
-Consider the following classical store-buffering litmus test, \texttt{SB.litmus}, for x86:
-
-\begin{verbatim}
+\begin{lstlisting}[numbers=left, xleftmargin=2em]
 X86 SB
 "Fre PodWR Fre PodWR"
 { x=0; y=0; }
@@ -380,15 +377,15 @@ MOV [x],$1  | MOV [y],$1
 MOV EAX,[y] | MOV EAX,[x]
 
 exists (0:EAX=0 /\ 1:EAX=0)
-\end{verbatim}
+\end{lstlisting}
 
 A litmus test specification typically consists of three main sections:
 
-\textbf{Initial state.} This section defines the initial values of registers and memory locations. Initialization to zero may be omitted.
+\textbf{Initial state (line 3).} This section defines the initial values of registers and memory locations. In the example, both \texttt{x} and \texttt{y} are initialised to \texttt{0}. Initialization to zero may be omitted.
 
-\textbf{Code section.} This section defines the code that is executed concurrently. In the example above, there are two threads.
+\textbf{Code section (lines 5--7).} This section defines the code that is executed concurrently. In the example, thread \texttt{P0} writes \texttt{1} to \texttt{x} and then reads from \texttt{y} into \texttt{EAX}, while thread \texttt{P1} writes \texttt{1} to \texttt{y} and then reads from \texttt{x} into \texttt{EAX}.
 
-\textbf{Final condition.} This section specifies constraints on the final values of registers and memory locations.
+\textbf{Final condition (line 9).} This section specifies constraints on the final values of registers and memory locations. Here, the condition asks whether both threads can read \texttt{0}, i.e., whether \texttt{P0:EAX=0} and \texttt{P1:EAX=0} can hold simultaneously.
 
 The DIY7 toolchains compile such litmus tests into real machine code and collect the results after running them a specific number of times. The semantics of a program is the set of all executions the program can exhibit when running on an architecture \citep{DennisPhdThesis}. 
 
@@ -684,7 +681,7 @@ We will explain this decision in more detail later.
 \subsection{BPF Memory Model}
 \label{Background:BPF}
 
-BPF (Berkeley Packet Filter) is a technology that allows programs to run safely inside the Linux kernel without modifying kernel source code or loading kernel modules. It was originally designed for network packet filtering, but its extended version, eBPF, has since become widely used in industry for performance monitoring, tracing, and security enforcement. Because eBPF programs execute within the kernel, they interact directly with the kernel's memory subsystem and are subject to the same weak memory ordering behaviors as the rest of the kernel.
+BPF (Berkeley Packet Filter)~\citep{mccanne1993bpf} is a technology that allows programs to run safely inside the Linux kernel~\citep{linux-kernel} without modifying kernel source code or loading kernel modules. It was originally designed for network packet filtering, but its extended version, eBPF, has since become widely used in industry for performance monitoring, tracing, and security enforcement. Because eBPF programs execute within the kernel, they interact directly with the kernel's memory subsystem and are subject to the same weak memory ordering behaviors as the rest of the kernel.
 
 Despite this close relationship, no formal memory model for BPF existed prior to 2024. The BPF memory model was introduced in 2024 through a proposal discussed on \href{https://lwn.net/Articles/976071/}{LWN.net}~\citep{bpf-memory-model-lwn}. That proposal identifies two principal sources of weak memory behaviors in BPF: atomic instructions (such as \texttt{xchg} and \texttt{cmpxchg}), and jump instructions. Understanding these behaviors is important because they represent the bare minimum of ordering guarantees that most BPF programs currently rely on. In the absence of a formalized model, it is impossible to determine whether a bug caused by reordered memory operations is a fault in the BPF program, the compiler, or the BPF just-in-time (JIT) compiler.
 
