@@ -391,7 +391,7 @@ The DIY7 toolchains compile such litmus tests into real machine code and collect
 
 In the x86 SB example, the \texttt{MOV} instruction can be translated into read or write events. Based on this translation, events and relations between them are generated, while the computations in the program are ignored. The semantics then proposes the possible execution graphs, called candidate executions. We can subsequently use the memory model to determine whether any of the candidate executions are disallowed.
 
-The syntax and usage of litmus tests are not the main focus of this thesis. In \textsc{LeanCat}, we abstract litmus tests as a set of possible \texttt{candidate execution}s directly. Supporting the translation from architecture-specific instructions to candidate executions is time-consuming, and our main task is to compare different memory models. Therefore, we currently provide a set of initial \texttt{Candidate Execution} structures to construct litmus tests from these patterns in Lean~4.
+The syntax and usage of litmus tests are not the main focus of this thesis. In \textsc{LeanCat}, we abstract litmus tests as a set of possible \texttt{candidate execution}s directly. Supporting the translation from architecture-specific instructions to candidate executions is time-consuming, and our main task is to compare different memory models. Therefore, we currently provide a set of initial \texttt{Candidate Execution} patterns and use template-based generation to construct litmus tests from these patterns in Lean~4.
 
 \subsubsection{Memory Model Semantics}
 
@@ -468,7 +468,7 @@ acyclic po | com as sc
 \end{figure}
 
 Based on SC, we can build the Total Store Order (TSO)~\citep{sewell2010x86tso}
-memory model. The TSO model is used mostly in X86, and it can be described by a hardware model where each
+memory model. The TSO model can be described by a hardware model where each
 thread has a write buffer. A write instruction first stores its value into the
 buffer instead of writing directly to memory. Because write instructions are
 more expensive than reads, the processor can postpone the write and execute
@@ -484,7 +484,7 @@ Formally, we express this as \texttt{po \textbackslash (W;R)}, where \texttt{;}
 denotes relation composition and \texttt{\textbackslash} denotes relation
 difference. This removes write--read pairs from the acyclicity constraint,
 meaning that read instructions may be reordered before preceding writes in
-program order. 
+program order. The TSO model is used mostly in X86.
 
 In x86, there are additional atomic instructions that are used to avoid the
 reordering of write--read pairs, such as \texttt{CMPXCHG}. These instructions
