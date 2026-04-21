@@ -44,7 +44,7 @@ In cat, we use Set in Lean 4 to organize the events, and there are some primitiv
 
 \subsection{Tagged Events}
 
-There are many sets; they are defined by tags instead of being implicitly defined in the Cat language. For example, in LKMM memory models, there are relations used to express accesses; they are normally defined in this way:
+There are many sets; they are defined by tags instead of being implicitly defined in the Cat language. For example, in LKMM, there are relations used to express accesses; they are normally defined in this way:
 
 \begin{verbatim}
 enum Accesses = 'ONCE (*READ_ONCE,WRITE_ONCE*) ||
@@ -57,7 +57,7 @@ instructions W[Accesses]
 instructions RMW[Accesses]
 \end{verbatim}
 
-The \texttt{Accesses} are then used to tag the events that are in \texttt{R} (reads), \texttt{W} (writes), or \texttt{RMW} (read-modify-writes). These events serve an important role, because they can be used to disambiguate the types of operations in each case. For example, we can identify a read as an acquire-read by tagging a read event with \texttt{ACQUIRE}. Because weak memory model semantics represent only executions, in that case only one tag can be attached. Also, even if an \texttt{R} event was produced by a regular read instruction or an acquire, this is why we need a tag system.
+The \texttt{Accesses} are then used to tag the events that are in \texttt{R} (reads), \texttt{W} (writes), or \texttt{RMW} (read-modify-writes). These events serve an important role, because they can be used to disambiguate the types of operations in each case. For example, we can identify a read as an acquire-read by tagging a read event with \texttt{ACQUIRE}. We use tags to differentiate normal instructions from tagged instructions. For example, some read instructions come from the READ\_ONCE macro in Linux kernel litmus tests, so we can tag a read event as ONCE to distinguish it from other read events.
 
 We use the Sigma type to represent the tag system in this way:
 \begin{verbatim}
@@ -65,7 +65,7 @@ structure Event where
   id : Nat   -- Unique identifier
   t_id : Nat -- Thread ID
   effect : Effect -- Action performed
-  tag : Sigma tagType : Type, tagType
+  tag : Sigma (tagType : Type), tagType
 \end{verbatim}
 
 The Sigma type is a dependent type in which the first component is the type on which the second component depends. Since we only know the tag when we know the explicit candidate executions, we cannot determine the types of the tags before parsing the Cat files, as the tags are normally defined in the Bell files. We only know the explicit type when we see the definitions, and the Sigma type captures this property well, because the actual tag used in the event is determined by the tag type defined in Bell files.
