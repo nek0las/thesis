@@ -501,7 +501,7 @@ We define \textit{At} (atomic operations) as
 where \texttt{dom} denotes the domain of a relation and \texttt{codom} denotes
 the codomain (range) of a relation.
 
-Using this set, we define the relation
+Here, $F$ denotes the set of fence events — special synchronisation instructions that enforce ordering constraints between memory operations on the same thread. Using this set, we define the relation
 \[
 \mathit{implied} = \mathit{po}\mathbin{;}[\mathit{At} \cup F] \;\cup\; [\mathit{At} \cup F]\mathbin{;}\mathit{po},
 \]
@@ -623,7 +623,7 @@ following mappings between synchronization primitives and tags:
 
 Like we did in TSO and SC, we first need to maintain an order in the local thread. The local orders will be modeled by \textit{ppo} and \textit{SCpv}. The \textit{SCpv} is the sequential consistency per variable, and it states that for each variable the values must follow SC. And \textit{ppo} is preserved program order; this is used to constrain the ordering in the local thread by dependencies and fences. 
 
-The dependencies are composed of address dependencies and data dependencies. These dependencies always start with a read event. The data dependencies mean that the following instruction will use the result, and the address dependencies mean that the following instruction will use the value of the result as the address. Therefore these dependencies cannot be reordered.
+The dependencies are composed of address dependencies and data dependencies, denoted $\mathit{addr}$ and $\mathit{data}$ respectively. These dependencies always start with a read event. The data dependencies ($\mathit{data}$) mean that the following instruction will use the result, and the address dependencies ($\mathit{addr}$) mean that the following instruction will use the value of the result as the address. Therefore these dependencies cannot be reordered.
 
 And these dependencies can be categorized into read--write dependencies and read--read dependencies. The read--write dependencies include the \textit{ctrl} dependencies, but the relation has to be the read--write pair as:
 \[
@@ -632,9 +632,9 @@ And these dependencies can be categorized into read--write dependencies and read
 
 The read--read dependencies are the address dependencies or the \textit{dep} followed by an \textit{rfi} (starts with a read and ends with a read). The architecture Alpha does not preserve the read--read address dependencies, so LKMM adds the \textit{rd-dep} as the \textit{strong-rrdep} to model Alpha explicitly~\citep{alglave2018frightening}.
 
-\textit{ppo} then uses the dependencies as the \textit{to-r} and \textit{to-w} relations. The \textit{to-w} is modeled as the internal overwrites, and overwrite is from-read (a write overwrites a read) and a coherence order (a write overwrites a write), and together with the \textit{rw-dep} to compose an order of \textit{to-w}. The \textit{to-r} is modeled as \textit{strong-rrdep} or the \textit{rfi-rel-acq}. The \textit{strong-rrdep} is explained above, and the \textit{rfi-rel-acq} is the typical release-write, acquire-read order, and we cannot reorder these release-acquire instructions.
+\textit{ppo} (preserved program order) is the subset of program order that the hardware must respect — it captures the ordering constraints that cannot be reordered even on a weak memory model. \textit{ppo} uses the dependencies as the \textit{to-r} and \textit{to-w} relations. The \textit{to-w} is modeled as the internal overwrites, and overwrite is from-read (a write overwrites a read) and a coherence order (a write overwrites a write), and together with the \textit{rw-dep} to compose an order of \textit{to-w}. The \textit{to-r} is modeled as \textit{strong-rrdep} or the \textit{rfi-rel-acq}. The \textit{strong-rrdep} is explained above, and the \textit{rfi-rel-acq} is the typical release-write, acquire-read order, and we cannot reorder these release-acquire instructions.
 
-The fence also contributes to the \textit{ppo}. The \textit{strong-fence} is the \textit{mb} (memory barrier); it orders the events separated by \texttt{smp\_mb}. It also orders the events separated by \texttt{rmb} and \texttt{wmb}, or when the first event is the acquire (\textit{po-acquire}) or the second event is the release (\textit{po-rel}). The ppo is defined as: 
+The fence also contributes to the \textit{ppo}. $\mathit{mb}$ denotes the set of full memory-barrier fence events, i.e., $\mathit{mb} = F[\texttt{mb}]$. The \textit{strong-fence} is $\mathit{mb}$; it orders the events separated by \texttt{smp\_mb}. It also orders the events separated by \texttt{rmb} and \texttt{wmb}, or when the first event is the acquire (\textit{po-acquire}) or the second event is the release (\textit{po-rel}). The ppo is defined as: 
 
 \[
 \mathit{ppo} := \mathit{rrdep}^{*} \mathbin{;} (\mathit{to\text{-}r} \cup \mathit{to\text{-}w} \cup \mathit{fence})
@@ -659,7 +659,7 @@ The \textit{strong-fence} and \textit{po-rel} need to be \textit{A-cumul} becaus
 
 The final definition generalizes the cumulative behaviors of propagation by adding the \textit{overwrites} and \textit{rfe}.
 
-The \textit{ppo} and \textit{prop} compose the \textit{hb} (happens-before) relation. The \textit{ppo} is for the ordering within the same thread, and the \textit{prop} is for the ordering involving other threads. The \textit{hb} is the union of \textit{ppo} and \textit{rfe} relations, together with the \textit{prop} that relates distinct events. Then we can use \textit{acyclic} to constrain the \textit{hb}, to make sure there is no ordering problem. 
+The \textit{ppo} and \textit{prop} compose the \textit{hb} (happens-before) relation. The \textit{ppo} is for the ordering within the same thread, and the \textit{prop} is for the ordering involving other threads. Here, $\mathit{id}$ denotes the identity relation $\Delta$ (every event related to itself), so $\mathit{prop} \setminus \mathit{id}$ restricts \textit{prop} to pairs of distinct events. The \textit{hb} is the union of \textit{ppo} and \textit{rfe} relations, together with the \textit{prop} that relates distinct events. Then we can use \textit{acyclic} to constrain the \textit{hb}, to make sure there is no ordering problem. 
 
 Besides the \textit{hb} (happens-before) relation, they also defined the \textit{pb} (propagates-before) relation. The \textit{pb} relation consists of events that begin with a write originating from another thread (i.e., propagations), followed by a strong fence and then an arbitrary number of \textit{hb} links.
 They enforce the acyclicity of \textit{pb} to guarantee that events are overwritten in a manner consistent with the orderings imposed by strong fences.
@@ -676,7 +676,7 @@ In summary, the Linux Kernel Memory Model (LKMM) is defined by the following con
 \]
 
 The LKMM also formalizes RCU operations, but these involve very complex and computationally expensive constraints. For this reason, we decided to exclude the RCU-related part from our analysis.
-We will explain this decision in more detail later.
+We explain this decision in more detail in Section~\ref{sec:design:cat-subset}.
 
 \subsection{BPF Memory Model}
 \label{Background:BPF}
@@ -692,7 +692,7 @@ The BPF model exhibits the same high-level structure as the LKMM: it enforces co
 
 
 \section{Lean 4 and Its Metaprogramming Framework}
-This subsection introduces the necessary background for readers who have never used Lean 4 before. We cover only the most important concepts used in this project and do not introduce complex topics such as monads. Before presenting the key features of Lean 4, we first explain why we chose it as our tool for this project.
+This section introduces the necessary background for readers unfamiliar with Lean 4; readers already familiar with it may skip ahead to Section~\ref{chapter:design}. We cover only the most important concepts used in this project and do not introduce complex topics such as monads. Before presenting the key features of Lean 4, we first explain why we chose it as our tool for this project.
 
 \subsection{Lean 4}
 
@@ -703,12 +703,12 @@ Lean 4~\citep{deMoura2021lean4} is not only just an ITP, it is also a functional
 For readers unfamiliar with interactive theorem provers, the following simple example illustrates how they work. We can experiment with more examples in the \href{https://adam.math.hhu.de/#/g/leanprover-community/nng4/}{Lean 4 Natural Number Game}. Suppose we want to prove that for all natural numbers \(n\), \(n + 0 = n\). While this equality is obvious at a glance, in a formal system we must justify it using previously proven theorems. In Lean 4, this is achieved using commands called \emph{tactics}. One particularly useful tactic is \texttt{rw} (rewrite). There exists a theorem \texttt{add\_zero} stating that \(\forall a, a + 0 = a\). If our goal is to prove \(n + 0 = n\), we can apply the tactic \texttt{rw [add\_zero]}. This replaces \(n + 0\) with \(n\), immediately closing the goal.
 
 
-More generally, the \texttt{rw} tactic allows us to replace any subexpression that matches the left-hand side of a known equality with the corresponding right-hand side. For example, to prove \((n + 0) + 0 = n\), we can apply \texttt{rw [add\_zero]} twice. Each application eliminates one occurrence of \(+ 0\), eventually reducing the goal to the trivial equality \(n = n\). This example reflects a fundamental principle in Lean 4: even the simplest intuitive facts must be formally justified by applying previously established theorems. Tactics provide a systematic and interactive way to do so. While this particular example may appear trivial, we will explore more powerful tactics and theorems later.
+More generally, the \texttt{rw} tactic allows us to replace any subexpression that matches the left-hand side of a known equality with the corresponding right-hand side. Multiple rewrites with \emph{different} theorems can be chained together. For example, to prove \((n + 0) \times 1 = n\), we first apply \texttt{rw [add\_zero]}, which rewrites \(n + 0\) to \(n\), reducing the goal to \(n \times 1 = n\). We then apply \texttt{rw [mul\_one]}, which uses the theorem \(\forall a,\, a \times 1 = a\) to rewrite \(n \times 1\) to \(n\), reducing the goal to the trivial equality \(n = n\), which is closed automatically by \texttt{rfl}. This example reflects a fundamental principle in Lean 4: even the simplest intuitive facts must be formally justified by applying previously established theorems. Tactics provide a systematic and interactive way to do so. While this particular example may appear trivial, we will explore more powerful tactics and theorems later.
 
 \subsection{Automated Proof Search with Aesop}
 \label{subsec:aesop}
 
-To mitigate the practical overhead of manual proof construction, we incorporate the \texttt{aesop} (Automated Extensible Search for Omniscient Proofs) tactic into the \texttt{LeanCat} framework. As discussed in Section 4.4, establishing acyclicity and monotonicity often requires significant "tedious" effort in chaining relational properties and constructing transitive paths. \texttt{aesop} is an extensible proof search tactic for Lean 4, broadly similar in function to Isabelle's \texttt{auto}, designed to bridge this gap by performing a rule-based, best-first search to close proof goals.
+To mitigate the practical overhead of manual proof construction, we incorporate the \texttt{aesop} (Automated Extensible Search for Omniscient Proofs) tactic into the \texttt{LeanCat} framework. As discussed in Section 4.4, establishing acyclicity and monotonicity often requires significant "tedious" effort in chaining relational properties and constructing transitive paths. \texttt{aesop}~\citep{ayers2023aesop} is an extensible proof search tactic for Lean 4, broadly similar in function to Isabelle's \texttt{auto}, designed to bridge this gap by performing a rule-based, best-first search to close proof goals.
 
 The tactic operates by maintaining a search tree that alternates between goal nodes and rule application (\textit{rapp}) nodes. This tree is explored based on a collection of user-defined rules, which are categorized into distinct phases. In the context of \texttt{LeanCat}, we leverage several rule builders—such as \texttt{apply}, \texttt{forward}, and \texttt{cases}—to automate structural reasoning. For example, by registering the constructors of the \texttt{NonEmpty} predicate or the cases for \texttt{MyList} as rules, we can automate the "tricky" task of creating \texttt{TransGen} chains during cycle detection. 
 
@@ -738,6 +738,7 @@ syntax:51 expr:51 "|" expr:50 : expr
 The natural number after \verb|syntax| and after each \verb|expr| specifies precedence levels. This declaration means: The entire production (the binary | operator) has precedence 51.
 The left operand is parsed with precedence 51 (same as the operator).
 The right operand is parsed with precedence 50 (strictly lower).
+This asymmetry encodes right-associativity and follows the Pratt parsing technique~\citep{pratt1973top}.
 
 In Lean 4, a higher number indicates higher (stronger/tighter) precedence. Therefore, for an expression such as r1 | r2 | r3, the parser groups it as ((r1 | r2) | r3), that is left-associative. This happens because the right operand is restricted to precedence $> 50$. If we tried to group it the other way, as (r1 | (r2 | r3)) without parentheses, and the subexpression (r2 | r3) would need to be parsed in a context expecting precedence $> 50$, but the inner | operator has precedence 51, which conflicts with the allowed range. Hence, such a grouping is naturally rejected by the parser, enforcing left associativity.
 
@@ -748,7 +749,11 @@ In Lean 4, a higher number indicates higher (stronger/tighter) precedence. There
     \label{fig:meta-api}
 \end{figure}
 
-After we have defined how to parse the \texttt{inst} category (and the associated syntax), the next step is to assign semantics to it. Lean~4 provides multiple ways to handle syntax transformations and elaboration; a comprehensive list can be found in Figure~\ref{fig:meta-api}. In this project, we make use of all these mechanisms, but we will not introduce them all in this section. Instead, we focus on illustrating how \texttt{macro\_rules} works through the following example.
+After we have defined how to parse the \texttt{inst} category (and the associated syntax), the next step is to assign semantics to it. Lean~4 provides multiple ways to handle syntax transformations and elaboration, summarised in Figure~\ref{fig:meta-api}. According to the Lean~4 metaprogramming documentation~\citep{lean4metaprog}, the pipeline follows the order \texttt{syntax} $\to$ \texttt{macro} $\to$ \texttt{elab}: after parsing, any applicable macros are applied iteratively, and finally a single elaborator converts the resulting syntax into a typed expression.
+
+The mechanisms fall into two broad groups. \emph{Macros} (\texttt{notation}, \texttt{macro}, \texttt{macro\_rules}) are \texttt{Syntax~→~MacroM~Syntax} functions: they transform one piece of syntax into another without any access to type information or the elaboration environment. \texttt{notation} and \texttt{macro} are high-level conveniences that automatically declare both a \texttt{syntax} rule and the corresponding macro; \texttt{macro\_rules} provides explicit pattern matching over syntax while handling boilerplate automatically. Macros are most suitable for ``creating syntax sugars, notations, and shortcuts''~\citep{lean4metaprog}; as soon as types or control flow are involved, a macro is no longer the right tool.
+
+\emph{Elaborators} (\texttt{elab}, \texttt{elab\_rules}) are the component ``in charge of turning the user facing \texttt{Syntax} into something with which the rest of the compiler can work''~\citep{lean4metaprog}. They run inside \texttt{TermElabM} or \texttt{CommandElabM}, giving them full access to the type environment, expected types, and metavariables. In this project, we make use of all these mechanisms, but we will not introduce them all in this section. Instead, we focus on illustrating how \texttt{macro\_rules} works through the following example.
 
 As mentioned earlier, a macro is essentially a conversion from one piece of syntax to another. In Lean~4, \texttt{antiquotations} (brackets prefixed with `) are used to capture and splice parts of the input syntax into the output syntax. These act like placeholders in a pattern-matching regular expression style template for syntax trees. Here is how we can implement the desired translation using \texttt{macro\_rules}:
 
