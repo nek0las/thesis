@@ -33,7 +33,7 @@ acyclic ghb as tso
 
 \section{Core Types for Memory Models in Lean 4}
 \label{sec:design:core-types}
-To parse the weak memory models, we need to define the data types we operate on firstly. We use~\citep{catOnlineDocHerd,catManualSyntax11} as our reference. The Cat syntax manual~\citep{catManualSyntax11} defines the syntax and semantics of the Cat language in a formal way, but it is not always up to date. For example, it does not define the \texttt{[]} unary operator, while the online documentation~\citep{catOnlineDocHerd} defines it and is continuously updated. Therefore, most of the time we use the online documentation as our primary reference.
+We use~\citep{catOnlineDocHerd,catManualSyntax11} as our reference. The Cat syntax manual~\citep{catManualSyntax11} defines the syntax and semantics of the Cat language in a formal way, but it is not always up to date. For example, it does not define the \texttt{[]} unary operator, while the online documentation~\citep{catOnlineDocHerd} defines it and is continuously updated. Therefore, most of the time we use the online documentation as our primary reference.
 
 \subsection{Event and Set}
 Events and sets of events are the most fundamental data types in the Cat language: Cat defines predicates and binary relations over them in \citet{catOnlineDocHerd}. One event represents an instruction, so it has an ID, a thread ID, an address, a value, etc. We can represent the thread ID and the ID using \texttt{Nat}, but the address and value are not fixed by Cat. Different architectures may have different address spaces; for example, some machines use 32-bit addresses, while others use 64-bit addresses or even wider representations. Similarly, values may range over signed integers or floating-point numbers. These details are intentionally left unspecified by Cat \citet{catOnlineDocHerd,catManualSyntax11}.
@@ -44,7 +44,9 @@ In cat, we use Set in Lean 4 to organize the events, and there are some primitiv
 
 \subsection{Tagged Events}
 
-There are many sets; they are defined by tags instead of being implicitly defined in the Cat language. For example, in LKMM, there are relations used to express accesses; they are normally defined in this way:
+In the herd7 toolchain, a memory model is split across two files. The \emph{Cat file} defines the consistency axioms over relations (as introduced in Section~\ref{Background:AWMM}). The \emph{Bell file} is an architecture-specific companion file that declares the instruction sets, enumerations, and tags for a particular architecture — it specifies which events are reads, writes, fences, or read-modify-writes, and what tags each instruction kind may carry. The Cat file then refers to the tag definitions from the Bell file to construct tagged sets of events.
+
+There are many sets; they are defined by tags instead of being implicitly defined in the Cat language. For example, in LKMM, there are relations used to express accesses; they are normally defined in the Bell file in this way:
 
 \begin{verbatim}
 enum Accesses = 'ONCE (*READ_ONCE,WRITE_ONCE*) ||
@@ -72,13 +74,11 @@ The Sigma type is a dependent type in which the first component is the type on w
 
 However, the Sigma type introduces another problem: \texttt{Event} cannot derive \texttt{DecidableEq}. \texttt{DecidableEq} is used frequently in practice to automatically determine whether two instances are equal. Normally this can be derived directly, but the problem with this event definition is the Sigma type: it introduces a type as an argument, so \texttt{Event} cannot derive \texttt{DecidableEq} automatically. This is because all the types in \texttt{Event} must also have \texttt{DecidableEq}, and there is no constraint that \texttt{tagType} has \texttt{DecidableEq}.
 
-To solve this, we use an axiom:
+To solve this, we move the uniqueness requirement into \texttt{CandidateExecution} as the field:
 \begin{verbatim}
-axiom event_id_unique :
-  ∀ e₁ e₂ : Event, e₁.id = e₂.id -> e₁ = e₂
+idUnique : ∀ e₁ e₂ : Event, (e₁ ∈ evts ∧ e₂ ∈ evts) → e₁.id ≠ e₂.id
 \end{verbatim}
-
-It states that if two events have the same \texttt{id}, then they are the same event. This is a little bit unsafe, because it is easy to define two different events that have different operations but the same \texttt{id}. However, this is one of our assumptions: we assume all events provided by litmus tests are distinguishable by their \texttt{id}s. With this axiom, we can define \texttt{DecidableEq} for \texttt{Event}. It is a trade-off between practical usability and soundness.
+This states that within a candidate execution, no two events in \texttt{evts} share the same \texttt{id}. The constraint is scoped to a specific execution, and any litmus test that constructs a \texttt{CandidateExecution} must discharge this proof obligation explicitly, making invalid constructions impossible.
 
 Because the macro system is defined as a translation from one syntax to another, each tag definition is compiled into a corresponding \texttt{def} in Lean 4. However, this design exposes a limitation: Lean 4 does not support global renaming of definitions. This becomes problematic because the translation is performed on each instruction independently.
 
@@ -177,7 +177,7 @@ def union (r1 r2 : Rel Event Event) : Rel Event Event :=
   fun x y => r1 x y \/ r2 x y
 
 def inter (r1 r2 : Rel Event Event) : Rel Event Event :=
-  fun x y => r1 x y /\ r2 x y
+  fun x y => r1 x y ∧ r2 x y
 
 instance : Union (Rel Event Event) := ⟨union⟩
 instance : Inter (Rel Event Event) := ⟨inter⟩
@@ -205,7 +205,7 @@ Next, consider total store order (\textsc{tso}; see Figure~\ref{fig:cat-tso}). C
 In Lean, we implement this idea either via a definition
 \begin{verbatim}
 def prod (s1 s2 : Set Event) : Rel Event Event :=
-  fun e1 e2 => e1 \in s1 /\ e2 \in s2
+  fun e1 e2 => e1 ∈ s1 ∧ e2 ∈ s2
 \end{verbatim}
 or directly via \texttt{Set.prod}; LeanCat uses \texttt{Set.prod} to reuse existing Mathlib lemmas \citep{mathlib2020}.
 
@@ -286,7 +286,7 @@ This mainly specifies when a Cat program should return an error state, rather th
 
 \textbf{Primitive Relations and Ignored Directives}
 
-The Cat standard library (\texttt{cos.cat}, \texttt{lock.cat}) defines several relations computationally, including the coherence order and the \texttt{fencerel} function, which computes the set of pairs $(a, b)$ such that a fence event $f$ exists with $(a, f) \in \mathit{po}$ and $(f, b) \in \mathit{po}$. Rather than implementing the full import pipeline, we treat \texttt{include} directives as no-ops and model the imported relations---as well as architecture-specific fence relations such as \texttt{mb} and \texttt{wmb}---directly as primitive fields of \texttt{CandidateExecution}. This is consistent with the view that the candidate execution is already the output of a lower-level analysis: herd7 computes these relations from the program state before invoking the Cat consistency check, so at the memory model level they can simply be treated as given inputs.
+The Cat standard library (\texttt{cos.cat}, \texttt{lock.cat}) defines several relations computationally, including the coherence order and the \texttt{fencerel} function, which computes the set of pairs $(a, b)$ such that a fence event $f$ exists with $(a, f) \in \mathit{po}$ and $(f, b) \in \mathit{po}$. Because we define relations such as \texttt{fr}, \texttt{mb}, and \texttt{wmb} directly as primitive fields of \texttt{CandidateExecution}, the standard library files that would otherwise compute them become redundant. In the memory models we target (SC, TSO, LKMM), the only \texttt{include} directives that appear are for the standard library files \texttt{cos.cat} and \texttt{lock.cat}. Since all relations introduced by these files are already covered by our structure definition, we can safely treat all \texttt{include} directives as no-ops. We do not ignore other parts of the Cat language; only these standard library imports are skipped.
 
 The Cat language also provides \texttt{flag} assertions, which are non-fatal warnings used to detect certain execution patterns (such as unmatched RCU lock/unlock pairs) without invalidating the execution. Since these assertions do not affect consistency, we discard them during elaboration. Concretely, the elaborator silently returns an empty command for both \texttt{include} and \texttt{flag} instructions.
 
@@ -294,7 +294,7 @@ The Cat language also provides \texttt{flag} assertions, which are non-fatal war
 
 In the Cat language, program order (\texttt{po}) is an abstract relation. We encode it concretely as $e_1.\mathit{id} < e_2.\mathit{id} \wedge e_1.\mathit{t\_id} = e_2.\mathit{t\_id}$, where $\mathit{id}$ is the unique event identifier and $\mathit{t\_id}$ is the thread identifier. This encoding assumes that event identifiers are assigned consistently with the program order within each thread, so that events appearing earlier in the program carry smaller IDs. It removes the need to maintain an explicit set of program-order edges, which simplifies the definition of \texttt{Events} and reduces the number of well-formedness conditions that litmus test authors must establish.
 
-This design choice interacts with the \texttt{event\_id\_unique} axiom: since two events with the same ID are definitionally equal, the ID comparison faithfully represents distinctness, and the ordering it induces within a thread is consistent with the intended program order. Litmus test authors must therefore assign event IDs carefully, but in practice this is easy to satisfy by numbering events sequentially within each thread.
+This design choice interacts with the \texttt{idUnique} field of \texttt{CandidateExecution}: since no two events in the same execution share an ID, the ID comparison faithfully represents distinctness, and the ordering it induces within a thread is consistent with the intended program order. Litmus test authors must therefore assign event IDs carefully, but in practice this is easy to satisfy by numbering events sequentially within each thread.
 
 \textbf{From-Read as a Derived Relation}
 
