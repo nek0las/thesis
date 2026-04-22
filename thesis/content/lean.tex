@@ -1,7 +1,7 @@
 \chapter{Background}
 \label{chapter:Background}
 
-In this chapter, we introduce weak memory, the Lean 4 programming language and its metaprogramming framework, and the mathematical background needed in later chapters. First, we introduce weak memory models through some basic examples and weak behaviors (Section \ref{Background:LKMM}).
+In this chapter, we introduce weak memory, the Lean~4 programming language and its metaprogramming framework, and the mathematical background needed in later chapters. First, we introduce weak memory models through some basic examples and weak behaviors (Section \ref{Background:LKMM}).
 
 \section{Mathematical Background}
 \label{sec:math-background}
@@ -13,13 +13,13 @@ We use the notation \(a \, R \, b\) to denote that \((a,b) \in R\), and \(a \not
 In this thesis, the elements \(a\) and \(b\) are both \emph{events}, and these binary relations compose the directed execution graph, as described in Section~\ref{Background:AWMM}. Two relations can be composed together to obtain a new directed graph. Relation composition plays an important role in the \texttt{cat} language.
 
 \paragraph{Relation Composition.}
-Let $R$ be a relation from a set $A$ to a set $B$, and let $S$ be a relation from $B$ to a set $C$. The composite of $R$ and $S$ is the relation consisting of ordered pairs $(a, c)$, where $a \in A, c \in C$, and for which there exists an element $b \in B$ such that $(a, b) \in R$ and $(b, c) \in S$ \citep[p.~607]{rosen2012discrete}. We denote the composite of $R$ and $S$ by $S ; R$ \citep[p.~607]{rosen2012discrete}.
+Let $R$ be a relation from a set $A$ to a set $B$, and let $S$ be a relation from $B$ to a set $C$. The composite of $R$ and $S$ is the relation consisting of ordered pairs $(a, c)$, where $a \in A, c \in C$, and for which there exists an element $b \in B$ such that $(a, b) \in R$ and $(b, c) \in S$ \citep[p.~607]{rosen2012discrete}. We denote the composite of $R$ and $S$ by $R ; S$ \citep[p.~607]{rosen2012discrete}.
 
 Computing the composite of two relations requires finding elements that are the second component of ordered pairs in the first relation and the first component of ordered pairs in the second relation. This property is widely used in many memory models. For example, there is a relation called \emph{fr} (from-read), which represents that a read instruction observes a value that is later overwritten by another write instruction; the write instructions to the same address are totally ordered by the coherence order.
 
 In \texttt{cat}, we define
 \[
-fr = co ; rf^{-1},
+fr = rf^{-1} ; co,
 \]
 where \(rf^{-1}\) denotes the inverse of the relation \(rf\), meaning that the order of each pair is reversed. Intuitively, this composition connects a read event to a write event that comes later in coherence order than the write from which the read obtained its value.
 
@@ -97,7 +97,7 @@ The \emph{external} relation, denoted by \texttt{ext}, consists of pairs of even
 \]
 Equivalently, $\texttt{ext} = (E \times E) \setminus \texttt{int}$. In memory models, these are used to derive specific sub-relations; for example, \texttt{rfi} (reads-from internal) is defined as $\mathit{rf} \cap \texttt{int}$, and \texttt{rfe} (reads-from external) is defined as $\mathit{rf} \cap \texttt{ext}$.
 
-Relation composition, defined in Section~\ref{sec:math-background}, is central to formalizing memory models in Cat. As noted there, the \emph{fr} (from-read) relation is a key example: $\mathit{fr} = \mathit{co} \mathbin{;} \mathit{rf}^{-1}$.
+Relation composition, defined in Section~\ref{sec:math-background}, is central to formalizing memory models in Cat. As noted there, the \emph{fr} (from-read) relation is a key example: $\mathit{fr} = \mathit{rf}^{-1} \mathbin{;} \mathit{co}$.
 
 \subsection{Comparing Memory Models}
 
@@ -346,7 +346,7 @@ exists (0:EAX=0 /\ 1:EAX=0)
 
 A litmus test specification typically consists of three main sections:
 
-\textbf{Initial state (line 3).} This section defines the initial values of registers and memory locations. In the example, both \texttt{x} and \texttt{y} are initialised to \texttt{0}. Initialization to zero may be omitted.
+\textbf{Initial state (line 3).} This section defines the initial values of registers and memory locations. In the example, both \texttt{x} and \texttt{y} are initialized to \texttt{0}. Initialization to zero may be omitted.
 
 \textbf{Code section (lines 5--7).} This section defines the code that is executed concurrently. In the example, thread \texttt{P0} writes \texttt{1} to \texttt{x} and then reads from \texttt{y} into \texttt{EAX}, while thread \texttt{P1} writes \texttt{1} to \texttt{y} and then reads from \texttt{x} into \texttt{EAX}.
 
@@ -360,7 +360,7 @@ The syntax and usage of litmus tests are not the main focus of this thesis. In \
 
 \subsubsection{Memory Model Semantics}
 
-Having shown how to use binary relations to draw a litmus test, we have not yet demonstrated how to define a memory model. The Inria team~\citep{10.1145/2627752} developed a specification language called Cat, which uses binary relations to define memory models. Many memory models, such as RISC-V, ARM, and X86-TSO~\citep{sewell2010x86tso}, are already defined in Cat; in this section we introduce sequential consistency and total store order as representative examples.
+Having shown how to use binary relations to draw a litmus test, we have not yet demonstrated how to define a memory model. The Inria team~\citep{10.1145/2627752} developed a specification language called Cat, which uses binary relations to define memory models. Many memory models, such as RISC-V, ARM, and x86-TSO~\citep{sewell2010x86tso}, are already defined in Cat; in this section we introduce sequential consistency and total store order as representative examples.
 
 \citet{lam1675439} introduced what is called Sequential consistency: \textit{the result of any execution is the same as if the operations of all the processors were executed in some sequential order, and the operations of each individual processor appear in this sequence in the order specified by its program. A multiprocessor satisfying this condition will be called sequentially consistent.}
 
@@ -433,7 +433,7 @@ acyclic po | com as sc
 \end{figure}
 
 Based on SC, we can build the TSO memory model. The TSO model can be described by a hardware model where each
-thread has a write buffer and it's used in X86. A write instruction first stores its value into the buffer instead of writing directly to memory. Because write instructions are
+thread has a write buffer and it is used in x86. A write instruction first stores its value into the buffer instead of writing directly to memory. Because write instructions are
 more expensive than reads, the processor can postpone the write and execute
 later read instructions first to improve performance. This write buffer architecture is commonly illustrated in the literature \citep{sewell2010x86tso}.
 
@@ -464,7 +464,7 @@ We define \textit{At} (atomic operations) as
 where \texttt{dom} denotes the domain of a relation and \texttt{codom} denotes
 the codomain (range) of a relation.
 
-Here, $F$ denotes the set of fence events — special synchronisation instructions that enforce ordering constraints between memory operations on the same thread. Using this set, we define the relation
+Here, $F$ denotes the set of fence events — special synchronization instructions that enforce ordering constraints between memory operations on the same thread. Using this set, we define the relation
 \[
 \mathit{implied} = \mathit{po}\mathbin{;}[\mathit{At} \cup F] \;\cup\; [\mathit{At} \cup F]\mathbin{;}\mathit{po},
 \]
@@ -515,7 +515,7 @@ indicates the set of annotatable events that carry the given tag
 Besides the READ\_ONCE and WRITE\_ONCE instructions, there are also synchronization primitives in the LKMM. 
 
 \textbf{Acquire and Release}: Full memory barriers disallow any instruction
-reordering across the barrier (e.g., mfence in X86), both before and after it. In contrast, an
+reordering across the barrier (e.g., mfence in x86), both before and after it. In contrast, an
 Acquire operation only prevents later instructions from being reordered before
 it, ensuring that all subsequent instructions execute after the Acquire. A
 Release operation only prevents earlier instructions from being reordered
@@ -656,47 +656,47 @@ The BPF model exhibits the same high-level structure as the LKMM: it enforces co
 
 
 
-\section{Lean 4 and Its Metaprogramming Framework}
-This section introduces the necessary background for readers unfamiliar with Lean 4; readers already familiar with it may skip ahead to Section~\ref{chapter:design}. We cover only the most important concepts used in this project and do not introduce complex topics such as monads. Before presenting the key features of Lean 4, we first explain why we chose it as our tool for this project.
+\section{Lean~4 and Its Metaprogramming Framework}
+This section introduces the necessary background for readers unfamiliar with Lean~4; readers already familiar with it may skip ahead to Section~\ref{chapter:design}. We cover only the most important concepts used in this project and do not introduce complex topics such as monads. Before presenting the key features of Lean~4, we first explain why we chose it as our tool for this project.
 
-\subsection{Lean 4}
+\subsection{Lean~4}
 
-Lean 4 is an interactive theorem prover (ITP). Traditionally, most proofs for memory models have been carried out on paper, for example in \citep{podkopaev2019bridging, 10.1145/2627752, batty2011mathematizing, doko2016program}. Although these works make important theoretical contributions, they are prone to subtle issues, such as undetected errors in existing models \citep{chakraborty2016fixing, chakraborty2017grounding} or the need for later repairs \citep{10.1145/3140587.3062352Reparing}. By using an ITP, we can dramatically increase the reliability of our proofs: they are mechanically checked by a computer, greatly reducing the chance of missed edge cases.
+Lean~4 is an interactive theorem prover (ITP). Traditionally, most proofs for memory models have been carried out on paper, for example in \citep{podkopaev2019bridging, 10.1145/2627752, batty2011mathematizing, doko2016program}. Although these works make important theoretical contributions, they are prone to subtle issues, such as undetected errors in existing models \citep{chakraborty2016fixing, chakraborty2017grounding} or the need for later repairs \citep{10.1145/3140587.3062352Reparing}. By using an ITP, we can dramatically increase the reliability of our proofs: they are mechanically checked by a computer, greatly reducing the chance of missed edge cases.
 
-Lean 4~\citep{deMoura2021lean4} is not only just an ITP, it is also a functional programming language like Haskell and OCaml, which means it is a general-purpose programming language that supports computation and IO. This gives us the ability to read and parse the Cat files directly from storage, instead of manually migrating the Cat files into Lean~4.
+Lean~4~\citep{deMoura2021lean4} is not only just an ITP, it is also a functional programming language like Haskell and OCaml, which means it is a general-purpose programming language that supports computation and IO. This gives us the ability to read and parse the Cat files directly from storage, instead of manually migrating the Cat files into Lean~4.
 
-For readers unfamiliar with interactive theorem provers, the following simple example illustrates how they work. We can experiment with more examples in the \href{https://adam.math.hhu.de/#/g/leanprover-community/nng4/}{Lean 4 Natural Number Game}. Suppose we want to prove that for all natural numbers \(n\), \(n + 0 = n\). While this equality is obvious at a glance, in a formal system we must justify it using previously proven theorems. In Lean 4, this is achieved using commands called \emph{tactics}. One particularly useful tactic is \texttt{rw} (rewrite). There exists a theorem \texttt{add\_zero} stating that \(\forall a, a + 0 = a\). If our goal is to prove \(n + 0 = n\), we can apply the tactic \texttt{rw [add\_zero]}. This replaces \(n + 0\) with \(n\), immediately closing the goal.
+For readers unfamiliar with interactive theorem provers, the following simple example illustrates how they work. We can experiment with more examples in the \href{https://adam.math.hhu.de/#/g/leanprover-community/nng4/}{Lean~4 Natural Number Game}. Suppose we want to prove that for all natural numbers \(n\), \(n + 0 = n\). While this equality is obvious at a glance, in a formal system we must justify it using previously proven theorems. In Lean~4, this is achieved using commands called \emph{tactics}. One particularly useful tactic is \texttt{rw} (rewrite). There exists a theorem \texttt{add\_zero} stating that \(\forall a, a + 0 = a\). If our goal is to prove \(n + 0 = n\), we can apply the tactic \texttt{rw [add\_zero]}. This replaces \(n + 0\) with \(n\), immediately closing the goal.
 
 
-More generally, the \texttt{rw} tactic allows us to replace any subexpression that matches the left-hand side of a known equality with the corresponding right-hand side. Multiple rewrites with \emph{different} theorems can be chained together. For example, to prove \((n + 0) \times 1 = n\), we first apply \texttt{rw [add\_zero]}, which rewrites \(n + 0\) to \(n\), reducing the goal to \(n \times 1 = n\). We then apply \texttt{rw [mul\_one]}, which uses the theorem \(\forall a,\, a \times 1 = a\) to rewrite \(n \times 1\) to \(n\), reducing the goal to the trivial equality \(n = n\), which is closed automatically by \texttt{rfl}. This example reflects a fundamental principle in Lean 4: even the simplest intuitive facts must be formally justified by applying previously established theorems. Tactics provide a systematic and interactive way to do so. While this particular example may appear trivial, we will explore more powerful tactics and theorems later.
+More generally, the \texttt{rw} tactic allows us to replace any subexpression that matches the left-hand side of a known equality with the corresponding right-hand side. Multiple rewrites with \emph{different} theorems can be chained together. For example, to prove \((n + 0) \times 1 = n\), we first apply \texttt{rw [add\_zero]}, which rewrites \(n + 0\) to \(n\), reducing the goal to \(n \times 1 = n\). We then apply \texttt{rw [mul\_one]}, which uses the theorem \(\forall a,\, a \times 1 = a\) to rewrite \(n \times 1\) to \(n\), reducing the goal to the trivial equality \(n = n\), which is closed automatically by \texttt{rfl}. This example reflects a fundamental principle in Lean~4: even the simplest intuitive facts must be formally justified by applying previously established theorems. Tactics provide a systematic and interactive way to do so. While this particular example may appear trivial, we will explore more powerful tactics and theorems later.
 
 \subsection{Automated Proof Search with Aesop}
 \label{subsec:aesop}
 
-To mitigate the practical overhead of manual proof construction, we incorporate the \texttt{aesop} (Automated Extensible Search for Omniscient Proofs) tactic ~\citep{ayers2023aesop} into the \texttt{LeanCat} framework. As discussed in Section 4.4, establishing acyclicity and monotonicity often requires significant "tedious" effort in chaining relational properties and constructing transitive paths. \texttt{aesop} is an extensible proof search tactic for Lean 4, broadly similar in function to Isabelle's \texttt{auto}, designed to bridge this gap by performing a rule-based, best-first search to close proof goals.
+To mitigate the practical overhead of manual proof construction, we incorporate the \texttt{aesop} (Automated Extensible Search for Omniscient Proofs) tactic ~\citep{ayers2023aesop} into the \texttt{LeanCat} framework. As discussed in Section 4.4, establishing acyclicity and monotonicity often requires significant "tedious" effort in chaining relational properties and constructing transitive paths. \texttt{aesop} is an extensible proof search tactic for Lean~4, broadly similar in function to Isabelle's \texttt{auto}, designed to bridge this gap by performing a rule-based, best-first search to close proof goals.
 
 The tactic operates by maintaining a search tree that alternates between goal nodes and rule application (\textit{rapp}) nodes. This tree is explored based on a collection of user-defined rules, which are categorized into distinct phases. In the context of \texttt{LeanCat}, we leverage several rule builders—such as \texttt{apply}, \texttt{forward}, and \texttt{cases}—to automate structural reasoning. For example, by registering the constructors of the \texttt{NonEmpty} predicate or the cases for \texttt{MyList} as rules, we can automate the "tricky" task of creating \texttt{TransGen} chains during cycle detection. 
 
-Crucially, \texttt{aesop} remains a "tactic proposer" that operates outside the trusted core. While it can be called as \texttt{aesop?} to generate a human-readable tactic script and avoid performance penalties, every proof it generates must ultimately be elaborated into a proof term accepted by the Lean 4 kernel. This ensures that while we automate the mechanical aspects of proof engineering, the logical integrity of the memory model verification remains strictly checked by the ITP.
+Crucially, \texttt{aesop} remains a "tactic proposer" that operates outside the trusted core. While it can be called as \texttt{aesop?} to generate a human-readable tactic script and avoid performance penalties, every proof it generates must ultimately be elaborated into a proof term accepted by the Lean~4 kernel. This ensures that while we automate the mechanical aspects of proof engineering, the logical integrity of the memory model verification remains strictly checked by the ITP.
 
-\subsection{Metaprogramming in Lean 4}
+\subsection{Metaprogramming in Lean~4}
 
-Another important reason for choosing Lean 4 is its extensibility. Lean 4 provides a metaprogramming framework that allows users to define domain-specific languages (DSLs) directly within the system. Informally, metaprogramming refers to writing programs that manipulate or generate other programs. In conventional programming, programs must follow a predefined syntax understood by the compiler or interpreter. The process of parsing this syntax and translating it into intermediate representations, such as abstract syntax trees (ASTs) or control-flow graphs (CFGs), belongs to the meta-level, whereas writing ordinary programs belongs to the object-level.
+Another important reason for choosing Lean~4 is its extensibility. Lean~4 provides a metaprogramming framework that allows users to define domain-specific languages (DSLs) directly within the system. Informally, metaprogramming refers to writing programs that manipulate or generate other programs. In conventional programming, programs must follow a predefined syntax understood by the compiler or interpreter. The process of parsing this syntax and translating it into intermediate representations, such as abstract syntax trees (ASTs) or control-flow graphs (CFGs), belongs to the meta-level, whereas writing ordinary programs belongs to the object-level.
 
-In most systems, meta-level functionality is implemented in a different language from the object-level language. However, Lean 4 integrates both levels within a single framework: most meta-level code is written in Lean itself. This design enables users to extend the language by defining new syntax constructs and providing corresponding elaboration procedures that translate them into core Lean expressions.
+In most systems, meta-level functionality is implemented in a different language from the object-level language. However, Lean~4 integrates both levels within a single framework: most meta-level code is written in Lean itself. This design enables users to extend the language by defining new syntax constructs and providing corresponding elaboration procedures that translate them into core Lean expressions.
 
 This capability is often described as reflection, where meta-level functionality is made directly accessible at the object-level. As a result, users can introduce custom notation or commands and use them immediately within the same development environment. For example, new commands can be defined concisely using elab declarations.
 
-In practice, Lean 4 metaprogramming frequently involves working directly with its internal representations of programs. In particular, the concrete syntax tree (CST), represented by the Syntax type, captures the parsed structure of code, while the abstract syntax tree (AST), represented by the Expr type, corresponds to its elaborated form. These representations are especially important when implementing tactics and other advanced features. Consequently, although Lean 4 provides powerful metaprogramming capabilities, mastering them requires a solid understanding of these underlying structures.
+In practice, Lean~4 metaprogramming frequently involves working directly with its internal representations of programs. In particular, the concrete syntax tree (CST), represented by the Syntax type, captures the parsed structure of code, while the abstract syntax tree (AST), represented by the Expr type, corresponds to its elaborated form. These representations are especially important when implementing tactics and other advanced features. Consequently, although Lean~4 provides powerful metaprogramming capabilities, mastering them requires a solid understanding of these underlying structures.
 
 Lean~4 metaprogramming provides two ways to operate on the grammar: macros and elaborators. A macro is the simpler option — it is a function (with side effects) that converts one syntax term into another, similar to macros in Rust. An elaborator is more powerful: it operates at the CST level, converts terms into AST form, and can also manipulate the environment (namespaces, scopes, etc.). In this project we use macros as the primary mechanism because they offer a direct and straightforward mapping; elaborators are used for the more complex cases that involve environment manipulation.
 
-To illustrate, suppose we want to translate the notation let r = co | po into the Lean 4 definition def r := co.union po, where co and po are binary relations. We can start by defining a syntax rule for the Lean 4 parser like this: 
+To illustrate, suppose we want to translate the notation let r = co | po into the Lean~4 definition def r := co.union po, where co and po are binary relations. We can start by defining a syntax rule for the Lean~4 parser like this: 
 
 syntax "let" cat\_ident "=" expr : inst
 
 
-This looks similar to a regular expression pattern. The \verb|syntax| keyword declares a new piece of concrete syntax, and \verb|: inst| specifies that this syntax belongs to the syntax category \verb|inst| (a node kind in the concrete syntax tree used to organize and group related syntax constructs), we can use \texttt{syntax\_cat} to define a syntax category in Lean 4. Here, \verb|cat_ident| stands for the identifier (e.g., \verb|r|), and \verb|expr| represents the right-hand side. In our case, the binary operation co | po. Next, we need to define the \verb||| operator itself for expressions with the following rule: 
+This looks similar to a regular expression pattern. The \verb|syntax| keyword declares a new piece of concrete syntax, and \verb|: inst| specifies that this syntax belongs to the syntax category \verb|inst| (a node kind in the concrete syntax tree used to organize and group related syntax constructs), we can use \texttt{syntax\_cat} to define a syntax category in Lean~4. Here, \verb|cat_ident| stands for the identifier (e.g., \verb|r|), and \verb|expr| represents the right-hand side. In our case, the binary operation co | po. Next, we need to define the \verb||| operator itself for expressions with the following rule: 
 
 syntax:51 expr:51 "|" expr:50 : expr
 
@@ -705,16 +705,16 @@ The left operand is parsed with precedence 51 (same as the operator).
 The right operand is parsed with precedence 50 (strictly lower).
 This asymmetry encodes right-associativity and follows the Pratt parsing technique~\citep{pratt1973top}.
 
-In Lean 4, a higher number indicates higher (stronger/tighter) precedence. Therefore, for an expression such as r1 | r2 | r3, the parser groups it as ((r1 | r2) | r3), that is left-associative. This happens because the right operand is restricted to precedence $> 50$. If we tried to group it the other way, as (r1 | (r2 | r3)) without parentheses, and the subexpression (r2 | r3) would need to be parsed in a context expecting precedence $> 50$, but the inner | operator has precedence 51, which conflicts with the allowed range. Hence, such a grouping is naturally rejected by the parser, enforcing left associativity.
+In Lean~4, a higher number indicates higher (stronger/tighter) precedence. Therefore, for an expression such as r1 | r2 | r3, the parser groups it as ((r1 | r2) | r3), that is left-associative. This happens because the right operand is restricted to precedence $> 50$. If we tried to group it the other way, as (r1 | (r2 | r3)) without parentheses, and the subexpression (r2 | r3) would need to be parsed in a context expecting precedence $> 50$, but the inner | operator has precedence 51, which conflicts with the allowed range. Hence, such a grouping is naturally rejected by the parser, enforcing left associativity.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\textwidth]{thesis/figures/metaproramming-cheatsheet.png}
-    \caption{Meta-programming APIs in Lean 4.}
+    \caption{Meta-programming APIs in Lean~4.}
     \label{fig:meta-api}
 \end{figure}
 
-After we have defined how to parse the \texttt{inst} category (and the associated syntax), the next step is to assign semantics to it. Lean~4 provides multiple ways to handle syntax transformations and elaboration, summarised in Figure~\ref{fig:meta-api}. According to the Lean~4 metaprogramming documentation~\citep{lean4metaprog}, the pipeline follows the order \texttt{syntax} $\to$ \texttt{macro} $\to$ \texttt{elab}: after parsing, any applicable macros are applied iteratively, and finally a single elaborator converts the resulting syntax into a typed expression.
+After we have defined how to parse the \texttt{inst} category (and the associated syntax), the next step is to assign semantics to it. Lean~4 provides multiple ways to handle syntax transformations and elaboration, summarized in Figure~\ref{fig:meta-api}. According to the Lean~4 metaprogramming documentation~\citep{lean4metaprog}, the pipeline follows the order \texttt{syntax} $\to$ \texttt{macro} $\to$ \texttt{elab}: after parsing, any applicable macros are applied iteratively, and finally a single elaborator converts the resulting syntax into a typed expression.
 
 The mechanisms fall into two broad groups. \emph{Macros} (\texttt{notation}, \texttt{macro}, \texttt{macro\_rules}) are \texttt{Syntax~→~MacroM~Syntax} functions: they transform one piece of syntax into another. \texttt{notation} and \texttt{macro} are high-level conveniences that automatically declare both a \texttt{syntax} rule and the corresponding macro; \texttt{macro\_rules} provides explicit pattern matching over syntax while handling boilerplate automatically. Macros are most suitable for defining syntax sugars, notations, and shortcuts~\citep{lean4metaprog}; as soon as types or control flow are involved, a macro is no longer the right tool.
 
@@ -736,7 +736,7 @@ macro_rules
   | `($e₁:expr "|" $e₂:expr) => `(Set.union $e₁ $e₂)
 \end{verbatim}
 
-This is a simple illustration of how the meta-programming framework works. In our project, the implementation is more complex and it is not necessary to introduce all of them. After we defining the Macro rules, Lean 4 checks that the final elaborated terms are type-safe using its small trusted kernel. Macros and elaborators operate outside the kernel and can define arbitrary syntax or transformations, but their output must ultimately be accepted by the kernel~\citep{deMoura2021lean4}. This means even if we define unsafe or incorrect syntax transformations, they cannot break soundness because the kernel will reject any ill-typed terms.
+This is a simple illustration of how the meta-programming framework works. In our project, the implementation is more complex and it is not necessary to introduce all of them. After we defining the Macro rules, Lean~4 checks that the final elaborated terms are type-safe using its small trusted kernel. Macros and elaborators operate outside the kernel and can define arbitrary syntax or transformations, but their output must ultimately be accepted by the kernel~\citep{deMoura2021lean4}. This means even if we define unsafe or incorrect syntax transformations, they cannot break soundness because the kernel will reject any ill-typed terms.
 
 
 

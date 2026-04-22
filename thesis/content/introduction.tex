@@ -7,13 +7,13 @@ Writing a proof for each architecture and each memory model on paper is time-con
 
 The ARM team mechanized the ARMv8 memory model in Rocq \citep{10.1145/3458926ArmedCat}, but this work targets only ARM and does not provide a general framework. Similarly, in his PhD thesis, Sprokholt develops an Agda framework for verifying the correctness of transformations between architectures without relying on Cat files \citep{DennisPhdThesis}. Neither approach, therefore, provides a general proof framework that directly reuses existing Cat specifications.
 
-In this project, we propose a domain-specific proof framework, LeanCat\footnote{Available at \url{https://github.com/nek0las/lean-cats}.}, to mechanize weak memory models in Lean 4. LeanCat relies on existing Cat files: it parses Cat specifications and introduces their semantics into Lean. It also provides necessary primitives and abstractions to help users prove interesting properties, such as whether one memory model is weaker than another. LeanCat greatly reduces the mechanization effort and the amount of boilerplate code required for weak memory transformation proofs.
+In this project, we propose a domain-specific proof framework, LeanCat\footnote{Available at \url{https://github.com/nek0las/lean-cats}.}, to mechanize weak memory models in Lean~4. LeanCat relies on existing Cat files: it parses Cat specifications and introduces their semantics into Lean. It also provides necessary primitives and abstractions to help users prove interesting properties, such as whether one memory model is weaker than another. LeanCat greatly reduces the mechanization effort and the amount of boilerplate code required for weak memory transformation proofs.
 
 \section{Contributions}
 
-We design and implement LeanCat, a domain-specific proof framework that mechanizes weak memory models in Lean 4. LeanCat parses existing Cat specifications directly and introduces their semantics into Lean 4 using its metaprogramming framework, so that users do not need to translate or rewrite memory model definitions manually. We implement a core subset of the Cat language targeting the Linux Kernel Memory Model (LKMM)~\citep{alglave2018frightening}, including support for tagged events, relation operators, and the acyclicity, irreflexivity, and emptiness judgments.
+We design and implement LeanCat, a domain-specific proof framework that mechanizes weak memory models in Lean~4. LeanCat parses existing Cat specifications directly and introduces their semantics into Lean~4 using its metaprogramming framework, so that users do not need to translate or rewrite memory model definitions manually. We implement a core subset of the Cat language targeting the Linux Kernel Memory Model (LKMM)~\citep{alglave2018frightening}, including support for tagged events, relation operators, and the acyclicity, irreflexivity, and emptiness judgments.
 
-We define the core types and well-formedness conditions needed to represent program executions in Lean 4, and we develop a library of theorems about binary relations and acyclicity that bridge the gap between Lean 4's existing Mathlib library and the specific needs of weak memory model reasoning. In particular, we prove an acyclicity monotonicity lemma that serves as the central proof technique for comparing memory models.
+We define the core types and well-formedness conditions needed to represent program executions in Lean~4, and we develop a library of theorems about binary relations and acyclicity that bridge the gap between Lean~4's existing Mathlib library and the specific needs of weak memory model reasoning. In particular, we prove an acyclicity monotonicity lemma that serves as the central proof technique for comparing memory models.
 
 We demonstrate LeanCat through two case studies. First, we check concrete litmus test 
 executions (see Section~\ref{sec:litmus-tests}) against memory models, including 
@@ -25,7 +25,7 @@ stronger than MIPS, reducing the comparison to a monotonicity argument over
 acyclicity constraints. We also provide a counterexample execution that TSO permits 
 but SC forbids, completing the strict separation.
 
-We integrate execution graph visualization into the Lean 4 development environment using ProofWidgets, allowing users to inspect program executions graphically during proof development.
+We integrate execution graph visualization into the Lean~4 development environment using ProofWidgets, allowing users to inspect program executions graphically during proof development.
 
 \section{Structure of this Thesis}
 

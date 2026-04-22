@@ -1,18 +1,18 @@
 \chapter{Results}
 \label{chapter:results}
 
-In this chapter, we present the results of the \textsc{LeanCat} framework. We begin with an interactive visualization of candidate executions using ProofWidgets (Section~\ref{sec:visualization}), which provides an intuitive way to inspect execution graphs and identify cycles directly inside Lean~4. We then describe the library theorems about binary relations and acyclicity that form the proof infrastructure (Section~\ref{sec:library-theorems}). Finally, we present a series of case studies (Section~\ref{subsection: Subsection of Results}): we use litmus tests to establish that specific executions are forbidden under particular models, and we prove model strength comparisons.
+In this chapter, we present the results of the \textsc{LeanCat} framework. We begin with an interactive visualization of candidate executions using ProofWidgets (Section~\ref{sec:visualization}), which provides an intuitive way to inspect execution graphs and identify cycles directly inside Lean~4. We then describe the library theorems about binary relations and acyclicity that form the proof infrastructure (Section~\ref{sec:library-theorems}). Finally, we present a series of case studies (Section~\ref{sec:case-studies}): we use litmus tests to establish that specific executions are forbidden under particular models, and we prove model strength comparisons.
 
 \section{Visualization}
 \label{sec:visualization}
 
-In Lean 4, we use the \emph{InfoView} panel on the right-hand side of Visual Studio Code. We typically rely on this panel (via the Lean VSCode extension) to inspect the current goals and track the progress of a proof.
+In Lean~4, we use the \emph{InfoView} panel on the right-hand side of Visual Studio Code. We typically rely on this panel (via the Lean VSCode extension) to inspect the current goals and track the progress of a proof.
 
-In our development, we use type classes together with \texttt{Set} and \texttt{RelSet} to define candidate executions. However, this representation can be difficult to reason about from a human perspective. Essentially, graphs in Lean 4 are encoded in a way that is convenient for machine processing, but not for human intuition. It would be much easier to understand the structure—especially to identify cycles—if we could directly visualize the graph.
+In our development, we use type classes together with \texttt{Set} and \texttt{RelSet} to define candidate executions. However, this representation can be difficult to reason about from a human perspective. Essentially, graphs in Lean~4 are encoded in a way that is convenient for machine processing, but not for human intuition. It would be much easier to understand the structure—especially to identify cycles—if we could directly visualize the graph.
 
 To achieve this visualization, we use the tool ProofWidgets~\citep{nawrocki2023proofwidgets}\footnote{\url{https://github.com/leanprover-community/ProofWidgets4}}. Broadly speaking, it provides APIs that allow us to visualize data and proofs interactively. Let us look at an example of how it works in LeanCat.
 
-The following program represents the X86 \emph{Store Buffering (SB)} litmus test (from Figure~\ref{fig:litmus-test}):
+The following program represents the x86 \emph{Store Buffering (SB)} litmus test (from Figure~\ref{fig:litmus-test}):
 
 \begin{verbatim}
 /-! ### X86 SB (Store Buffering) Litmus Test -/
@@ -53,7 +53,7 @@ This produces a clear graphical representation of the execution. From this graph
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{thesis/figures/InfoView.png}
-  \caption{The InfoView panel in Visual Studio Code showing execution graph in Lean 4.}
+  \caption{The InfoView panel in Visual Studio Code showing execution graph in Lean~4.}
   \label{fig:infoview}
 \end{figure}
 
@@ -63,7 +63,7 @@ This produces a clear graphical representation of the execution. From this graph
 To support the case studies, we proved a collection of library theorems about binary relations,
 acyclicity, and the primitive relations of candidate executions. These theorems bridge the gap
 between Lean~4's existing \texttt{Mathlib} library and the specific needs of weak memory
-model reasoning. We highlight the two most important results in detail and briefly summarise
+model reasoning. We highlight the two most important results in detail and briefly summarize
 the remaining supporting lemmas.
 
 \paragraph{Acyclicity Monotonicity.}
@@ -125,7 +125,7 @@ we demonstrate how they are applied in practice.
  
 
 \section{Case Studies}
-\label{subsection: Subsection of Results}
+\label{sec:case-studies}
 \subsection{Litmus Test Executions}
 \label{sec:snippets}
 
@@ -409,13 +409,13 @@ that is, $M_2$ permits at least as many behaviors as $M_1$. Formally, we require
   \{X \mid X \in S_c \text{ and } \mathrm{allowed}_{\mathrm{weak}}(X)\}.
 \end{equation}
 
-\subsubsection{Comparing SC, MIPS, and X86-TSO}
+\subsubsection{Comparing SC, MIPS, and x86-TSO}
 
 We compare three memory models: Sequential Consistency, Total Store Order (x86-TSO), 
 and MIPS. Although these models are relatively simple, x86-TSO and MIPS are 
 widely used in practice.
 
-\paragraph{X86-TSO Semantics.}
+\paragraph{x86-TSO Semantics.}
 We defined TSO in Figure~\ref{fig:cat-tso}, but that definition is incomplete. Two 
 additional properties are required: \emph{atomicity} and \emph{sequential consistency 
 per location}. The complete x86-TSO definition is therefore:
@@ -594,6 +594,6 @@ The remaining two cases --- $\mathit{addr};[\mathit{Plain}];\mathit{wmb}$ and th
 
 With the emergence of high-capability models such as Opus and Codex, AI is capable of addressing the tedious overhead of formalization, though it can also introduce unvalidated heuristic errors. An interactive proof assistant is fundamentally distinct because it maintains strict foundational verification; it can provide precise feedback to the LLM when it detects errors, enabling an iterative cycle of refinement. Consequently, the precise formulation of theorem statements and the demarcation between AI-generated code and the trusted parts of the development become critical considerations.
 
-In this framework, our contribution is the provision of a trusted infrastructure that translates the Cat language into Lean 4 directly, ensuring reusability across many memory models. Traditionally, formalizers must write corresponding proofs for each model manually, incurring significant overhead in redundant boilerplate and common theorems. While one could task an LLM with reasoning about a Cat file directly without such a framework, we must recognize that its heuristic nature can mislead humans by introducing incorrect assumptions for the models. This is why it is essential to maintain a sharp separation between the trusted core and the LLM-generated code.
+In this framework, our contribution is the provision of a trusted infrastructure that translates the Cat language into Lean~4 directly, ensuring reusability across many memory models. Traditionally, formalizers must write corresponding proofs for each model manually, incurring significant overhead in redundant boilerplate and common theorems. While one could task an LLM with reasoning about a Cat file directly without such a framework, we must recognize that its heuristic nature can mislead humans by introducing incorrect assumptions for the models. This is why it is essential to maintain a sharp separation between the trusted core and the LLM-generated code.
 
 In our project, we relegate these tedious proofs to automation. For any given litmus test, a cycle is often easily identified by inspection, but the formal mechanization is notably labor-intensive. It requires the manual construction of transitive closure (\texttt{TransGen}) chains and the composition of relations to demonstrate that they indeed form a cycle.

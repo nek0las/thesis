@@ -1,4 +1,4 @@
-\chapter{Implementation in Lean 4}
+\chapter{Implementation in Lean~4}
 \label{chapter:design}
 
 When we work with pen and paper, we usually do not focus on the subtle parts of a proof; instead, we prioritize the interesting aspects. In contrast, mechanization requires us to define every detail of the specification. These challenges are independent of the particular proof assistant we choose, so we propose a general design whose ideas can be easily implemented in other languages. In this section, we identify and clarify the issues involved in mechanizing weak memory models and show how we address them using MathLib and Meta-Programming framework \citep{deMoura2021lean4,10.1145/3110278Lean4Meta,mathlib2020}.
@@ -31,7 +31,7 @@ acyclic ghb as tso
   \label{fig:cat-tso}
 \end{figure}
 
-\section{Core Types for Memory Models in Lean 4}
+\section{Core Types for Memory Models in Lean~4}
 \label{sec:design:core-types}
 We use~\citep{catOnlineDocHerd,catManualSyntax11} as our reference. The Cat syntax manual~\citep{catManualSyntax11} defines the syntax and semantics of the Cat language in a formal way, but it is not always up to date. For example, it does not define the \texttt{[]} unary operator, while the online documentation~\citep{catOnlineDocHerd} defines it and is continuously updated. Therefore, most of the time we use the online documentation as our primary reference.
 
@@ -40,12 +40,12 @@ Events and sets of events are the most fundamental data types in the Cat languag
 
 However, addresses and values are irrelevant to the problem we want to solve. LeanCat works at a high level of abstraction: we do not need to generate a DSL or assembly code to simulate litmus tests; instead, we only care about the execution graph and the relations between instructions in the program. Therefore, in our design we use \texttt{Nat} to represent both addresses and values.
 
-In cat, we use Set in Lean 4 to organize the events, and there are some primitive set of events like W (All the write events), R (All the read events), F (All the fence events), etc. These events are gathered from the herd7 tools for each litmus tests, and they call them anarchical semantics, we can simply treat them as the input of the model. Besides the primitive events, there are some sets are composed by these primitive sets, for example, the M (Set of modification events) is the union of the W and R. Besides that, there are some user-defined sets, which are an important part of the LKMM model; these sets are defined by the tag carried by each event.
+In cat, we use Set in Lean~4 to organize the events, and there are some primitive set of events like W (All the write events), R (All the read events), F (All the fence events), etc. These events are gathered from herdtools7 for each litmus test, and they call them anarchical semantics, we can simply treat them as the input of the model. Besides the primitive events, there are some sets are composed by these primitive sets, for example, the M (Set of modification events) is the union of the W and R. Besides that, there are some user-defined sets, which are an important part of the LKMM model; these sets are defined by the tag carried by each event.
 
 \subsection{Tagged Events}
 \label{subsec:tagged-events}
 
-In the herd7 toolchain, a memory model is split across two files. The \emph{Cat file} 
+In the herdtools7 toolchain, a memory model is split across two files. The \emph{Cat file} 
 defines the consistency axioms over relations (as introduced in 
 Section~\ref{Background:AWMM}). The \emph{Bell file} is an architecture-specific 
 companion file that declares extra definitions (e.g., tags) for a particular 
@@ -83,9 +83,9 @@ However, the Sigma type introduces another problem: \texttt{Event} cannot derive
 
 To solve this, we use the event \texttt{id} as a proxy for equality: two events are considered equal if and only if they share the same \texttt{id}. The uniqueness of IDs within an execution is enforced as a field of \texttt{CandidateExecution}, introduced in Section~\ref{sec:candidate-execution}.
 
-Because the macro system is defined as a translation from one syntax to another, each tag definition is compiled into a corresponding \texttt{def} in Lean 4. However, this design exposes a limitation: Lean 4 does not support global renaming of definitions. This becomes problematic because the translation is performed on each instruction independently.
+Because the macro system is defined as a translation from one syntax to another, each tag definition is compiled into a corresponding \texttt{def} in Lean~4. However, this design exposes a limitation: Lean~4 does not support global renaming of definitions. This becomes problematic because the translation is performed on each instruction independently.
 
-In particular, when multiple instructions share the same tag set but bear with different events, such as \texttt{F[Accesses]}, \texttt{W[Accesses]}, and \texttt{RMW[Accesses]}, we would ideally refine or rename \texttt{Accesses} per instruction to reflect this. Since Lean 4 does not permit such global renaming, this approach is not feasible.
+In particular, when multiple instructions share the same tag set but bear with different events, such as \texttt{F[Accesses]}, \texttt{W[Accesses]}, and \texttt{RMW[Accesses]}, we would ideally refine or rename \texttt{Accesses} per instruction to reflect this. Since Lean~4 does not permit such global renaming, this approach is not feasible.
 
 To address this issue, we redesign the grammar. Instead of assigning tags to a single instruction using the form \{\textit{event}\}[\textit{tag}], we generalize it to \{\textit{events}\}[\textit{tags}], where \textit{events} denotes a set of instructions. This allows us to attach a shared tag constraint to multiple instructions simultaneously, avoiding the need for renaming. We don't use elaborator states because our macro elaborates instructions one at a time from an array, since there is no reliable global context in which to maintain and apply stateful renaming across instructions.
 
@@ -142,7 +142,7 @@ The field \texttt{fr := rf.inv.comp co} provides a default value derived from \t
 We establish a formal abstraction at this boundary: while a candidate execution is typically generated from a litmus test via a parser or compiler, the correctness of that translation is not what we focus on at the memory level. In this project, we assume the correctness of the generation process and treat the candidate execution itself as the input. It is important to note that this is a significant assumption in practice; instructions with similar behaviors may not produce identical events and relations. For example, a Read instruction might be represented as a simple $R$ in a standard \texttt{.cat} file, whereas in LKMM it is treated as \texttt{READ\_ONCE}. These differing semantics generate different candidate executions; however, by abstracting these details and focusing solely on the candidate execution as the input, we significantly reduce the overall verification effort.
 
 \subsection{Well-Formedness Conditions}
-Well-formedness conditions are the important properties that give each set and relation a meaning. Only when the relations satisfy these conditions do we say they are well-formed; otherwise they are meaningless. Most of the well-formedness conditions are adapted from the herdtools7 Coq development \citep{10.1145/2627752, 10.1145/3458926ArmedCat}.
+Well-formedness conditions are the important properties that give each set and relation a meaning. Only when the relations satisfy these conditions do we say they are well-formed; otherwise they are meaningless. Most of the well-formedness conditions are adapted from the herdtools7 Rocq development \citep{10.1145/2627752, 10.1145/3458926ArmedCat}.
 
 
 
@@ -218,7 +218,7 @@ def prod {$\alpha$ $\beta$ : Type} (s1 : Set $\alpha$) (s2 : Set $\beta$) : Rel 
 or directly via \texttt{Set.prod}; LeanCat uses \texttt{Set.prod} to reuse existing Mathlib lemmas \citep{mathlib2020}.
 
 
-\section{Connecting Cat Specifications to Lean 4}
+\section{Connecting Cat Specifications to Lean~4}
 Now that we know how to represent the types and operators of the Cat language in Lean~4, we need a way to turn this representation into a convenient DSL inside Lean. In principle, we could use the data structures defined above to encode each memory model manually and then prove properties about it. However, our goal is to reuse existing Cat specifications (e.g., Figures~\ref{fig:cat-sc} and~\ref{fig:cat-tso}), rather than rewriting them by hand \citep{catOnlineDocHerd,catManualSyntax11}.
 
 To parse Cat files, there are several possible implementation strategies. For example, we could use an external parser (in OCaml, Rust, or C/C++) to translate Cat into an intermediate representation (such as an AST) and then generate Lean code. Instead, we rely on Lean~4's metaprogramming framework and implement the parsing pipeline inside Lean itself, which removes one translation layer and lets the kernel type-check the elaborated result \citep{10.1145/3110278Lean4Meta,deMoura2021lean4}.
@@ -267,15 +267,15 @@ let rcu-rscs = let rec
         (unmatched-po ; unmatched-po))
     in matched
 \end{verbatim}
-This recursive function computes the RCU lock pairs. An approach is to encode the recursive function directly in Lean 4. However, Lean requires recursive definitions to be provably terminating. Structural recursion is automatically accepted, but for more general recursion, we must provide a termination proof (e.g., via a well-founded measure). In general, termination checking cannot be fully automated because determining whether arbitrary programs terminate is undecidable.
+This recursive function computes the RCU lock pairs. An approach is to encode the recursive function directly in Lean~4. However, Lean requires recursive definitions to be provably terminating. Structural recursion is automatically accepted, but for more general recursion, we must provide a termination proof (e.g., via a well-founded measure). In general, termination checking cannot be fully automated because determining whether arbitrary programs terminate is undecidable.
 
-Another approach is to encode the recursion using a least fixed-point formulation. Since the data types in Cat are represented using sets and relations, the semantics can be translated into SMT formulas over relations and sets. In principle, the resulting constraints could be solved by an SMT solver. However, the SMT integrations available in Lean 4 are still relatively immature, making this approach unreliable in practice. Although the problem could also be formalized and proven directly in Lean, doing so would introduce significant additional complexity. Due to time constraints, we leave this aspect for future work.
+Another approach is to encode the recursion using a least fixed-point formulation. Since the data types in Cat are represented using sets and relations, the semantics can be translated into SMT formulas over relations and sets. In principle, the resulting constraints could be solved by an SMT solver. However, the SMT integrations available in Lean~4 are still relatively immature, making this approach unreliable in practice. Although the problem could also be formalized and proven directly in Lean, doing so would introduce significant additional complexity. Due to time constraints, we leave this aspect for future work.
 
 \subsection{Design Choices}
 The design involves several trade-offs arising from the limitations of Lean~4 and from aspects of the Cat language that are left implicit or undefined in the specification. The following subsections describe the key decisions made during implementation.
 
 \textbf{Implicit Definitions}
-Herd7 is a project under active development, so its documentation is sometimes outdated; it is necessary to consult the practical implementation directly. The tag names in Cat are converted into capitalized identifiers in the generated Lean code.
+herdtools7 is a project under active development, so its documentation is sometimes outdated; it is necessary to consult the practical implementation directly. The tag names in Cat are converted into capitalized identifiers in the generated Lean code.
 
 Besides the documentation, some aspects of the Cat language are implicit. For example, the manual presents the ``semantics of instructions'' as follows~\citep{catManualSyntax11}:
 \begin{quote}\small
