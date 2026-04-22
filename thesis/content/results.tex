@@ -1,6 +1,8 @@
 \chapter{Results}
 \label{chapter:results}
 
+This chapter presents the results of the \textsc{LeanCat} framework. We organise the results into three parts. First, we demonstrate the interactive visualization of candidate executions using ProofWidgets, which provides an intuitive way to inspect execution graphs and identify cycles. Second, we describe the library theorems about binary relations, acyclicity, and primitive relations that form the proof infrastructure of the framework. Third, we present a series of case studies showing how the framework is used in practice: we use litmus tests to establish that specific executions are forbidden under particular models, and we prove model strength comparisons --- that SC is stronger than TSO and TSO is stronger than MIPS.
+
 \section{Visualization}
 \label{sec:visualization}
 
@@ -126,7 +128,7 @@ we demonstrate how they are applied in practice.
 \subsection{Litmus Test Executions}
 \label{sec:snippets}
 
-We proved that SC is stronger than TSO and TSO is stronger than MIPS. We can use litmus tests to demonstrate this. Litmus tests are small concurrent programs with specific initial conditions and a query about whether a particular outcome is observable. They serve as a convenient way to distinguish memory models: if one model allows an outcome that another forbids, the models are provably different in strength.
+We will prove that SC is stronger than TSO and TSO is stronger than MIPS. We can use litmus tests to demonstrate this. Litmus tests are small concurrent programs with specific initial conditions and a query about whether a particular outcome is observable. They serve as a convenient way to distinguish memory models: if one model allows an outcome that another forbids, the models are provably different in strength.
 
 \subsubsection{Store Buffering}
 
@@ -465,7 +467,7 @@ let ghb = ppo | rfe | fr | co
 acyclic ghb as pso
 \end{lstlisting}
 
-In LeanCat, we use the \texttt{defcat} tactic to load Cat files into Lean~4. This produces 
+In LeanCat, we use the \texttt{defcat} command to load Cat files into Lean~4. This produces 
 a predicate for each model that takes a candidate execution as input, reflecting the 
 general proof goal: for all candidate executions, one architecture is weaker than another.
 
@@ -559,7 +561,7 @@ empty   rmw & (fre;coe)    as Atomic
 acyclic po_amo_fetch | com as fetch_fence
 \end{verbatim}
   \end{minipage}
-  \caption{Cat definition of the BPF memory model.}
+  \caption{Cat definition of the BPF memory model, taken from the herd7 memory model repository (\href{https://github.com/herd/herdtools7/blob/master/herd/libdir/bpf.cat}{\texttt{herd/libdir/bpf.cat}}).}
   \label{fig:bpf-definition}
 \end{figure}
 

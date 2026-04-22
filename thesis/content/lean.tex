@@ -328,7 +328,7 @@ We can redraw Figure~\ref{fig:litmus-execution-primitive-relation} with derived 
 \subsubsection{Litmus Tests}
 \label{sec:litmus-tests}
 
-The Store Buffering example in Figure~\ref{fig:litmus-test} is often used together with a small concurrent program to demonstrate the possible behaviors of a memory model. And in these concurrent programs, the results are always non-deterministic. Such small programs are called litmus tests. We can observe these unexpected behaviors by running a litmus test on real hardware (e.g., RISC-V, Arm, x86, etc.).
+The Store Buffering example in Figure~\ref{fig:litmus-test} is often used together with a small concurrent program to demonstrate the possible behaviors of a memory model. And in these concurrent programs, the results are always non-deterministic. Such small programs are called litmus tests. We can observe these unexpected behaviors by running a litmus test on real hardware (e.g., RISC-V, ARM, x86, etc.).
 
 The Inria team~\citep{10.1145/2627752} developed a tool called \href{https://diy.inria.fr/}{DIY7} that automatically generates litmus tests for different architectures using their litmus program specifications. For example, the Store Buffering example in Figure~\ref{fig:litmus-test} on x86 can be represented as the following litmus test, \texttt{SB.litmus}:
 
@@ -360,7 +360,7 @@ The syntax and usage of litmus tests are not the main focus of this thesis. In \
 
 \subsubsection{Memory Model Semantics}
 
-Having shown how to use binary relations to draw a litmus test, we have not yet demonstrated how to define a memory model. The Inria team~\citep{10.1145/2627752} developed a specification language called Cat, which uses binary relations to define memory models. Many memory models, such as RISC-V, Arm, and X86-TSO~\citep{sewell2010x86tso}, are already defined in Cat; in this section we introduce sequential consistency and total store order as representative examples.
+Having shown how to use binary relations to draw a litmus test, we have not yet demonstrated how to define a memory model. The Inria team~\citep{10.1145/2627752} developed a specification language called Cat, which uses binary relations to define memory models. Many memory models, such as RISC-V, ARM, and X86-TSO~\citep{sewell2010x86tso}, are already defined in Cat; in this section we introduce sequential consistency and total store order as representative examples.
 
 \citet{lam1675439} introduced what is called Sequential consistency: \textit{the result of any execution is the same as if the operations of all the processors were executed in some sequential order, and the operations of each individual processor appear in this sequence in the order specified by its program. A multiprocessor satisfying this condition will be called sequentially consistent.}
 
