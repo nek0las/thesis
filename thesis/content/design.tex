@@ -107,7 +107,7 @@ In addition to these definitions, we treat the coherence order and from-read rel
 
 In the definition above, $\mathit{cross}(S_1 \mathbin{+\!\!+} S)$ is constructed by taking the set of all unions of one relation $e_1$ chosen from $S_1$ and one relation $t$ chosen from $\mathit{cross}(S)$. This computation is difficult to represent and reason about effectively. First, it is unclear how to express it using the current definitions of sets in Lean. Second, all of its associated properties would need to be proved explicitly, while providing limited practical benefit. Therefore, for most relations of this kind in the standard library, we define them directly as primitive relations instead of computing them.
 
-We define the candidate execution as follows. The \texttt{idUnique} field enforces that no two events in the execution share the same \texttt{id}, which allows event identity to be decided by ID comparison and is the solution to the \texttt{DecidableEq} problem described in Section~\ref{subsec:tagged-events}.
+We define the candidate execution as follows. 
 \begin{lstlisting}
 structure CandidateExecution (evts : Events) where
   evts := evts
@@ -125,13 +125,9 @@ structure CandidateExecution (evts : Events) where
   ctrl : SetRel Event Event
   fence : SetRel Event Event
   mb : SetRel Event Event
-  uniqueId : ∀ (e₁ e₂ : Event),
-    e₁ ∈ evts.all → e₂ ∈ evts.all
-    -> e₁ ≠ e₂
-    → e₁.id ≠ e₂.id
 \end{lstlisting}
 
-The \textit{Candidate Execution} is designed as a universal superset containing all possible relations and event types. Because different architectures, such as RISC-V \citep{riscv-spec} and Arm \citep{arm-arm} --possess distinct sets of relations and events, our framework maintains compatibility by supporting these variations within a single, unified structure. This approach is consistent with the Linux Kernel Memory Model (LKMM) \citep{alglave2018frightening}, which must account for the various behaviors of multiple underlying architectures, including dependencies such as \textit{data}, \textit{address}, and \textit{control}.
+The \textit{Candidate Execution} is designed as a universal superset containing all possible relations and event types. Because different architectures, such as RISC-V \citep{riscv-spec} and ARM \citep{arm-arm} --possess distinct sets of relations and events, our framework maintains compatibility by supporting these variations within a single, unified structure. This approach is consistent with the Linux Kernel Memory Model (LKMM) \citep{alglave2018frightening}, which must account for the various behaviors of multiple underlying architectures, including dependencies such as \textit{data}, \textit{address}, and \textit{control}. The \texttt{idUnique} field enforces that no two events in the execution share the same \texttt{id}, which allows event identity to be decided by ID comparison and is the solution to the \texttt{DecidableEq} problem described in Section~\ref{subsec:tagged-events}.
 
 We establish a formal abstraction at this boundary: while a candidate execution is typically generated from a litmus test via a parser or compiler, the correctness of that translation is not what we focus on at the memory level. In this project, we assume the correctness of the generation process and treat the candidate execution itself as the input. It is important to note that this is a significant assumption in practice; instructions with similar behaviors may not produce identical events and relations. For example, a Read instruction might be represented as a simple $R$ in a standard \texttt{.cat} file, whereas in LKMM it is treated as \texttt{READ\_ONCE}. These differing semantics generate different candidate executions; however, by abstracting these details and focusing solely on the candidate execution as the input, we significantly reduce the overall verification effort.
 
