@@ -1,7 +1,10 @@
 \chapter{Conclusion}
 \label{chapter:conclusion}
 
+In this chapter, we summarise the contributions of LeanCat and reflect on what has been achieved (Section~\ref{sec:summary}). We then outline directions for future work that build on the infrastructure developed in this thesis (Section~\ref{sec:future-work}).
+
 \section{Summary}
+\label{sec:summary}
 
 Modern computer architectures execute concurrent programs on shared memory, and the subtle behaviors that arise under weak memory models can lead to hard-to-find bugs and security vulnerabilities. The Cat specification language provides a concise axiomatic framework for describing these models as graphs of binary relations, and many architectures --- including x86, RISC-V, ARM, and the Linux kernel --- already have Cat definitions. However, mechanizing these specifications in a proof assistant and constructing formal proofs about them have remained largely orthogonal problems. Writing proofs from scratch for each architecture is time-consuming, and most existing mechanizations do not reuse Cat files directly, introducing additional translation work.
 
@@ -16,6 +19,7 @@ We also integrated execution graph visualization into the Lean 4 development env
 Taken together, these results show that LeanCat achieves its stated goal. It significantly reduces the mechanization effort and boilerplate required for weak memory model proofs, and the framework generalizes naturally: the same infrastructure --- \texttt{defcat}, \texttt{acyclicMono}, and the candidate execution types --- applies uniformly across SC, TSO, MIPS, and LKMM without architecture-specific proof engineering.
 
 \section{Future Work}
+\label{sec:future-work}
 One promising direction for future work is to extend LeanCat to support more complex model comparisons, such as between RISC-V and TSO, or between LKMM and the underlying architectures it is designed to support. As we discussed in Section~\ref{sec:limitations}, the Cat language leaves many properties implicit because herdtools7 handles them computationally. For example, Cat assumes that the coherence order is a strict total order per location without stating this formally. In Lean 4, every such assumption must be made explicit as a well-formedness condition before proofs become possible. For simple models like SC and TSO, the number of such implicit assumptions is manageable. However, for more complex architectures like RISC-V, the number of implicit assumptions grows significantly, and identifying and formalizing them correctly requires substantial additional effort. LeanCat already provides the foundational infrastructure for such comparisons; the \texttt{defcat} command, the \texttt{acyclicMono} lemma, and the candidate execution framework are all in place. The remaining work is to identify the implicit assumptions for each new model and add them as well-formedness conditions, which is a well-defined engineering task rather than a fundamental research challenge. We therefore expect that extending LeanCat to support RISC-V and other architectures is achievable in future work, building directly on the infrastructure developed in this thesis.
 
 We should also add mappings of instructions between different architectures; for example, we can add instruction mappings between BPF and LKMM, then prove that after mapping, the memory models are still stronger than others or not. We can also add more well-formedness conditions and assumptions for each architecture, such as ARM.

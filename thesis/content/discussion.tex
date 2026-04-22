@@ -1,6 +1,8 @@
 \chapter{Discussion}
 \label{chapter:discussion}
 
+In this chapter, we reflect on the design and results of LeanCat. We first discuss the limitations of the current implementation (Section~\ref{sec:limitations}), identifying the boundaries of the Cat subset we support and the challenges that remain open. We then compare LeanCat with related work (Section~\ref{sec:related-work}), situating it within the broader landscape of memory model mechanization and verification tools.
+
 \section{Limitations}
 \label{sec:limitations}
 
@@ -20,6 +22,7 @@ LeanCat achieves its stated goals, but several limitations remain. We discuss th
 
 
 \section{Related Work}
+\label{sec:related-work}
 
 The ARM team mechanized the ARMv8 memory model in Coq~\citep{10.1145/3458926ArmedCat}, producing a formalization called RCoq that proves equivalences between different axiomatic formulations of the ARM model. Their mechanization is tightly coupled to the ARM architecture: the definitions and proofs are written by hand in Coq specifically for ARMv8. In contrast, LeanCat is architecture-independent --- it parses standard Cat specification files and introduces them as native Lean~4 definitions, so the same framework handles SC, TSO, MIPS, and LKMM without architecture-specific proof engineering.
 
