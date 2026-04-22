@@ -236,7 +236,7 @@ The relations between events are distinguished as primitive relations and derive
 Using these primitive relations, we can represent executions of the Store Buffering litmus test. The execution orders are implicitly determined by these primitive relations. Figure~\ref{fig:litmus-execution-primitive-relation} shows one such execution, where the dotted lines represent the coherence order, the dashed lines represent the reads-from relation, and the thick lines represent the program order. And one such an execution graph is called a \texttt{Candidate Execution}.
 
 A candidate execution consists of a set of events together with a collection of
-relations over these events. For example, it is represented as
+relations over these events. In general, it is represented as
 \[
 X = \langle E, \mathit{po}, \mathit{rf}, \mathit{co}, \mathit{rmw} \rangle,
 \]
@@ -275,7 +275,7 @@ Some relations are composed based on the primitive relations. The following are 
 \label{fig:fr-example}
 \end{figure}
 
-\textbf{External relations} are relations between events from different threads. For instance, \texttt{rfe} consists of all \texttt{rf} edges between threads; \texttt{coe} denotes external \texttt{co}, and \texttt{fre} denotes external \texttt{fr}. Conversely, \texttt{internal relations} are relations between events within the same thread, such as \texttt{rfi}, \texttt{coi}, and \texttt{fri}. We consider initialization \texttt{W} events to be internal with events on any thread.
+\textbf{External relations} are relations between events from different threads. For instance, \texttt{rfe} consists of all \texttt{rf} edges between threads; \texttt{coe} denotes external \texttt{co}, and \texttt{fre} denotes external \texttt{fr}. Conversely, \texttt{internal relations} are relations between events within the same thread, such as \texttt{rfi}, \texttt{coi}, and \texttt{fri}.
 
 \begin{figure}[htbp]
 \centering
@@ -313,13 +313,13 @@ Some relations are composed based on the primitive relations. The following are 
     node[midway, right, font=\scriptsize] {$\mathit{rfe}$};
 
 \draw[rf-ext] (init) -- (rx1)
-    node[pos=0.65, sloped, above, font=\scriptsize] {$\mathit{rfi}$};
+    node[pos=0.65, sloped, above, font=\scriptsize] {$\mathit{rf}$};
 
 % From-read relations
-\draw[fr] (rx1) to[bend right=45] node[midway, below, font=\scriptsize] {$\mathit{fre}$} (wx1);
+\draw[fr] (rx1) to[bend right=45] node[midway, below, font=\scriptsize] {$\mathit{fr}$} (wx1);
 
 \end{tikzpicture}
-\caption{Execution with internal reads-from (\textit{rfi}, blue dashed), external reads-from (\textit{rfe}, red dashed), external from-read (\textit{fre}, grey dotted), program order (\textit{po}, solid), and coherence order (\textit{co}, dotted).}
+\caption{Execution with internal reads-from (\textit{rfi}, blue dashed), external reads-from (\textit{rf}, red dashed), external from-read (\textit{fr}, grey dotted), program order (\textit{po}, solid), and coherence order (\textit{co}, dotted).}
 \label{fig:litmus-execution-with-derived-relation}
 \end{figure}
 
@@ -356,7 +356,7 @@ The DIY7 toolchains compile such litmus tests into real machine code and collect
 
 In the x86 SB example, the \texttt{MOV} instruction can be translated into read or write events. Based on this translation, events and relations between them are generated, while the computations in the program are ignored. The semantics then proposes the possible execution graphs, called candidate executions. We can subsequently use the memory model to determine whether any of the candidate executions are disallowed.
 
-The syntax and usage of litmus tests are not the main focus of this thesis. In \textsc{LeanCat}, we abstract litmus tests as a set of possible \texttt{candidate execution}s directly. Supporting the translation from architecture-specific instructions to candidate executions is time-consuming, and our main task is to compare different memory models. Therefore, we currently provide a set of initial \texttt{Candidate Execution} patterns and use template-based generation to construct litmus tests from these patterns in Lean~4.
+The syntax and usage of litmus tests are not the main focus of this thesis. In \textsc{LeanCat}, we abstract litmus tests as a set of possible \texttt{candidate execution}s directly. Supporting the translation from architecture-specific instructions to candidate executions is time-consuming, and our main task is to compare different memory models. Therefore, we currently provide a \texttt{Candidate Execution} structure as the template.
 
 \subsubsection{Memory Model Semantics}
 
@@ -432,10 +432,8 @@ acyclic po | com as sc
 \label{fig:sequential-consistency}
 \end{figure}
 
-Based on SC, we can build the Total Store Order (TSO)~\citep{sewell2010x86tso}
-memory model. The TSO model can be described by a hardware model where each
-thread has a write buffer. A write instruction first stores its value into the
-buffer instead of writing directly to memory. Because write instructions are
+Based on SC, we can build the TSO memory model. The TSO model can be described by a hardware model where each
+thread has a write buffer and it's used in X86. A write instruction first stores its value into the buffer instead of writing directly to memory. Because write instructions are
 more expensive than reads, the processor can postpone the write and execute
 later read instructions first to improve performance. This write buffer architecture is commonly illustrated in the literature \citep{sewell2010x86tso}.
 
@@ -449,7 +447,7 @@ Formally, we express this as \texttt{po \textbackslash (W;R)}, where \texttt{;}
 denotes relation composition and \texttt{\textbackslash} denotes relation
 difference. This removes write--read pairs from the acyclicity constraint,
 meaning that read instructions may be reordered before preceding writes in
-program order. The TSO model is used mostly in X86.
+program order.
 
 In x86, there are additional atomic instructions that are used to avoid the
 reordering of write--read pairs, such as \texttt{CMPXCHG}. These instructions
@@ -489,27 +487,7 @@ acyclic (implied | xppo | rfe | fr | co) as tso
 \subsection{Linux Kernel Memory Model}
 \label{Background:LKMM}
 
-\begin{figure}[h]
-\centering
-\begin{align*}
-\mathit{dep} &:= \mathit{addr} \cup \mathit{data} \\
-\mathit{rwdep} &:= (\mathit{dep} \cup \mathit{ctrl}) \cap (R \times W) \\
-\mathit{overwrite} &:= \mathit{co} \cup \mathit{fr} \\
-\mathit{to}\text{-}\mathit{w} &:= \mathit{rwdep} \cup (\mathit{overwrite} \cap \mathit{int}) \\
-\mathit{rrdep} &:= \mathit{addr} \cup (\mathit{dep} \mathbin{;} \mathit{rfi}) \\
-\mathit{strong}\text{-}\mathit{rrdep} &:= \mathit{rrdep}^{+} \cap \mathit{rb}\text{-}\mathit{dep} \\
-\mathit{to}\text{-}\mathit{r} &:= \mathit{strong}\text{-}\mathit{rrdep} \cup \mathit{rfi}\text{-}\mathit{rel}\text{-}\mathit{acq} \\
-\mathit{strong}\text{-}\mathit{fence} &:= \mathit{mb} \\
-\mathit{fence} &:= \mathit{strong}\text{-}\mathit{fence} \cup \mathit{po}\text{-}\mathit{rel} \cup \mathit{wmb} \cup \mathit{rmb} \cup \mathit{acq}\text{-}\mathit{po} \\
-\mathit{ppo} &:= \mathit{rrdep}^{*} \mathbin{;} (\mathit{to}\text{-}\mathit{r} \cup \mathit{to}\text{-}\mathit{w} \cup \mathit{fence}) \\
-\mathit{cumul}\text{-}\mathit{fence} &:= \mathit{A}\text{-}\mathit{cumul}(\mathit{strong}\text{-}\mathit{fence} \cup \mathit{po}\text{-}\mathit{rel}) \cup \mathit{wmb} \\
-\mathit{prop} &:= (\mathit{overwrite} \cap \mathit{ext})^{?} \mathbin{;} \mathit{cumul}\text{-}\mathit{fence}^{*} \mathbin{;} \mathit{rfe}^{?} \\
-\mathit{hb} &:= ((\mathit{prop} \setminus \mathit{id}) \cap \mathit{int}) \cup \mathit{ppo} \cup \mathit{rfe} \\
-\mathit{pb} &:= \mathit{prop} \mathbin{;} \mathit{strong}\text{-}\mathit{fence} \mathbin{;} \mathit{hb}^{*}
-\end{align*}
-\caption{LKMM Definitions}
-\label{fig:lkmm-definitions}
-\end{figure}
+
 
 
 We now turn to a more complex memory model, namely the Linux Kernel Memory
@@ -520,7 +498,7 @@ a multiprocessor system. Supporting all of them in an efficient and secure way
 is challenging. A poorly designed memory model can lead to efficiency problems
 and security problems \citep{alglave2018frightening}. The LKMM must therefore be
 fairly permissive, in the sense that any behavior allowed by one of these
-architectures must also be allowed by the LKMM. The LKMM is defined in Figure~\ref{fig:lkmm-definitions}. 
+architectures must also be allowed by the LKMM.  
 
 The most fundamental way to access memory in the Linux kernel is through
 \texttt{READ\_ONCE} and \texttt{WRITE\_ONCE}. These primitives prevent the
@@ -640,8 +618,30 @@ In summary, the Linux Kernel Memory Model (LKMM) is defined by the following con
 \end{aligned}
 \]
 
-The LKMM also formalizes RCU operations, but these involve very complex and computationally expensive constraints. For this reason, we decided to exclude the RCU-related part from our analysis.
+The LKMM is defined in Figure~\ref{fig:lkmm-definitions}. The LKMM also formalizes RCU operations, but these involve very complex and computationally expensive constraints. For this reason, we decided to exclude the RCU-related part from our analysis.
 We explain this decision in more detail in Section~\ref{sec:design:cat-subset}.
+
+\begin{figure}[h]
+\centering
+\begin{align*}
+\mathit{dep} &:= \mathit{addr} \cup \mathit{data} \\
+\mathit{rwdep} &:= (\mathit{dep} \cup \mathit{ctrl}) \cap (R \times W) \\
+\mathit{overwrite} &:= \mathit{co} \cup \mathit{fr} \\
+\mathit{to}\text{-}\mathit{w} &:= \mathit{rwdep} \cup (\mathit{overwrite} \cap \mathit{int}) \\
+\mathit{rrdep} &:= \mathit{addr} \cup (\mathit{dep} \mathbin{;} \mathit{rfi}) \\
+\mathit{strong}\text{-}\mathit{rrdep} &:= \mathit{rrdep}^{+} \cap \mathit{rb}\text{-}\mathit{dep} \\
+\mathit{to}\text{-}\mathit{r} &:= \mathit{strong}\text{-}\mathit{rrdep} \cup \mathit{rfi}\text{-}\mathit{rel}\text{-}\mathit{acq} \\
+\mathit{strong}\text{-}\mathit{fence} &:= \mathit{mb} \\
+\mathit{fence} &:= \mathit{strong}\text{-}\mathit{fence} \cup \mathit{po}\text{-}\mathit{rel} \cup \mathit{wmb} \cup \mathit{rmb} \cup \mathit{acq}\text{-}\mathit{po} \\
+\mathit{ppo} &:= \mathit{rrdep}^{*} \mathbin{;} (\mathit{to}\text{-}\mathit{r} \cup \mathit{to}\text{-}\mathit{w} \cup \mathit{fence}) \\
+\mathit{cumul}\text{-}\mathit{fence} &:= \mathit{A}\text{-}\mathit{cumul}(\mathit{strong}\text{-}\mathit{fence} \cup \mathit{po}\text{-}\mathit{rel}) \cup \mathit{wmb} \\
+\mathit{prop} &:= (\mathit{overwrite} \cap \mathit{ext})^{?} \mathbin{;} \mathit{cumul}\text{-}\mathit{fence}^{*} \mathbin{;} \mathit{rfe}^{?} \\
+\mathit{hb} &:= ((\mathit{prop} \setminus \mathit{id}) \cap \mathit{int}) \cup \mathit{ppo} \cup \mathit{rfe} \\
+\mathit{pb} &:= \mathit{prop} \mathbin{;} \mathit{strong}\text{-}\mathit{fence} \mathbin{;} \mathit{hb}^{*}
+\end{align*}
+\caption{LKMM Definitions}
+\label{fig:lkmm-definitions}
+\end{figure}
 
 \subsection{BPF Memory Model}
 \label{Background:BPF}
@@ -673,7 +673,7 @@ More generally, the \texttt{rw} tactic allows us to replace any subexpression th
 \subsection{Automated Proof Search with Aesop}
 \label{subsec:aesop}
 
-To mitigate the practical overhead of manual proof construction, we incorporate the \texttt{aesop} (Automated Extensible Search for Omniscient Proofs) tactic into the \texttt{LeanCat} framework. As discussed in Section 4.4, establishing acyclicity and monotonicity often requires significant "tedious" effort in chaining relational properties and constructing transitive paths. \texttt{aesop}~\citep{ayers2023aesop} is an extensible proof search tactic for Lean 4, broadly similar in function to Isabelle's \texttt{auto}, designed to bridge this gap by performing a rule-based, best-first search to close proof goals.
+To mitigate the practical overhead of manual proof construction, we incorporate the \texttt{aesop} (Automated Extensible Search for Omniscient Proofs) tactic ~\citep{ayers2023aesop} into the \texttt{LeanCat} framework. As discussed in Section 4.4, establishing acyclicity and monotonicity often requires significant "tedious" effort in chaining relational properties and constructing transitive paths. \texttt{aesop} is an extensible proof search tactic for Lean 4, broadly similar in function to Isabelle's \texttt{auto}, designed to bridge this gap by performing a rule-based, best-first search to close proof goals.
 
 The tactic operates by maintaining a search tree that alternates between goal nodes and rule application (\textit{rapp}) nodes. This tree is explored based on a collection of user-defined rules, which are categorized into distinct phases. In the context of \texttt{LeanCat}, we leverage several rule builders—such as \texttt{apply}, \texttt{forward}, and \texttt{cases}—to automate structural reasoning. For example, by registering the constructors of the \texttt{NonEmpty} predicate or the cases for \texttt{MyList} as rules, we can automate the "tricky" task of creating \texttt{TransGen} chains during cycle detection. 
 

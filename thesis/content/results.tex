@@ -1,7 +1,7 @@
 \chapter{Results}
 \label{chapter:results}
 
-In this chapter, we present the results of the \textsc{LeanCat} framework. We begin with an interactive visualization of candidate executions using ProofWidgets (Section~\ref{sec:visualization}), which provides an intuitive way to inspect execution graphs and identify cycles directly inside Lean~4. We then describe the library theorems about binary relations and acyclicity that form the proof infrastructure (Section~\ref{sec:library-theorems}). Finally, we present a series of case studies (Section~\ref{subsection: Subsection of Results}): we use litmus tests to establish that specific executions are forbidden under particular models, and we prove model strength comparisons showing that SC is stronger than TSO and TSO is stronger than MIPS.
+In this chapter, we present the results of the \textsc{LeanCat} framework. We begin with an interactive visualization of candidate executions using ProofWidgets (Section~\ref{sec:visualization}), which provides an intuitive way to inspect execution graphs and identify cycles directly inside Lean~4. We then describe the library theorems about binary relations and acyclicity that form the proof infrastructure (Section~\ref{sec:library-theorems}). Finally, we present a series of case studies (Section~\ref{subsection: Subsection of Results}): we use litmus tests to establish that specific executions are forbidden under particular models, and we prove model strength comparisons.
 
 \section{Visualization}
 \label{sec:visualization}
@@ -563,7 +563,7 @@ empty   rmw & (fre;coe)    as Atomic
 acyclic po_amo_fetch | com as fetch_fence
 \end{verbatim}
   \end{minipage}
-  \caption{Cat definition of the BPF memory model, taken from the herd7 memory model repository (\href{https://github.com/herd/herdtools7/blob/master/herd/libdir/bpf.cat}{\texttt{herd/libdir/bpf.cat}}).}
+  \caption{Cat definition of the BPF memory model (\href{https://github.com/herd/herdtools7/blob/master/herd/libdir/bpf.cat}{\texttt{herd/libdir/bpf.cat}}).}
   \label{fig:bpf-definition}
 \end{figure}
 

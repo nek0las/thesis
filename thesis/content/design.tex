@@ -1,7 +1,7 @@
 \chapter{Implementation in Lean 4}
 \label{chapter:design}
 
-When we work with pen and paper, we usually do not focus on the subtle parts of a proof; instead, we prioritize the interesting aspects. In contrast, mechanization requires us to define every detail of the specification. These challenges are independent of the particular proof assistant we choose, so we propose a general design whose ideas can be easily implemented in other languages. In this section, we identify and clarify the issues involved in mechanizing weak memory models and show how we address them using Lean 4’s existing MathLib and Meta-Programming framework \citep{deMoura2021lean4,10.1145/3110278Lean4Meta,mathlib2020}.
+When we work with pen and paper, we usually do not focus on the subtle parts of a proof; instead, we prioritize the interesting aspects. In contrast, mechanization requires us to define every detail of the specification. These challenges are independent of the particular proof assistant we choose, so we propose a general design whose ideas can be easily implemented in other languages. In this section, we identify and clarify the issues involved in mechanizing weak memory models and show how we address them using MathLib and Meta-Programming framework \citep{deMoura2021lean4,10.1145/3110278Lean4Meta,mathlib2020}.
 
 \begin{figure}[t]
   \centering
@@ -45,7 +45,13 @@ In cat, we use Set in Lean 4 to organize the events, and there are some primitiv
 \subsection{Tagged Events}
 \label{subsec:tagged-events}
 
-In the herd7 toolchain, a memory model is split across two files. The \emph{Cat file} defines the consistency axioms over relations (as introduced in Section~\ref{Background:AWMM}). The \emph{Bell file} is an architecture-specific companion file that declares the instruction sets, enumerations, and tags for a particular architecture — it specifies which events are reads, writes, fences, or read-modify-writes, and what tags each instruction kind may carry. The Cat file then refers to the tag definitions from the Bell file to construct tagged sets of events.
+In the herd7 toolchain, a memory model is split across two files. The \emph{Cat file} 
+defines the consistency axioms over relations (as introduced in 
+Section~\ref{Background:AWMM}). The \emph{Bell file} is an architecture-specific 
+companion file that declares extra definitions (e.g., tags) for a particular 
+architecture. The Cat file 
+then refers to the tag definitions from the Bell file to construct tagged 
+sets of events.
 
 There are many sets; they are defined by tags instead of being implicitly defined in the Cat language. For example, in LKMM, there are relations used to express accesses; they are normally defined in the Bell file in this way:
 
@@ -85,10 +91,9 @@ To address this issue, we redesign the grammar. Instead of assigning tags to a s
 
 For example, the previous cases can be expressed uniformly as \{\texttt{F, W, RMW}\}[\texttt{Accesses}]. Under this formulation, the \texttt{ACQUIRE} case can be represented as:
 
-\begin{lstlisting}
+\begin{lstlisting}[mathescape=true]
 fun evts x a =>
-  a ∈ {e | e.tag = ⟨lkmm.Accesses, lkmm.Accesses.ACQUIRE'⟩} ∩ x.evts.R ∩ x.evts.W
-  ∧ a ∈ x.evts.RMW
+  a ∈ {e | e.tag = ⟨lkmm.Accesses, lkmm.Accesses.ACQUIRE'⟩} $\cap$ x.evts.R $\cap$ x.evts.W $\cap$ a ∈  x.evts.RMW
 \end{lstlisting}
 
 \subsection{Candidate Execution}
@@ -105,7 +110,7 @@ In addition to these definitions, we treat the coherence order (\texttt{co}) as 
   \right\}.
 \]
 
-In the definition above, $\mathit{cross}(S_1 \mathbin{+\!\!+} S)$ is constructed by taking the set of all unions of one relation $e_1$ chosen from $S_1$ and one relation $t$ chosen from $\mathit{cross}(S)$. This is an intrinsically recursive computation over a list of relation sets, producing a set of tuples of relations. While it is possible in principle to represent this using an inductive type in Lean~4, doing so would introduce a new higher-order structure with no existing Mathlib support. All associated properties — such as membership characterisations and monotonicity — would then need to be proved from scratch, at significant cost and with limited practical benefit, since these definitions only appear in the standard library and not in the consistency axioms themselves. Therefore, for most relations of this kind in the standard library, we define them directly as primitive relations instead of computing them.
+In the definition above, $\mathit{cross}(S_1 \mathbin{+\!\!+} S)$ is constructed by taking the set of all unions of one relation $e_1$ chosen from $S_1$ and one relation $t$ chosen from $\mathit{cross}(S)$. This is an intrinsically recursive computation over a list of relation sets, producing a set of tuples of relations. While it is possible in principle to represent this using an inductive type in Lean~4, doing so would introduce a new higher-order structure with no existing Mathlib support. All associated properties would then need to be proved from scratch, at significant cost and with limited practical benefit, since these definitions only appear in the standard library and not in the memory models themselves. Therefore, for most relations of this kind in the standard library, we define them directly as primitive relations instead of computing them.
 
 We define the candidate execution as follows. 
 \begin{lstlisting}
@@ -127,9 +132,12 @@ structure CandidateExecution (evts : Events) where
   mb : SetRel Event Event
 \end{lstlisting}
 
+The \textit{Candidate Execution} is designed as a universal superset containing all possible relations and event types. Because different architectures, such as RISC-V \citep{riscv-spec} and ARM \citep{arm-arm} --possess distinct sets of relations and events, our framework maintains compatibility by supporting these variations within a single, unified structure. This approach is consistent with the Linux Kernel Memory Model (LKMM) \citep{alglave2018frightening}, which must account for the various behaviors of multiple underlying architectures, including dependencies such as \textit{data}, \textit{address}, and \textit{control}. 
+
+The \texttt{idUnique} field enforces that no two events in the execution share the same \texttt{id}, which allows event identity to be decided by ID comparison and is the solution to the \texttt{DecidableEq} problem described in Section~\ref{subsec:tagged-events}.
+
 The field \texttt{fr := rf.inv.comp co} provides a default value derived from \texttt{rf} and \texttt{co}, following the standard definition $\mathit{fr} = \mathit{rf}^{-1} ; \mathit{co}$. Because it is a default, a litmus test author can override it with a concrete relation if needed, while executions that do not specify \texttt{fr} explicitly will use the derived value automatically.
 
-The \textit{Candidate Execution} is designed as a universal superset containing all possible relations and event types. Because different architectures, such as RISC-V \citep{riscv-spec} and ARM \citep{arm-arm} --possess distinct sets of relations and events, our framework maintains compatibility by supporting these variations within a single, unified structure. This approach is consistent with the Linux Kernel Memory Model (LKMM) \citep{alglave2018frightening}, which must account for the various behaviors of multiple underlying architectures, including dependencies such as \textit{data}, \textit{address}, and \textit{control}. The \texttt{idUnique} field enforces that no two events in the execution share the same \texttt{id}, which allows event identity to be decided by ID comparison and is the solution to the \texttt{DecidableEq} problem described in Section~\ref{subsec:tagged-events}.
 
 We establish a formal abstraction at this boundary: while a candidate execution is typically generated from a litmus test via a parser or compiler, the correctness of that translation is not what we focus on at the memory level. In this project, we assume the correctness of the generation process and treat the candidate execution itself as the input. It is important to note that this is a significant assumption in practice; instructions with similar behaviors may not produce identical events and relations. For example, a Read instruction might be represented as a simple $R$ in a standard \texttt{.cat} file, whereas in LKMM it is treated as \texttt{READ\_ONCE}. These differing semantics generate different candidate executions; however, by abstracting these details and focusing solely on the candidate execution as the input, we significantly reduce the overall verification effort.
 
@@ -152,15 +160,15 @@ However, these general-purpose tactics are not sufficient on their own for the w
 
 To address this, we define a custom tactic macro \texttt{candidateExecution\_wf}:
 
-\begin{verbatim}
+\begin{lstlisting}[mathescape=true]
 macro "candidateExecution_wf" : tactic =>
   `(tactic|
     (all_goals repeat first
-       | simp at *
-         aesop
-       | (casesm _ ∈ _
+        | simp at *
+          aesop
+        | (casesm _ $\in$ _
           aesop)))
-\end{verbatim}
+\end{lstlisting}
 
 The macro repeatedly applies two strategies. The first simplifies all goals using \texttt{simp} and then attempts to close them with \texttt{aesop}. The second destructs set-membership hypotheses of the form \texttt{e ∈ S} using \texttt{casesm}, which enumerates the finitely many elements of the concrete event set, and then tries \texttt{aesop} on each case. We use it to automatically prove the well-formedness of the candidate executions.
 
@@ -168,16 +176,18 @@ The macro repeatedly applies two strategies. The first simplifies all goals usin
 Now that we have the primitive types, we need a way to connect them. We can reuse existing definitions from Mathlib for working with \texttt{Set} and \texttt{Rel}, and then describe \textsc{tso} and \textsc{sc} using these functions.
 
 The following is the standard Cat definition of sequential consistency (\textsc{sc}; see Figure~\ref{fig:cat-sc}). We ignore the \texttt{include} directive here, since we model the relations imported from \texttt{cos.cat} as primitives. The first statement, \texttt{let com = rf | fr | co}, introduces a name for the expression on the right-hand side; in Lean, this can be represented with a \texttt{def}. The operator \texttt{|} is relational union. Since Mathlib does not provide union and intersection for relations out of the box, we define them as follows:
-\begin{verbatim}
-def union (r1 r2 : Rel Event Event) : Rel Event Event :=
-  fun x y => r1 x y \/ r2 x y
 
-def inter (r1 r2 : Rel Event Event) : Rel Event Event :=
-  fun x y => r1 x y ∧ r2 x y
+\begin{lstlisting}[mathescape=true]
+def union {$\alpha$ $\beta$ : Type} (r1 r2 : Rel $\alpha$ $\beta$) : Rel $\alpha$ $\beta$ :=
+  fun x y => r1 x y $\vee$ r2 x y
 
-instance : Union (Rel Event Event) := ⟨union⟩
-instance : Inter (Rel Event Event) := ⟨inter⟩
-\end{verbatim}
+def inter {$\alpha$ $\beta$ : Type} (r1 r2 : Rel $\alpha$ $\beta$) : Rel $\alpha$ $\beta$ :=
+  fun x y => r1 x y $\wedge$ r2 x y
+
+instance {$\alpha$ $\beta$ : Type} : Union (Rel $\alpha$ $\beta$) := $\langle$union$\rangle$
+instance {$\alpha$ $\beta$ : Type} : Inter (Rel $\alpha$ $\beta$) := $\langle$inter$\rangle$
+\end{lstlisting}
+
 With these instances, Lean can use the usual notation (e.g., $r_1 \cup r_2$ and $r_1 \cap r_2$) to combine relations.
 
 The most important proposition is \emph{acyclicity}, and there are other propositions that are also useful in proofs, such as \emph{irreflexivity}. For a relation $r : \mathrm{Event} \to \mathrm{Event} \to \mathrm{Prop}$, we define acyclicity as
@@ -199,10 +209,12 @@ Next, consider total store order (\textsc{tso}; see Figure~\ref{fig:cat-tso}). C
   \{\,(e_1,e_2) \mid e_1 \in S_1 \wedge e_2 \in S_2\,\}.
 \]
 In Lean, we implement this idea either via a definition
-\begin{verbatim}
-def prod (s1 s2 : Set Event) : Rel Event Event :=
-  fun e1 e2 => e1 ∈ s1 ∧ e2 ∈ s2
-\end{verbatim}
+
+\begin{lstlisting}[language=Lean, mathescape=true]
+def prod {$\alpha$ $\beta$ : Type} (s1 : Set $\alpha$) (s2 : Set $\beta$) : Rel $\alpha$ $\beta$ :=
+  fun e1 e2 => e1 $\in$ s1 $\wedge$ e2 $\in$ s2
+\end{lstlisting}
+
 or directly via \texttt{Set.prod}; LeanCat uses \texttt{Set.prod} to reuse existing Mathlib lemmas \citep{mathlib2020}.
 
 
