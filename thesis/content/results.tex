@@ -1,7 +1,7 @@
 \chapter{Results}
 \label{chapter:results}
 
-This chapter presents the results of the \textsc{LeanCat} framework. We organise the results into three parts. First, we demonstrate the interactive visualization of candidate executions using ProofWidgets, which provides an intuitive way to inspect execution graphs and identify cycles. Second, we describe the library theorems about binary relations, acyclicity, and primitive relations that form the proof infrastructure of the framework. Third, we present a series of case studies showing how the framework is used in practice: we use litmus tests to establish that specific executions are forbidden under particular models, and we prove model strength comparisons --- that SC is stronger than TSO and TSO is stronger than MIPS.
+In this chapter, we present the results of the \textsc{LeanCat} framework. We begin with an interactive visualization of candidate executions using ProofWidgets (Section~\ref{sec:visualization}), which provides an intuitive way to inspect execution graphs and identify cycles directly inside Lean~4. We then describe the library theorems about binary relations and acyclicity that form the proof infrastructure (Section~\ref{sec:library-theorems}). Finally, we present a series of case studies (Section~\ref{subsection: Subsection of Results}): we use litmus tests to establish that specific executions are forbidden under particular models, and we prove model strength comparisons showing that SC is stronger than TSO and TSO is stronger than MIPS.
 
 \section{Visualization}
 \label{sec:visualization}
@@ -58,6 +58,7 @@ This produces a clear graphical representation of the execution. From this graph
 \end{figure}
 
 \section{Library Theorems}
+\label{sec:library-theorems}
 
 To support the case studies, we proved a collection of library theorems about binary relations,
 acyclicity, and the primitive relations of candidate executions. These theorems bridge the gap
@@ -524,6 +525,7 @@ directly to \texttt{xppo}, and a \texttt{sync} edge maps to \texttt{implied} bec
 every MIPS SYNC event is also a fence event in TSO. The proof can be found at \href{https://github.com/nek0las/lean-cats/blob/main/LeanCats/mipsWeakerThanTSO.lean}{LeanCats/mipsWeakerThanTSO.lean}.
 
 \subsubsection{Comparing BPF and LKMM}
+\label{sec:bpf}
 
 As discussed in Section~\ref{Background:BPF}, the BPF memory model shares the same high-level structure as the LKMM: both enforce coherence, happens-before, propagation, and atomicity constraints, and both capture their ordering requirements through \textit{ppo} and \textit{prop} relations. However, their synchronization primitives are expressed at different levels of abstraction. The LKMM is defined in terms of Linux kernel C primitives --- \texttt{smp\_mb}, \texttt{smp\_wmb}, \texttt{smp\_rmb}, acquire, and release --- whereas the BPF model is defined at a level closer to assembly, using AArch64-style atomic memory operations (\texttt{po\_amo\_fetch}) and explicit acquire/release annotations (\texttt{AQ}/\texttt{RL}). Establishing a formal mapping between these two fence systems requires a careful translation between the two frameworks, and to our knowledge no such mapping has been proposed in the literature. Due to this gap and the time constraints of this project, we were unable to prove any properties involving fence orderings between BPF and LKMM. The BPF model is defined in Figure~\ref{fig:bpf-definition}.
 
