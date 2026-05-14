@@ -1,26 +1,27 @@
 \chapter{Background}
 \label{chapter:Background}
 
-[The Weak Memory Model section is highly overlapped with the introduction part, so we should focus more on the formal memory models. Mention that the SB.litmus and dekkeer's examples before to refresh the problems, refresh the ideas of memory models in short (It's a graph that shows the relations)
-We should give it the formal semantics, and what is an axiomatic memory models. And before we explain axiomatic memory models, we should introduce the mathematical backgrounds, should explain enough why we need to talk about math at this point to make reader happy (It's binary relation)]
+Chapter~\ref{chapter:introduction} introduced the main problem: weak-memory behavior can make a concurrent program behave in ways that are difficult to predict from the program text alone. The Store Buffering example showed this concretely, and the Dekker-style synchronization example showed why such behavior matters for correctness. We also saw that an execution can be drawn as a graph whose nodes are events and whose arrows describe relationships such as program order, reads-from, coherence order, and from-read.
 
-We can explain the execution graph we could explain the rf fr, etc, they can be explained without using binary relations. (From the high level view to the formal)
-
-
+This chapter turns that intuition into the background needed for the rest of the thesis. We first introduce the small amount of mathematics needed to talk about execution graphs precisely: binary relations, composition, closure, and acyclicity. We then use these ideas to explain axiomatic weak memory models, where a memory model is a set of constraints over candidate execution graphs. Finally, we introduce Lean~4 and its metaprogramming framework, because LeanCat uses Lean both as a proof assistant and as a language for translating Cat specifications into checked definitions.
 
 \section{Mathematical Background}
 \label{sec:math-background}
 
-To understand the axiomatic memory models, we need to use \emph{binary relations}. Relationships between elements of two sets are represented using a structure called a binary relation. A binary relation from a set $A$ to a set $B$ is formally defined as a subset of the Cartesian product $A \times B$ \citep[p.~599]{rosen2012discrete}. There are two common methods for representing relations: using square matrices and using directed graphs \citep[p.~621]{rosen2012discrete}. In this thesis, we mainly use the second method, i.e., directed graphs, to represent binary relations.
+The execution graphs from Chapter~\ref{chapter:introduction} are intuitive because they let us see arrows between events. To reason about such graphs formally, we need a mathematical object for arrows. This object is a \emph{binary relation}. A binary relation from a set $A$ to a set $B$ is formally defined as a subset of the Cartesian product $A \times B$ \citep[p.~599]{rosen2012discrete}. If $(a,b)$ belongs to such a relation, we can think of it as an arrow from $a$ to $b$.
+
+There are two common methods for representing relations: using square matrices and using directed graphs \citep[p.~621]{rosen2012discrete}. In this thesis, we mainly use directed graphs, because this representation matches the way memory models describe executions: events are nodes, and relations such as \textit{po}, \textit{rf}, \textit{co}, and \textit{fr} are edge sets between those nodes.
 
 We use the notation \(a \, R \, b\) to denote that \((a,b) \in R\), and \(a \not R b\) to denote that \((a,b) \notin R\) \citep[p.~600]{rosen2012discrete}.
 
-In this thesis, the elements \(a\) and \(b\) are both \emph{events}, and these binary relations compose the directed execution graph, as described in Section~\ref{Background:AWMM}. Two relations can be composed together to obtain a new directed graph. Relation composition plays an important role in the \texttt{cat} language.
+In this thesis, the elements \(a\) and \(b\) are usually \emph{events}. A relation then records one kind of edge between two events. For example, $a \,\mathit{po}\, b$ means that event $a$ comes before event $b$ in program order, while $a \,\mathit{rf}\, b$ means that event $b$ reads the value written by event $a$. By combining such relations, we obtain the execution graphs used by axiomatic memory models.
+
+The first operation we need is relation composition. Composition lets us connect two edge sets through an intermediate event, which is exactly what happens when memory models define derived relations from more basic ones.
 
 \paragraph{Relation Composition.}
 Let $R$ be a relation from a set $A$ to a set $B$, and let $S$ be a relation from $B$ to a set $C$. The composite of $R$ and $S$ is the relation consisting of ordered pairs $(a, c)$, where $a \in A, c \in C$, and for which there exists an element $b \in B$ such that $(a, b) \in R$ and $(b, c) \in S$ \citep[p.~607]{rosen2012discrete}. We denote the composite of $R$ and $S$ by $R ; S$ \citep[p.~607]{rosen2012discrete}.
 
-Computing the composite of two relations requires finding elements that are the second component of ordered pairs in the first relation and the first component of ordered pairs in the second relation. This property is widely used in many memory models. For example, there is a relation called \emph{fr} (from-read), which represents that a read instruction observes a value that is later overwritten by another write instruction; the write instructions to the same address are totally ordered by the coherence order.
+Computing the composite of two relations requires finding elements that are the second component of ordered pairs in the first relation and the first component of ordered pairs in the second relation. This operation is widely used in memory models. For example, there is a relation called \emph{fr} (from-read), which represents that a read instruction observes a value that is later overwritten by another write instruction. The write instructions to the same address are ordered by the coherence order.
 
 In \texttt{cat}, we define
 \[
@@ -28,9 +29,9 @@ fr = rf^{-1} ; co,
 \]
 where \(rf^{-1}\) denotes the inverse of the relation \(rf\), meaning that the order of each pair is reversed. Intuitively, this composition connects a read event to a write event that comes later in coherence order than the write from which the read obtained its value.
 
-After composing different relations, we can obtain a complete execution graph. As stated in Section~\ref{Background:AWMM}, we need to filter out disallowed executions using a set of judgments. The \texttt{cat} language provides three primitive judgments: \texttt{Acyclic}, \texttt{Irreflexive}, and \texttt{Empty}. Among them, \texttt{Acyclic} is the most important because our memory models are described by binary relations that compose the execution graph. A cycle (or circuit) in a directed graph is a path of length greater than zero that begins and ends at the same vertex \cite[pp.~665,~715]{rosen2012discrete}. A cycle in this graph usually means that some data that should have been read first was overwritten by later operations.
+By composing and combining relations, we can build larger parts of an execution graph from smaller ones. A memory model then filters candidate executions by checking whether these graph structures satisfy certain judgments. The \texttt{cat} language provides three primitive judgments: \texttt{Acyclic}, \texttt{Irreflexive}, and \texttt{Empty}. Among them, \texttt{Acyclic} is the most important for this thesis. A cycle (or circuit) in a directed graph is a path of length greater than zero that begins and ends at the same vertex \cite[pp.~665,~715]{rosen2012discrete}. Intuitively, when a memory model forbids a cycle, it is saying that the ordering constraints in the execution graph must not contradict each other.
 
-Models defined using binary relations can be viewed as directed graphs. When we illustrate them in a diagram, cycles are easy to identify by visually connecting the points. However, to represent this structure using binary relations, we need a formal way to express both direct connections and paths that return to earlier points. For this purpose, we rely on two properties: \emph{reflexivity} and \emph{transitive closure}.
+When we illustrate an execution graph in a diagram, cycles are often easy to identify by visually following the arrows. In a proof assistant, however, we need a formal way to express paths and to state that no path returns to its starting point. For this purpose, we rely on reflexivity, transitivity, and transitive closure.
 
 \paragraph{Reflexivity.}
 A relation $R$ on a set $A$ is called reflexive if $(a, a) \in R$ for every element $a \in A$ \citep[p.~602]{rosen2012discrete}. Formally:
@@ -102,7 +103,7 @@ The \emph{external} relation, denoted by \texttt{ext}, consists of pairs of even
 \]
 Equivalently, $\texttt{ext} = (E \times E) \setminus \texttt{int}$. In memory models, these are used to derive specific sub-relations; for example, \texttt{rfi} (reads-from internal) is defined as $\mathit{rf} \cap \texttt{int}$, and \texttt{rfe} (reads-from external) is defined as $\mathit{rf} \cap \texttt{ext}$.
 
-Relation composition, defined in Section~\ref{sec:math-background}, is central to formalizing memory models in Cat. As noted there, the \emph{fr} (from-read) relation is a key example: $\mathit{fr} = \mathit{rf}^{-1} \mathbin{;} \mathit{co}$.
+The same relational view also gives us a simple way to compare memory models.
 
 \subsection{Comparing Memory Models}
 
@@ -116,19 +117,21 @@ From a high-level perspective, when comparing different models, we check whether
 
 This captures the idea that every execution permitted by the stricter model must also be permitted by the weaker one.
 
+We now have the vocabulary for the next step. We can say not only that an execution graph has arrows, but also how those arrows are combined, followed, restricted, checked for cycles, and compared across models. This is exactly what axiomatic memory models use relations for.
+
 \section{Axiomatic Weak Memory Models}
 
 \label{Background:AWMM}
 
-In Figure \ref{fig:litmus-execution-0-1}, we use lines to show the execution order and write-read pairs. In axiomatic models, these lines represent binary relations, and events represent nodes or instructions. Together, these binary relations compose an execution graph. 
+An axiomatic weak memory model describes program behavior by talking about candidate executions. A candidate execution is an execution graph: events are nodes, and relations are arrows between those nodes. The memory model does not simulate the hardware step by step. Instead, it checks whether the graph satisfies a set of axioms, such as acyclicity or emptiness constraints. If the graph satisfies the axioms, the execution is allowed; otherwise, it is forbidden.
 
-Each event is used to represent the behavior of an instruction. For example, Event R is used to define a read instruction that reads a value from a location, and Event W is used to define a write instruction that writes a value to that location. These addresses are concrete values (e.g., 0x00000000), but for clarity of presentation we denote them using symbols (e.g., x, y) in the examples. These symbolic locations strictly represent distinct locations in memory (i.e., X and Y are strictly different). Each event also has an identifier that is unique within the execution.
+Each event represents the memory-relevant behavior of an instruction. For example, an R event represents a read from a memory location, and a W event represents a write to a memory location. These addresses are concrete values in real executions, but for clarity we denote them using symbols such as $x$ and $y$ in examples. These symbolic locations represent distinct memory locations. Each event also has an identifier that is unique within the execution.
 
 \subsubsection{Primitive Relations}
 
 The relations between events are distinguished as primitive relations and derived relations. The latter are entirely defined from the former and are composed of primitive relations. We also define some typical primitive relations~\citep{10.1145/2627752}:
 
-\textbf{Program Order (\texttt{po})}, relating events by their syntactic order: the order among instructions in the program text carries over to execution graphs with \texttt{po} edges. It is a total order per thread. Figure~\ref{fig:litmus-execution-0-1} contains four events. In thread 0, the program order is $e_1 : W(x)=1$ followed by $e_2 : R(Y)=1$. In thread 1, the order is $e_3 : W(Y)=1$ followed by $e_4 : R(X)=1$. We denote these as $\mathit{po}(e_1, e_2)$ and $\mathit{po}(e_3, e_4)$.
+\textbf{Program Order (\texttt{po})}, relating events by their syntactic order: the order among instructions in the program text carries over to execution graphs with \texttt{po} edges. It is a total order per thread. In the Store Buffering test, each thread has a write followed by a read, so each thread contributes one \texttt{po} edge from its write event to its read event.
 
 \textbf{Reads From (\texttt{rf})}, which relates a W event to the R event reading from it. Every R event reads-from one W event or an initial write event. For instance, when event $e_2 : R(X) = 1$ reads 1 from location $X$, where that value was earlier written by $e_1 : W(X) = 1$, then we have an \texttt{rf} edge from $e_1$ to $e_2$, alternatively denoted as $\mathit{rf}(e_1, e_2)$.
 
@@ -676,7 +679,3 @@ macro_rules
 \end{verbatim}
 
 This is a simple illustration of how the meta-programming framework works. In our project, the implementation is more complex and it is not necessary to introduce all of them. After we defining the Macro rules, Lean~4 checks that the final elaborated terms are type-safe using its small trusted kernel. Macros and elaborators operate outside the kernel and can define arbitrary syntax or transformations, but their output must ultimately be accepted by the kernel~\citep{deMoura2021lean4}. This means even if we define unsafe or incorrect syntax transformations, they cannot break soundness because the kernel will reject any ill-typed terms.
-
-
-
-
