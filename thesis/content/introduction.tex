@@ -143,7 +143,7 @@ This observation connects memory consistency models to mathematical reasoning. T
 
 Before we go further, we explain why memory consistency models are important and why we want to use formal methods to reason about them.
 
-\subsubsection{Why Are Memory Consistency Models Important?}
+\section{Motivation: Memory Consistency Models}
 
 A memory consistency model describes the shared-memory behaviors allowed by an architecture~\cite{lam1675439,sewell2010x86tso}. Therefore, it can serve as a useful intermediate specification between programs and hardware. This is important because each architecture may have its own way to interact with shared memory. When different architectures are used together, or when software is moved from one architecture to another, we need to understand how their memory behaviors relate to each other. Many problems in heterogeneous systems can therefore be understood as problems about memory consistency models.
 
@@ -155,7 +155,7 @@ Memory consistency models are also useful for reasoning about binary translation
 
 Memory consistency models are also important for interoperability between different layers of a system. For example, a program may be written in a language such as C, compiled into machine code, and executed on hardware that follows an architectural memory consistency model~\cite{batty2011mathematizing,podkopaev2019bridging}. In systems such as the Linux kernel, we may also need to reason about the relationship between the programming-language memory consistency model, the Linux kernel memory consistency model, and the hardware memory consistency model~\cite{alglave2018frightening}. To reason about the correctness of the whole system, we need formal ways to compare and combine these models.
 
-\subsubsection{Why Use Formal Methods?}
+\section{Formal Reasoning About Memory Models}
 
 As described above, testing is useful for detecting the behaviors of a specific concurrent program by running it many times and observing its results. However, testing itself cannot cover all possible program behaviors. It also cannot provide a general way to describe these behaviors or reason about them across different architectures.
 
@@ -165,7 +165,7 @@ Formal memory consistency models are useful because they allow us to reason abou
 
 Both testing and formal methods are useful for studying weak memory consistency models. Testing helps us observe concrete behaviors, while formal methods help us describe and reason about the general space of possible behaviors. Therefore, a useful tool should support both concrete examples, such as litmus tests, and general mathematical reasoning about memory consistency models.
 
-\subsubsection{Contributions}
+\section{Thesis Contribution}
 
 In practice, many memory consistency models are written in Cat, a domain-specific language for specifying memory consistency models~\cite{10.1145/2627752,catOnlineDocHerd,catManualSyntax11}. Cat describes relations between events in a candidate execution, such as program order, reads-from, coherence order, and from-read. It also uses axioms, such as acyclicity constraints, to decide whether a candidate execution is allowed or forbidden by a memory consistency model.
 
