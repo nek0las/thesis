@@ -450,7 +450,7 @@ two properties complete the x86-TSO model. Formally, they are expressed as:
 The MIPS memory model is more relaxed than x86-TSO. Specifically, MIPS only preserves 
 program order for pairs of operations in which the first event is a read; all other 
 program-order pairs may be reordered. As a consequence, MIPS permits the execution in 
-Example~\ref{fig:mp-program}, since it does not include the $W{\times}W \cap \mathit{po}$ 
+Figure~\ref{fig:mp-program}, since it does not include the $W{\times}W \cap \mathit{po}$ 
 constraint. We define the MIPS semantics as follows:
 
 \begin{lstlisting}[]

@@ -1,14 +1,14 @@
 \chapter{Background}
 \label{chapter:Background}
 
-Chapter~\ref{chapter:introduction} introduced the main problem: weak-memory behavior can make a concurrent program behave in ways that are difficult to predict from the program text alone. The Store Buffering example showed this concretely, and the Dekker-style synchronization example showed why such behavior matters for correctness. We also saw that an execution can be drawn as a graph whose nodes are events and whose arrows describe relationships such as program order, reads-from, coherence order, and from-read.
+Chapter~\ref{chapter:introduction} introduced the main problem: weak-memory behavior can make a concurrent program behave in ways that are difficult to predict from the program text alone. The Store Buffering example in Figure~\ref{fig:litmus-test} showed this concretely, and the Dekker-style synchronization example in Figure~\ref{fig:flag-sync} showed why such behavior matters for correctness. We also saw in Figure~\ref{fig:litmus-execution-0-0} that an execution can be drawn as a graph whose nodes are events and whose arrows describe relationships such as program order, reads-from, coherence order, and from-read.
 
 This chapter turns that intuition into the background needed for the rest of the thesis. We first introduce the small amount of mathematics needed to talk about execution graphs precisely: binary relations, composition, closure, and acyclicity. We then use these ideas to explain axiomatic weak memory models, where a memory model is a set of constraints over candidate execution graphs. Finally, we introduce Lean~4 and its metaprogramming framework, because LeanCat uses Lean both as a proof assistant and as a language for translating Cat specifications into checked definitions.
 
 \section{Mathematical Background}
 \label{sec:math-background}
 
-The execution graphs from Chapter~\ref{chapter:introduction} are intuitive because they let us see arrows between events. To reason about such graphs formally, we need a mathematical object for arrows. This object is a \emph{binary relation}. A binary relation from a set $A$ to a set $B$ is formally defined as a subset of the Cartesian product $A \times B$ \citep[p.~599]{rosen2012discrete}. If $(a,b)$ belongs to such a relation, we can think of it as an arrow from $a$ to $b$.
+The execution graph in Figure~\ref{fig:litmus-execution-0-0} is intuitive because it lets us see arrows between events. To reason about such graphs formally, we need a mathematical object for arrows. This object is a \emph{binary relation}. A binary relation from a set $A$ to a set $B$ is formally defined as a subset of the Cartesian product $A \times B$ \citep[p.~599]{rosen2012discrete}. If $(a,b)$ belongs to such a relation, we can think of it as an arrow from $a$ to $b$.
 
 There are two common methods for representing relations: using square matrices and using directed graphs \citep[p.~621]{rosen2012discrete}. In this thesis, we mainly use directed graphs, because this representation matches the way memory models describe executions: events are nodes, and relations such as \textit{po}, \textit{rf}, \textit{co}, and \textit{fr} are edge sets between those nodes.
 
@@ -57,7 +57,7 @@ The reflexive-transitive closure, denoted by $R^*$, is the smallest relation tha
 \[
 R^* = R^+ \cup \Delta = \bigcup_{n=0}^{\infty} R^n.
 \]
-In memory models, these closures are fundamental for defining global orders. For example, $\mathit{hb}^*$ (the reflexive-transitive closure of the happens-before relation defined in LKMM \ref{fig:lkmm-definitions}) connects two events if one happens before the other or if they are the same event.
+In memory models, these closures are fundamental for defining global orders. For example, $\mathit{hb}^*$ (the reflexive-transitive closure of the happens-before relation defined in the LKMM model in Figure~\ref{fig:lkmm-definitions}) connects two events if one happens before the other or if they are the same event.
 
 \paragraph{Domain and Codomain.}
 Let $R$ be a relation from a set $A$ to a set $B$.
@@ -599,7 +599,7 @@ The BPF model exhibits the same high-level structure as the LKMM: it enforces co
 
 
 \section{Lean~4 and Its Metaprogramming Framework}
-This section introduces the necessary background for readers unfamiliar with Lean~4; readers already familiar with it may skip ahead to Section~\ref{chapter:design}. We cover only the most important concepts used in this project and do not introduce complex topics such as monads. Before presenting the key features of Lean~4, we first explain why we chose it as our tool for this project.
+This section introduces the necessary background for readers unfamiliar with Lean~4; readers already familiar with it may skip ahead to Chapter~\ref{chapter:design}. We cover only the most important concepts used in this project and do not introduce complex topics such as monads. Before presenting the key features of Lean~4, we first explain why we chose it as our tool for this project.
 
 \subsection{Lean~4}
 
