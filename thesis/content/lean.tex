@@ -1,7 +1,12 @@
 \chapter{Background}
 \label{chapter:Background}
 
-In this chapter, we introduce weak memory, the Lean~4 programming language and its metaprogramming framework, and the mathematical background needed in later chapters. First, we introduce weak memory models through some basic examples and weak behaviors (Section \ref{Background:LKMM}).
+[The Weak Memory Model section is highly overlapped with the introduction part, so we should focus more on the formal memory models. Mention that the SB.litmus and dekkeer's examples before to refresh the problems, refresh the ideas of memory models in short (It's a graph that shows the relations)
+We should give it the formal semantics, and what is an axiomatic memory models. And before we explain axiomatic memory models, we should introduce the mathematical backgrounds, should explain enough why we need to talk about math at this point to make reader happy (It's binary relation)]
+
+We can explain the execution graph we could explain the rf fr, etc, they can be explained without using binary relations. (From the high level view to the formal)
+
+
 
 \section{Mathematical Background}
 \label{sec:math-background}
@@ -111,74 +116,8 @@ From a high-level perspective, when comparing different models, we check whether
 
 This captures the idea that every execution permitted by the stricter model must also be permitted by the weaker one.
 
-\section{Weak Memory Model}
-There was a widely held belief in the software community that we did not need to optimize software; we could focus on abstraction, and hardware improvements would deliver performance gains for us. This belief largely held during the single-threaded era, when increasing clock speeds and improved microarchitectures steadily accelerated programs. However, when single-core processors hit power and energy-efficiency limits, hardware designers shifted toward adding more cores to improve performance. At that point, synchronization and memory-consistency abstractions were not yet well defined for compiler and system engineers. Vendors relied heavily on experience and natural-language descriptions to explain hardware behavior. Because natural language is inherently ambiguous, it became difficult to reason precisely about many concurrent program behaviors.
+\section{Axiomatic Weak Memory Models}
 
-
-The compiler will normally optimize the code aggressively for performance as long as the programmer can’t observe the difference between the unoptimized and optimized code, but in fact, the code is not equivalent. In a uniprocessor system it works fine, but when it comes to a multithreaded program the code can cause bugs. Also, the hardware itself will run the program out of order to optimize execution, or just speculatively execute. Optimizing compilers have great freedom in the way they translate source code to binary. They are allowed to apply transformations that add memory accesses, eliminate accesses, combine them, split them into pieces, or move them around~\cite{10.1145/2676726.2676995}.
-
-\begin{figure}[h]
-\centering
-\[
-\begin{array}{c}
-\text{Initially: } X = 0,\; Y = 0
-\end{array}
-\qquad
-\begin{array}{c|c}
-\text{Thread 0} & \text{Thread 1} \\
-\hline
-X := 1          & Y := 1 \\
-a := Y          & b := X
-\end{array}
-\]
-\caption{Store-Buffering litmus test}
-\label{fig:litmus-test}
-\end{figure}
-
-Let’s consider the following example in Figure \ref{fig:litmus-test}. It is a Store-Buffering program in which the variables X and Y are initialized to 0. Each thread first assigns the value 1 to one variable and then reads the other variable. From the programmer’s perspective, one might expect both a and b to be 1 if the program executes in the order in which the operations are written: Thread 0 writes X and then reads Y, so if Thread 1’s write to Y is already visible, a will be 1; symmetrically, b will be 1 if Thread 0’s write to X is already visible. However, hardware store buffering allows each thread to delay its write and execute the subsequent read before the other thread’s write propagates. In this case, both a and b can be 0: Thread 0 reads Y=0 before Thread 1’s write to Y is visible, and Thread 1 reads X=0 before Thread 0’s write to X is visible. This outcome $a=0, b=0$ is forbidden under Sequential Consistency but is observable on hardware with store buffers, making it the key weak memory behavior of this test. In the execution diagrams that follow, $W(X)=v$ denotes a write of value $v$ to memory location $X$, and $R(Y)=v$ denotes a read from location $Y$ that returns value $v$. Solid arrows represent the global execution order, and dashed arrows represent reads-from (\textit{rf}) edges, connecting each write to the read that observes its value. For instance, we may non-deterministically observe one of the following interleaving orders: 
-
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-    node distance=1cm,
-    event/.style={draw, rectangle, minimum width=0.5cm, minimum height=0.5cm},
-    po/.style={->, thick},
-    rf/.style={->, dashed, thick}
-]
-
-% Initial writes (merged)
-\node[event] (init) {Init: $X=0, Y=0$};
-
-% Thread 0
-\node[event, below left=1cm and 0.5cm of init] (wx1) {$W(X)=1$};
-\node[event, below=of wx1] (ry1) {$R(Y)=0$};
-
-% Thread 1
-\node[event, below right=1cm and 0.5cm of init] (wy1) {$W(Y)=1$};
-\node[event, below=of wy1] (rx1) {$R(X)=1$};
-
-% Program order
-\draw[po] (wx1) -- (ry1);
-\draw[po] (ry1) -- (wy1);
-\draw[po] (init) -- (wx1);
-
-% Read-from relations
-\draw[po] (wy1) -- (rx1);
-
-\draw[rf] (init) -- (ry1);
-\draw[rf] (wx1) -- (rx1);
-
-\end{tikzpicture}
-\caption{Execution Order with X = 1 and Y = 0 (solid arrows: execution order; dashed arrows: reads-from (\textit{rf}))}
-\label{fig:litmus-execution-0-1}
-\end{figure}
-
-Even though the order of instructions within each thread is preserved according to the program order, threads can interleave arbitrarily. The dashed reads-from (\texttt{rf}) arrows indicate the relationship between write operations and subsequent reads of the same memory location in the interleaving. Depending on the specific interleaving, these read operations may observe values written by different write operations, resulting in distinct assignments to a and b upon termination. The formal study of the exact behaviors concurrent programs can exhibit is a field known as weak memory models.
-
-Memory models are generally categorized into two classes: operational and axiomatic. Operational models are described using buffers and queues and are abstractions derived from hardware behavior \citep{10.1145/1993498.1993520OperationalModel}. In contrast, axiomatic memory models specify disallowed program behaviors, usually by constraining relations on memory accesses \citep{10.1145/2627752}. In this thesis, we use axiomatic memory models.
-
-\subsection{Axiomatic Weak Memory Models}
 \label{Background:AWMM}
 
 In Figure \ref{fig:litmus-execution-0-1}, we use lines to show the execution order and write-read pairs. In axiomatic models, these lines represent binary relations, and events represent nodes or instructions. Together, these binary relations compose an execution graph. 
@@ -195,7 +134,7 @@ The relations between events are distinguished as primitive relations and derive
 
 \textbf{Coherence Order (\texttt{co})}, which relates a W event with a W event overwriting it. For instance, when event $e_3 : W(X)=1$ first writes 1 to location $X$, which event $e_4 : W(X)=2$ then overwrites with 2, then we have an edge $\mathit{co}(e_3, e_4)$. Both \texttt{co}-related write events access the same location. Additionally, \texttt{co} is a total strict order per location.
 
-\textbf{Read Modify Write (\texttt{rmw})}, relating the R and W of a successful atomic read-modify-write instruction (RMW). RMW instructions execute atomically, ensuring no other thread can modify the value during the operation. Some variants, like compare-and-swap, can detect if the value has changed before the operation by checking against an expected value. The generated R and W events access the same location and are \texttt{po}-adjacent (i.e., there are no \texttt{po}-intermediate events).
+\textbf{Read Modify Write (\texttt{rmw})}, relating the R and W of a successful atomic read-modify-write instruction (RMW). RMW instructions execute atomically, ensuring no other thread can modify the value during the operation. Some variants, like compare-and-swap, can detect if the value has changed before the operation by checking against an expected value.
 
 \begin{figure}[htbp]
 \centering
@@ -323,7 +262,7 @@ Some relations are composed based on the primitive relations. The following are 
 \label{fig:litmus-execution-with-derived-relation}
 \end{figure}
 
-We can redraw Figure~\ref{fig:litmus-execution-primitive-relation} with derived relations, as shown in Figure~\ref{fig:litmus-execution-with-derived-relation}. Observe that the \textit{fr} edges always follow backwards along an \textit{rf} edge and then forwards along a \textit{co} edge (i.e., $\mathit{fr} = \mathit{rf}^{-1}\mathbin{;}\mathit{co}$), thus relating a read to the write that overwrites it. For instance, in this execution we can only read $0$ from $Y$ before overwriting $Y$ with $1$. All \textit{fr} relations in this execution are external, producing \textit{fre} arrows, while the \textit{co} relations are internal, producing \textit{coi} arrows.
+We can redraw Figure~\ref{fig:litmus-execution-primitive-relation} with derived relations, as shown in Figure~\ref{fig:litmus-execution-with-derived-relation}. Observe that the \textit{fr} edges always follow backwards along an \textit{rf} edge and then forwards along a \textit{co} edge (i.e., $\mathit{fr} = \mathit{rf}^{-1}\mathbin{;}\mathit{co}$), thus relating a read to the write that overwrites it. For instance, in this execution we can only read $0$ from $Y$ before overwriting $Y$ with $1$. 
 
 \subsubsection{Litmus Tests}
 \label{sec:litmus-tests}
@@ -540,7 +479,7 @@ extensive use of tags. These tags are important because they help distinguish
 which instruction generated a given event. For example, read events can be
 generated by both \texttt{READ\_ONCE} and \texttt{rmw} operations, so we need
 tags to differentiate between them. \citet{alglave2018frightening} defines the
-following mappings between synchronization primitives and tags:
+mappings between synchronization primitives and tags in Figure~\ref{fig:LKMM-events}.
 
 \begin{figure}[h]
 \centering

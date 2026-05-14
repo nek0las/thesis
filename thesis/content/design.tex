@@ -1,4 +1,4 @@
-\chapter{Implementation in Lean~4}
+\chapter{Methodology}
 \label{chapter:design}
 
 When we work with pen and paper, we usually do not focus on the subtle parts of a proof; instead, we prioritize the interesting aspects. In contrast, mechanization requires us to define every detail of the specification. These challenges are independent of the particular proof assistant we choose, so we propose a general design whose ideas can be easily implemented in other languages. In this section, we identify and clarify the issues involved in mechanizing weak memory models and show how we address them using MathLib and Meta-Programming framework \citep{deMoura2021lean4,10.1145/3110278Lean4Meta,mathlib2020}.
@@ -66,7 +66,9 @@ instructions W[Accesses]
 instructions RMW[Accesses]
 \end{verbatim}
 
-The \texttt{Accesses} are then used to tag the events that are in \texttt{R} (reads), \texttt{W} (writes), or \texttt{RMW} (read-modify-writes). These events serve an important role, because they can be used to disambiguate the types of operations in each case. For example, we can identify a read as an acquire-read by tagging a read event with \texttt{ACQUIRE}. We use tags to differentiate normal instructions from tagged instructions. For example, some read instructions come from the READ\_ONCE macro in Linux kernel litmus tests, so we can tag a read event as ONCE to distinguish it from other read events.
+The \texttt{Accesses} are then used to tag events as \texttt{R} (reads), \texttt{W} (writes), or \texttt{RMW} (read-modify-writes). These tags play an important role by distinguishing the types of operations. For example, a read can be identified as an acquire-read by tagging it with \texttt{ACQUIRE}.
+
+Tags are also used to differentiate instruction variants: for example, some reads originate from the \texttt{READ\_ONCE} macro in Linux kernel litmus tests, so they can be marked with \texttt{ONCE} to distinguish them from ordinary reads.
 
 We use the Sigma type to represent the tag system in this way:
 \begin{verbatim}

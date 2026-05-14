@@ -588,7 +588,7 @@ The proof follows the same structure as the SC-TSO and TSO-MIPS comparisons: we 
   \item \textbf{Coherence-internal overwrites.} The LKMM's $(\mathit{co} \cup \mathit{fr}) \cap \mathit{int}$ maps directly to BPF's $\mathit{coi} \cup \mathit{fri}$, since $\mathit{coi} = \mathit{co} \cap \mathit{int}$ and $\mathit{fri} = \mathit{fr} \cap \mathit{int}$ by definition.
 \end{itemize}
 
-The remaining two cases --- $\mathit{addr};[\mathit{Plain}];\mathit{wmb}$ and the full \textit{fence} ordering --- require a formal correspondence between the LKMM's fence primitives and BPF's \texttt{po\_amo\_fetch}. The core difficulty is that the \texttt{CandidateExecution} in LeanCat encodes fence relations (\texttt{mb}, \texttt{wmb}, \texttt{fence}) as opaque \texttt{SetRel} fields with no structural connection to BPF's \texttt{po\_amo\_fetch = ([M];po;RMW) | (RMW;po;[M])}. Without an explicit mapping axiom that relates the two fence systems, neither case can be discharged. We therefore leave these cases as \texttt{sorry} placeholders in the Lean development and defer their completion to future work.
+The remaining two cases --- $\mathit{addr};[\mathit{Plain}];\mathit{wmb}$ and the full \textit{fence} ordering --- require a formal correspondence between the LKMM's fence primitives and BPF's \texttt{po\_amo\_fetch}. The core difficulty is that the \texttt{CandidateExecution} in LeanCat encodes fence relations (\texttt{mb}, \texttt{wmb}, \texttt{fence}) as opaque \texttt{SetRel} fields with no structural connection to BPF's \texttt{po\_amo\_fetch = ([M];po;RMW) | (RMW;po;[M])}. Without an explicit mapping axiom that relates the two fence systems, neither case can be discharged. 
 
 \section{Proof Engineering and Heuristic Automation}
 
