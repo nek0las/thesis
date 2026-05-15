@@ -1,9 +1,9 @@
 \chapter{Background}
 \label{chapter:Background}
 
-Chapter~\ref{chapter:introduction} introduced the main problem: weak-memory behavior can make a concurrent program behave in ways that are difficult to predict from the program text alone. The Store Buffering example in Figure~\ref{fig:litmus-test} showed this concretely, and the Dekker-style synchronization example in Figure~\ref{fig:flag-sync} showed why such behavior matters for correctness. We also saw in Figure~\ref{fig:litmus-execution-0-0} that an execution can be drawn as a graph whose nodes are events and whose arrows describe relationships such as program order, reads-from, coherence order, and from-read.
+Chapter~\ref{chapter:introduction} introduced the main problem: weak-memory behavior can make a concurrent program behave in ways that are difficult to predict from the program source code alone. The Store Buffering example in Figure~\ref{fig:litmus-test} showed this concretely, and the Dekker-style synchronization example in Figure~\ref{fig:flag-sync} showed why such behavior matters for correctness. We also saw in Figure~\ref{fig:litmus-execution-0-0} that an execution can be drawn as a graph whose nodes are events and whose arrows describe relationships such as program order, reads-from, coherence order, and from-read.
 
-This chapter turns that intuition into the background needed for the rest of the thesis. We first introduce the small amount of mathematics needed to talk about execution graphs precisely: binary relations, composition, closure, and acyclicity. We then use these ideas to explain axiomatic weak memory models, where a memory model is a set of constraints over candidate execution graphs. Finally, we introduce Lean~4 and its metaprogramming framework, because LeanCat uses Lean both as a proof assistant and as a language for translating Cat specifications into checked definitions.
+This chapter develops the background needed for the rest of the thesis from that intuition. We first introduce the mathematical concepts needed to talk about execution graphs precisely: binary relations, composition, closure, and acyclicity. We then use these ideas to explain axiomatic weak memory consistency models, where a memory consistency model is a set of constraints over candidate execution graphs. Finally, we introduce Lean~4 and its metaprogramming framework, because LeanCat uses Lean both as a proof assistant and as a language for translating Cat specifications into checked definitions.
 
 \section{Mathematical Background}
 \label{sec:math-background}
@@ -312,25 +312,6 @@ instructions as specified in the program text, while the instructions from
 different threads may be interleaved with one another. In other words, all
 operations appear to execute in a single global sequence that preserves the
 program order of each individual thread.
-
-Let us return to the \textit{Store Buffering} example. Under Sequential
-Consistency, the only possible behaviors are those obtained by interleaving the
-instructions of the two threads while preserving the program order of each
-thread. In this case, there are six possible interleavings:
-
-\begin{enumerate}
-\item $W(x)=1 \;\rightarrow\; R(y) \;\rightarrow\; W(y)=1 \;\rightarrow\; R(x)$
-\item $W(x)=1 \;\rightarrow\; W(y)=1 \;\rightarrow\; R(y) \;\rightarrow\; R(x)$
-\item $W(x)=1 \;\rightarrow\; W(y)=1 \;\rightarrow\; R(x) \;\rightarrow\; R(y)$
-\item $W(y)=1 \;\rightarrow\; R(x) \;\rightarrow\; W(x)=1 \;\rightarrow\; R(y)$
-\item $W(y)=1 \;\rightarrow\; W(x)=1 \;\rightarrow\; R(y) \;\rightarrow\; R(x)$
-\item $W(y)=1 \;\rightarrow\; W(x)=1 \;\rightarrow\; R(x) \;\rightarrow\; R(y)$
-\end{enumerate}
-
-These interleavings preserve the program order within each thread while allowing
-instructions from different threads to be arbitrarily interleaved. As a result,
-every read observes the value written by the most recent write to the same
-location in the global execution order.
 
 To formalize Sequential Consistency, memory-model frameworks describe executions
 using relations between events. In particular, we define the \textit{communication}
