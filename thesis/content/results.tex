@@ -10,7 +10,7 @@ In Lean~4, we use the \emph{InfoView} panel on the right-hand side of Visual Stu
 
 In our development, we use type classes together with \texttt{Set} and \texttt{RelSet} to define candidate executions. However, this representation can be difficult to reason about from a human perspective. Essentially, graphs in Lean~4 are encoded in a way that is convenient for machine processing, but not for human intuition. It would be much easier to understand the structure—especially to identify cycles—if we could directly visualize the graph.
 
-To achieve this visualization, we use the tool ProofWidgets~\citep{nawrocki2023proofwidgets}\footnote{\url{https://github.com/leanprover-community/ProofWidgets4}}. Broadly speaking, it provides APIs that allow us to visualize data and proofs interactively. Let us look at an example of how it works in LeanCat.
+To achieve this visualization, we use the tool ProofWidgets~\citep{nawrocki2023proofwidgets}\footnote{\url{https://github.com/leanprover-community/ProofWidgets4}}. Broadly speaking, it provides APIs that allow us to visualize data and proofs interactively. Let us look at an example of how it works in \textsc{LeanCat}.
 
 The following program represents the x86 \emph{Store Buffering (SB)} litmus test (from Figure~\ref{fig:litmus-test}):
 
@@ -120,7 +120,7 @@ $\mathit{co}$ and \texttt{strictPartialOrderImpliesAcyclic}. Finally,
 \texttt{internalImpliesPoOrPoMinusOne} states that two distinct same-thread events must be
 related by program order in one direction, since $\mathit{po}$ is a total order per thread.
  
-Together, these theorems form the proof infrastructure of LeanCat. In the following sections,
+Together, these theorems form the proof infrastructure of \textsc{LeanCat}. In the following sections,
 we demonstrate how they are applied in practice.
  
 
@@ -254,7 +254,7 @@ Outcome: $a = 1$ and $b = 0$
 
 Under Sequential Consistency (SC), this outcome is disallowed as it violates the foundational requirement of global instruction interleaving. Within the x86-TSO model, the outcome is also forbidden due to the axiomatic invariant that both Store-Store and Load-Load program-order pairs must be preserved. Consequently, as illustrated in Figure~\ref{fig:mp-rfe-cycle}, the $\mathit{po}$ edges in both threads are included in the preserved program order, and the resulting cycle is detected as a violation of the acyclicity condition.
 
-In contrast, the MIPS model permits this behavior. As a relaxed architecture, MIPS does not enforce ordering between independent memory accesses unless an explicit synchronization barrier is present. In our \texttt{LeanCat} formalization, these $\mathit{po}$ edges are excluded from the \textit{ppo} relation for MIPS, effectively breaking the cycle shown in Figure~\ref{fig:mp-rfe-cycle}. The acyclicity check therefore passes, providing a machine-checked proof that MIPS allows weak behaviors that TSO strictly forbids.
+In contrast, the MIPS model permits this behavior. As a relaxed architecture, MIPS does not enforce ordering between independent memory accesses unless an explicit synchronization barrier is present. In our \textsc{LeanCat} formalization, these $\mathit{po}$ edges are excluded from the \textit{ppo} relation for MIPS, effectively breaking the cycle shown in Figure~\ref{fig:mp-rfe-cycle}. The acyclicity check therefore passes, providing a machine-checked proof that MIPS allows weak behaviors that TSO strictly forbids.
 
 \subsubsection{Load Buffering}
 
@@ -398,7 +398,7 @@ This cycle violates the LKMM's coherence condition, which requires $\mathit{po\_
 \subsection{Comparing Memory Models}
 \label{sec:comparison}
 
-To check whether a memory model is weaker or stronger than another, we can use LeanCat 
+To check whether a memory model is weaker or stronger than another, we can use \textsc{LeanCat} 
 to verify it mechanically. As we discussed in Section~\ref{sec:math-background}, a model 
 $M_1$ is stronger than $M_2$ if every execution allowed by $M_1$ is also allowed by $M_2$, 
 that is, $M_2$ permits at least as many behaviors as $M_1$. Formally, we require
@@ -468,7 +468,7 @@ let ghb = ppo | rfe | fr | co
 acyclic ghb as pso
 \end{lstlisting}
 
-In LeanCat, we use the \texttt{defcat} command to load Cat files into Lean~4. This produces 
+In \textsc{LeanCat}, we use the \texttt{defcat} command to load Cat files into Lean~4. This produces 
 a predicate for each model that takes a candidate execution as input, reflecting the 
 general proof goal: for all candidate executions, one architecture is weaker than another.
 
@@ -588,7 +588,7 @@ The proof follows the same structure as the SC-TSO and TSO-MIPS comparisons: we 
   \item \textbf{Coherence-internal overwrites.} The LKMM's $(\mathit{co} \cup \mathit{fr}) \cap \mathit{int}$ maps directly to BPF's $\mathit{coi} \cup \mathit{fri}$, since $\mathit{coi} = \mathit{co} \cap \mathit{int}$ and $\mathit{fri} = \mathit{fr} \cap \mathit{int}$ by definition.
 \end{itemize}
 
-The remaining two cases --- $\mathit{addr};[\mathit{Plain}];\mathit{wmb}$ and the full \textit{fence} ordering --- require a formal correspondence between the LKMM's fence primitives and BPF's \texttt{po\_amo\_fetch}. The core difficulty is that the \texttt{CandidateExecution} in LeanCat encodes fence relations (\texttt{mb}, \texttt{wmb}, \texttt{fence}) as opaque \texttt{SetRel} fields with no structural connection to BPF's \texttt{po\_amo\_fetch = ([M];po;RMW) | (RMW;po;[M])}. Without an explicit mapping axiom that relates the two fence systems, neither case can be discharged. 
+The remaining two cases --- $\mathit{addr};[\mathit{Plain}];\mathit{wmb}$ and the full \textit{fence} ordering --- require a formal correspondence between the LKMM's fence primitives and BPF's \texttt{po\_amo\_fetch}. The core difficulty is that the \texttt{CandidateExecution} in \textsc{LeanCat} encodes fence relations (\texttt{mb}, \texttt{wmb}, \texttt{fence}) as opaque \texttt{SetRel} fields with no structural connection to BPF's \texttt{po\_amo\_fetch = ([M];po;RMW) | (RMW;po;[M])}. Without an explicit mapping axiom that relates the two fence systems, neither case can be discharged. 
 
 \section{Proof Engineering and Heuristic Automation}
 
