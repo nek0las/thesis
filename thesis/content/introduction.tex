@@ -19,7 +19,7 @@ X := 1          & Y := 1 \\
 a := Y          & b := X
 \end{array}
 \]
-\caption{Store-Buffering litmus test}
+\caption{Store Buffering litmus test.}
 \label{fig:litmus-test}
 \end{figure}
 
@@ -28,7 +28,7 @@ The x86-TSO programmer's model in Figure~\ref{fig:tso-mem} explains why we can o
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{thesis/figures/mem-tso@2x.png}
-  \caption{The x86 memory architecture diagram.}
+  \caption{x86-TSO memory architecture diagram.}
   \label{fig:tso-mem}
 \end{figure}
 
@@ -61,7 +61,7 @@ This unexpected behavior may seem unlikely to introduce bugs because it is subtl
 \end{array}
 \end{array}
 \]
-\caption{Flag-based synchronization example}
+\caption{Flag-based synchronization example.}
 \label{fig:flag-sync}
 \end{figure}
 
@@ -79,7 +79,7 @@ One intuitive way to study memory consistency models is to run many different li
 
 Instead of considering only concrete litmus tests, we can represent program executions in a more general way. In concurrent programming, we often care about the ordering relationships between instructions: which instructions are ordered before others, which writes are observed by which reads, and how writes to the same memory location are ordered. These relationships can be represented by arrows. If one instruction points to another, the arrow represents a relation between the two instructions. These instructions and arrows together form an \texttt{execution graph}.
 
-One possible execution graph is called a \texttt{candidate execution}: it represents one possible combination of events and relations for a litmus-test outcome before a memory model decides whether that outcome is allowed~\cite{catManualSyntax11,10.1145/2627752}. For example, when the \texttt{Store-Buffering} program in Figure~\ref{fig:litmus-test} produces the result \texttt{a = 0} and \texttt{b = 0}, it can be represented as the execution graph in Figure~\ref{fig:litmus-execution-0-0}. In the graph, \texttt{W(X)=v} denotes a write of value \texttt{v} to location \texttt{X}, and \texttt{R(Y)=v} denotes a read from \texttt{Y} that returns value \texttt{v}.
+One possible execution graph is called a candidate execution: it represents one possible combination of events and relations for a litmus-test outcome before a memory model decides whether that outcome is allowed~\cite{catManualSyntax11,10.1145/2627752}. For example, when the \texttt{Store-Buffering} program in Figure~\ref{fig:litmus-test} produces the result \texttt{a = 0} and \texttt{b = 0}, it can be represented as the execution graph in Figure~\ref{fig:litmus-execution-0-0}. In the graph, \texttt{W(X)=v} denotes a write of value \texttt{v} to location \texttt{X}, and \texttt{R(Y)=v} denotes a read from \texttt{Y} that returns value \texttt{v}.
 
 \begin{figure}[htbp]
 \centering
@@ -187,6 +187,6 @@ Cat is therefore a useful starting point for mechanized reasoning. Instead of re
 
 To address this problem, we use interactive theorem proving (ITP). An ITP allows us to write mathematical definitions and proofs that are checked by a machine. Mechanization in ITP requires additional work, because definitions and proofs must be encoded in the proof assistant. However, it also provides important benefits: it reduces mistakes, makes definitions and lemmas reusable, and makes proofs easier to maintain when memory consistency models change.
 
-In this work, we use Lean 4 and Mathlib. Lean 4 allows us to mechanize memory consistency model definitions and proofs, so that the proof assistant can check the correctness of our reasoning~\cite{deMoura2021lean4}. Lean 4 is a good fit for this project because it also provides a powerful metaprogramming framework~\cite{10.1145/3110278Lean4Meta}. This is important because \textsc{LeanCat} needs to read Cat specifications and generate the corresponding Lean definitions automatically, instead of requiring users to encode every memory model by hand. Mathlib provides a rich library of reusable mathematical definitions and lemmas, giving us a strong foundation for reasoning about relations, orders, sets, and other mathematical structures used in memory consistency models~\cite{mathlib2020}.
+In this work, we use Lean~4 and Mathlib. Lean~4 allows us to mechanize memory consistency model definitions and proofs, so that the proof assistant can check the correctness of our reasoning~\cite{deMoura2021lean4}. Lean~4 is a good fit for this project because it also provides a powerful metaprogramming framework~\cite{10.1145/3110278Lean4Meta}. This is important because \textsc{LeanCat} needs to read Cat specifications and generate the corresponding Lean definitions automatically, instead of requiring users to encode every memory model by hand. Mathlib provides a rich library of reusable mathematical definitions and lemmas, giving us a strong foundation for reasoning about relations, orders, sets, and other mathematical structures used in memory consistency models~\cite{mathlib2020}.
 
-Finally, we introduce \textsc{LeanCat}. \textsc{LeanCat} is a compiler and proof infrastructure that connects these two sides: it takes memory models written in Cat and translates them into binary relations in Lean 4. \textsc{LeanCat} has several advantages. First, it improves reuse: existing Cat memory consistency models can be translated into Lean 4 definitions instead of being rewritten from scratch. Second, it improves consistency: when a memory consistency model changes, such as an update to the ARMv8 memory consistency model, \textsc{LeanCat} can regenerate the Lean definitions and help check the related properties again. Third, it supports both concrete and general reasoning: it can check whether a specific litmus test is allowed under a particular architecture, and it can also be used to prove more general properties between different architectures. Finally, \textsc{LeanCat} is user-friendly: it provides interfaces that allow users to inspect the execution graph of a litmus test and understand why a behavior is allowed or forbidden.
+Finally, we introduce \textsc{LeanCat}. \textsc{LeanCat} is a compiler and proof infrastructure that connects these two sides: it takes memory models written in Cat and translates them into binary relations in Lean~4. \textsc{LeanCat} has several advantages. First, it improves reuse: existing Cat memory consistency models can be translated into Lean~4 definitions instead of being rewritten from scratch. Second, it improves consistency: when a memory consistency model changes, such as an update to the ARMv8 memory consistency model, \textsc{LeanCat} can regenerate the Lean definitions and help check the related properties again. Third, it supports both concrete and general reasoning: it can check whether a specific litmus test is allowed under a particular architecture, and it can also be used to prove more general properties between different architectures. Finally, \textsc{LeanCat} is user-friendly: it provides interfaces that allow users to inspect the execution graph of a litmus test and understand why a behavior is allowed or forbidden.

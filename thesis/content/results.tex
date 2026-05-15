@@ -53,7 +53,7 @@ This produces a clear graphical representation of the execution. From this graph
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{thesis/figures/InfoView.png}
-  \caption{The InfoView panel in Visual Studio Code showing execution graph in Lean~4.}
+  \caption{The InfoView panel in Visual Studio Code showing an execution graph in Lean~4.}
   \label{fig:infoview}
 \end{figure}
 
@@ -313,9 +313,9 @@ Can we get $a = 1$ and $b = 1$?
 \label{fig:lb-rfe-cycle}
 \end{figure}
 
-Under Sequential Consistency (SC), this outcome is impossible: every valid interleaving requires at least one read to occur before the corresponding write, ensuring that at least one thread observes the initial value 0. Within the x86-TSO model, the outcome is similarly forbidden. As Figure~\ref{fig:lb-rfe-cycle} demonstrates, the cycle relies on $R \to W$ program-order edges; because TSO maintains a foundational verification of $R \to W$ ordering, this cycle cannot be eliminated. Furthermore, under MIPS, the outcome is also disallowed. Although MIPS is a relaxed architecture, it preserves $R \to W$ program-order pairs to prevent "out-of-thin-air" behaviors. Consequently, the \textit{po} edges in the cycle of Figure~\ref{fig:lb-rfe-cycle} contribute to the preserved program order, and the acyclicity check correctly identifies the execution as disallowed. We have verified this property through our formalization in LB.lean.
+Under Sequential Consistency (SC), this outcome is impossible: every valid interleaving requires at least one read to occur before the corresponding write, ensuring that at least one thread observes the initial value 0. Within the x86-TSO model, the outcome is similarly forbidden. As Figure~\ref{fig:lb-rfe-cycle} demonstrates, the cycle relies on $R \to W$ program-order edges; because TSO preserves $R \to W$ ordering, this cycle cannot be eliminated. Furthermore, under MIPS, the outcome is also disallowed. Although MIPS is a relaxed architecture, it preserves $R \to W$ program-order pairs to prevent ``out-of-thin-air'' behaviors. Consequently, the \textit{po} edges in the cycle of Figure~\ref{fig:lb-rfe-cycle} contribute to the preserved program order, and the acyclicity check correctly identifies the execution as disallowed. We have verified this property through our formalization in \texttt{LB.lean}.
 
-Together, these two litmus tests confirm the strict hierarchy: SC $\subset$ TSO $\subset$ MIPS. The SB test separates SC from TSO (and MIPS), while the MP test separates TSO from MIPS, and all of them forbid the \href{https://github.com/nek0las/lean-cats/blob/main/LeanCats/Linux/LB.lean}{LB.lean}.
+Together, these litmus tests confirm the strict hierarchy: SC $\subset$ TSO $\subset$ MIPS. The SB test separates SC from TSO (and MIPS), while the MP test separates TSO from MIPS. The LB test is forbidden by all three models, as shown in \href{https://github.com/nek0las/lean-cats/blob/main/LeanCats/Linux/LB.lean}{\texttt{LB.lean}}.
 
 \subsubsection{LKMM Litmus Tests}
 
@@ -592,7 +592,7 @@ The remaining two cases --- $\mathit{addr};[\mathit{Plain}];\mathit{wmb}$ and th
 
 \section{Proof Engineering and Heuristic Automation}
 
-With the emergence of high-capability models such as Opus and Codex, AI is capable of addressing the tedious overhead of formalization, though it can also introduce unvalidated heuristic errors. An interactive proof assistant is fundamentally distinct because it maintains strict foundational verification; it can provide precise feedback to the LLM when it detects errors, enabling an iterative cycle of refinement. Consequently, the precise formulation of theorem statements and the demarcation between AI-generated code and the trusted parts of the development become critical considerations.
+With the emergence of high-capability models such as Opus and Codex, AI can address some of the tedious overhead of formalization, though it can also introduce unvalidated heuristic errors. An interactive proof assistant is fundamentally different because every accepted proof is checked by a small trusted kernel. It can also provide precise feedback when it detects errors, enabling an iterative cycle of refinement. Consequently, the precise formulation of theorem statements and the boundary between AI-generated code and the trusted parts of the development become critical considerations.
 
 In this framework, our contribution is the provision of a trusted infrastructure that translates the Cat language into Lean~4 directly, ensuring reusability across many memory models. Traditionally, formalizers must write corresponding proofs for each model manually, incurring significant overhead in redundant boilerplate and common theorems. While one could task an LLM with reasoning about a Cat file directly without such a framework, we must recognize that its heuristic nature can mislead humans by introducing incorrect assumptions for the models. This is why it is essential to maintain a sharp separation between the trusted core and the LLM-generated code.
 
